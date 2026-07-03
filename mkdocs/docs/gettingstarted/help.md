@@ -9,7 +9,7 @@ corner of that node in the graph,
 * Using the right-click context menu on a button in the palette.
 
 The node help texts are also available
-in the [automatically generated documentation](../autodocs/). If this isn't
+in the [automatically generated documentation](../autodocs/index.md). If this isn't
 enough, don't hesitate to contact the Aberystwyth team.
 
 ## Expressions

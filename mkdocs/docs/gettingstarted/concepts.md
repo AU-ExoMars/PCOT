@@ -145,7 +145,7 @@ There may also be user-defined or "test" bits for use in development.
 
 
 
-Move on to [a First Tutorial](../tutorial)
+Move on to [a First Tutorial](tutorial.md)
 
 [^1]: 
 Allender, Elyse J., Roger B. Stabbins, Matthew D. Gunn, Claire R. Cousins,

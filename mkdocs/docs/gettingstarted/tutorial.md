@@ -176,7 +176,7 @@ text directly in its box.
 ## Loading an image
 
 The purpose of the *input 0* node is to bring the an input into the graph for manipulation.
-As noted [elsewhere](../concepts/), the graph is separate from the inputs. This makes it easier
+As noted [elsewhere](concepts.md), the graph is separate from the inputs. This makes it easier
 to run different graphs on the same inputs, or the same graph on different inputs.
 ==Clicking on the "Input 0" button== at the top of the window will open a window to let us change the
 input, which looks like this:
@@ -323,7 +323,7 @@ It's a little hard to see what's going on, so we will add a region of interest.
 This will make the *expr* node treat the operation differently - only the area inside
 the rectangle will be ```a$671/a$438```. Everywhere
 else in the image, the output will come from the left-hand side of the expression (the 671nm channel).
-The rules for ROIs are explained more fully [on this page](../../userguide/principles).
+The rules for ROIs are explained more fully [on this page](../userguide/principles.md).
 
 ==Open the *regions* section of the palette and add a *rect* node between the *input* and *expr* nodes==
 (the latter of which will be

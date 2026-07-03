@@ -22,7 +22,7 @@ being worked on - it's a difficult problem (more accurately, getting it
 into PCOT without pulling in a library that's 20 times bigger than PCOT itself
 is difficult).
 
-* [Favourites and macros](userguide/favesandmacros/) - save nodes with
+* [Favourites and macros](userguide/favesandmacros/index.md) - save nodes with
 particular settings and also collections of nodes which work like a single node.
 Both favourites and macros can be saved to archives which can be loaded on startup.
 * PCOT now also has Malvar-He-Cutler and Menon (DDFAPD) demosaicing algorithms.
@@ -32,7 +32,7 @@ not the rather weird OpenCV names.
 stretches, and does so on all bands (not just the RGB representation).
 * ***decorrstretch* node deprecated** - use *PCA* instead
 * Search box for palette!
-* [Settings dialog](userguide/settings) should make life easier for changing settings quickly.
+* [Settings dialog](userguide/settings.md) should make life easier for changing settings quickly.
 * Unconnected *expr* inputs give a null datum rather than raising an
 exception.
 * *reflectance* node supports angle data (filter angle and $\phi$, $\theta$ for target).

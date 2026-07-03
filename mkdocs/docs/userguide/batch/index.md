@@ -97,7 +97,7 @@ Here, we are running the graph once as above and then making some changes:
 
 @@@todo
 Write more on how the inputs work - intro here, more in params.md or
-elsewhere. Write more in general. Note [autodocs](../../autodocs/).
+elsewhere. Write more in general. Note [autodocs](../../autodocs/index.md).
 
 Finish.
 @@@

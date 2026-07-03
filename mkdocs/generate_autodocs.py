@@ -63,10 +63,10 @@ image *a*.
 ## Input and output parameters for the parameter file (batch) runner
 
 Below are links to pages describing parameters for setting the inputs and outputs
-in batch files. See [batch mode](../userguide/batch) for more details.
+in batch files. See [batch mode](../userguide/batch/index.md) for more details.
 
-* [Input parameters](batchinputs)
-* [Output parameters](batchoutputs)
+* [Input parameters](batchinputs.md)
+* [Output parameters](batchoutputs.md)
 
 """
 

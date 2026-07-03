@@ -1,6 +1,6 @@
 # Loading different image formats
 
-The examples in [the tutorial](../tutorial) use ENVI images, but
+The examples in [the tutorial](tutorial.md) use ENVI images, but
 other image formats are available:
 
 * plain RGB
@@ -32,7 +32,7 @@ images which are 32-bit floating point in the
 ## Loading an RGB image
 To load RGB, open an input
 and click the RGB button. A dialog will appear which is very similar to the
-[ENVI file dialog above](#inputenvi), 
+[ENVI file dialog above](#loading-an-envi-image), 
 but showing ENVI header files instead of image files. Double-click on such a
 file to load its associated data,
 which is assumed to be in the same directory with the same name. RGB images don't

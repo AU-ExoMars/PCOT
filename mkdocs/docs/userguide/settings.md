@@ -69,6 +69,6 @@ in the cameras directory, so make sure you get this right if you use it.
 In the Locations section:
 
 * **Locations for plugins** is a list of directories scanned for PCOT plugin files.
-* **List of macro and favourite archives** is a list of PCOT files which have all their [favourites and macros](favesandmacros/)
+* **List of macro and favourite archives** is a list of PCOT files which have all their [favourites and macros](favesandmacros/index.md)
 imported automatically when a new document is created.
 

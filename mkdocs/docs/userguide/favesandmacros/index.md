@@ -32,7 +32,7 @@ Note that the favourite name includes the name of the node type automatically.
 
 Favourites are saved with the document and can be imported into other
 documents. They can also be saved in an archive which can be imported
-manually or automatically (see [Importing](#below) below).
+manually or automatically (see [Importing](#importing-favourites-and-macros) below).
 
 
 ## Macros
