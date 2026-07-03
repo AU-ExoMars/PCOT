@@ -68,8 +68,8 @@ and how you use PCOT [as we have seen before](/gettingstarted/concepts/#uncertai
 |$\sin(a)$|$\sqrt{\left(\sigma_a\cos a\right)^2}$||
 |$\cos(a)$|$\sqrt{\left(\sigma_a\sin a\right)^2}$||
 |$\tan(a)$|$\sqrt{\left(\sigma_a\sec^2 a\right)^2}$|If the secant would be large, e.g. $a=\frac{\pi}{2}$, it is clipped at a very large value and DIVZERO is set in the DQ bit of the output.|
-|$a \wedge b$|$\min(\sigma_a,\sigma_b)$|i.e. the fuzzy logic "OR" operator, "\|" in Python |
-|$a \vee b$|$\max(\sigma_a,\sigma_b)$|i.e. the fuzzy logic "AND" operator, "&" in Python|
+|$a \wedge b$|$\min(\sigma_a,\sigma_b)$|minimum, i.e. the fuzzy logic "OR" operator, "\|" in Python |
+|$a \vee b$|$\max(\sigma_a,\sigma_b)$|maximum, i.e. the fuzzy logic "AND" operator, "&" in Python|
 |$\sqrt{a}$|calculated as $a^{0.5}$||
 
 Other operations (negation, inversion) leave the uncertainty unchanged.

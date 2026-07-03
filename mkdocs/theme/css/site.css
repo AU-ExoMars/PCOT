@@ -11,3 +11,8 @@ li > p {
     margin-top: 0 !important;
     margin-bottom: 0 !important;
 }
+
+table td,
+table th {
+    padding: 0.5em 1em;
+}
