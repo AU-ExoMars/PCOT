@@ -80,7 +80,7 @@ Close the dialog when you have the selected images you want. It might be a good 
 to examine the resulting multispectral image.
 
 There is more detail on the regular expression syntax 
-[here](/userguide/multifile).
+[here](../userguide/multifile.md).
 
 ## PDS4 products
 

@@ -1,6 +1,6 @@
 # How Values work
 
-Note - read this in conjunction with [GUPPY](/devguide/guppy).
+Note - read this in conjunction with [GUPPY](guppy.md).
 
 Value is PCOT's fundamental type for working with uncertain numerical data.
 Values are triplets of:
@@ -191,7 +191,7 @@ and it will work on scalar Values, vector Values and images - in the latter case
 Value.
 
 The `pooled_sd` function will take the nominal and uncertainty arrays and pool their variation into
-a single value, as described in [GUPPY](/devguide/guppy/).
+a single value, as described in [GUPPY](guppy.md).
 
 The datumfunc is simple:
 ```python

@@ -27,5 +27,5 @@ target reflectances, etc.
 
 ### Autodocs
 
-* [Automatically generated documentation](/autodocs) for nodes, expression
+* [Automatically generated documentation](../autodocs/) for nodes, expression
 functions and properties, and inputs/outputs in batch files.

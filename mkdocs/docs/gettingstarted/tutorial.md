@@ -54,7 +54,7 @@ More cameras and reflectances can be downloaded from the
 useful "recipes" for doing common operations. 
 
 You can change the locations of these directories - and many other things -
-from the [settings dialog](/userguide/settings) which can be opened
+from the [settings dialog](../userguide/settings.md) which can be opened
 from the Edit menu.
 
 @@@ warning
@@ -231,7 +231,7 @@ under development.
 The canvas is quite complicated because it does a lot of things, such as
 displaying spectra for each pixel,
 normalisation settings, and displaying data quality bits. More information
-can be found [here](/userguide/canvas), but for now:
+can be found [here](../userguide/canvas.md), but for now:
 
 * ==Click the **spectrum** button== to open a spectrum view, and move
 the cursor over the image to show the spectrum at different pixels. You may

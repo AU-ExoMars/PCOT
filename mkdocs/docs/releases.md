@@ -22,7 +22,7 @@ being worked on - it's a difficult problem (more accurately, getting it
 into PCOT without pulling in a library that's 20 times bigger than PCOT itself
 is difficult).
 
-* [Favourites and macros](/userguide/favesandmacros) - save nodes with
+* [Favourites and macros](userguide/favesandmacros/) - save nodes with
 particular settings and also collections of nodes which work like a single node.
 Both favourites and macros can be saved to archives which can be loaded on startup.
 * PCOT now also has Malvar-He-Cutler and Menon (DDFAPD) demosaicing algorithms.
@@ -37,7 +37,7 @@ stretches, and does so on all bands (not just the RGB representation).
 exception.
 * *reflectance* node supports angle data (filter angle and $\phi$, $\theta$ for target).
 * Raw loader crops overlong data and warns.
-* [GUPPY](/devguide/guppy), the Guide to Uncertainty in PCOT Python - how to write code that
+* [GUPPY](devguide/guppy.md), the Guide to Uncertainty in PCOT Python - how to write code that
 propagates uncertainty.
 * `TabData` is now `TabGeneric`, and if you use TaggedAggregate parameters
 in your node it will incorporate an editor for those parameters.

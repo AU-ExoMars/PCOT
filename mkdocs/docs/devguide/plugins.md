@@ -218,7 +218,7 @@ palette), and version. It will add the input and output connectors.
 Often, this can be a ```TabGeneric``` which will look at the node's ```out```
 attribute, which should be a ```Datum.```
 This tab class will also provide an editor for your node's parameters
-if those parameters are [TaggedAggregate parameters](/devguide/nodeser/#using-taggedaggregates-to-serialise-nodes).
+if those parameters are [TaggedAggregate parameters](nodeser.md#using-taggedaggregates-to-serialise-nodes).
 * **perform(self, node)** will actually perform the node's action, reading inputs 
 and setting outputs.
 

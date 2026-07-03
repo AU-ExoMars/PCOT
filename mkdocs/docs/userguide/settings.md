@@ -60,7 +60,7 @@ I'll cover a few here:
 * **File to load at startup** is a PCOT file automatically opened when
 PCOT starts, which is useful if you are only working on one particular
 script for the time being.
-* **Default regex for getting filter data** is used by the [Multifile loader](/userguide/multifile) to work out
+* **Default regex for getting filter data** is used by the [Multifile loader](multifile.md) to work out
 which filter is being used for a particular image from the filename.
 * **Default camera** is the default camera to set in the multifile loader and elsewhere. We don't check that the camera actually exists
 in the cameras directory, so make sure you get this right if you use it.
@@ -69,6 +69,6 @@ in the cameras directory, so make sure you get this right if you use it.
 In the Locations section:
 
 * **Locations for plugins** is a list of directories scanned for PCOT plugin files.
-* **List of macro and favourite archives** is a list of PCOT files which have all their [favourites and macros](/userguide/favesandmacros)
+* **List of macro and favourite archives** is a list of PCOT files which have all their [favourites and macros](favesandmacros/)
 imported automatically when a new document is created.
 

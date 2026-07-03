@@ -1,8 +1,8 @@
 # GUPPY: Guide to Uncertainty in PCOT Python
 
-Read this first: [Important Classes](/devguide/classes).
+Read this first: [Important Classes](classes.md).
 
-More details on Value and Datum can be found in [How Values Work](/devguide/values).
+More details on Value and Datum can be found in [How Values Work](values.md).
 
 When you are writing code which uses PCOT as a library, or adding
 new nodes or other functionality to PCOT itself, you will be dealing
@@ -54,7 +54,7 @@ All this assumes that the **variables are independent**: given the complexity
 of some the calculations in PCOT, the paths data can take through a graph, and
 the nature of the sources, it would be impossible to work out all the
 covariances. You need to consider this carefully both in your calculations
-and how you use PCOT [as we have seen before](/gettingstarted/concepts/#uncertainty).
+and how you use PCOT [as we have seen before](../gettingstarted/concepts.md#uncertainty).
 
 
 ## Formulae used
@@ -203,7 +203,7 @@ node processes data using the above technique.
 @@@
 
 ## The Value class
-As mentioned above, numeric values and arrays are stored using the [`Value` class](/devguide/values),
+As mentioned above, numeric values and arrays are stored using the [`Value` class](values.md),
 and occasionally it may be necessary to work at this level. It is also useful to understand
 some of the extra work that is done here in addition to the "raw" uncertainty
 calculations which are mentioned in the final section.

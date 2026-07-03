@@ -192,7 +192,7 @@ flats:
       preset: pancam-rawloader  # use this multifile preset for loading PANCAM files
 ```
 where the preset has been created in the multifile input. However, It's best to specify the data fully rather than risk another user not having the preset when
-trying to reconstruct the data. See the [multifile docs](/userguide/multifile.md) for more details on presets for loading binary
+trying to reconstruct the data. See the [multifile docs](multifile.md) for more details on presets for loading binary
 files. 
 
 ### Remapping filter names in flatfield data
@@ -293,7 +293,7 @@ Each `.sed` file is directly taken from the RS-3500 instrument; we use the Refle
 ## Listing camera data using PCOT
 
 @@@info
-Some of this information is duplicated in [the multifile input docs ](/userguide/multifile/)
+Some of this information is duplicated in [the multifile input docs ](multifile.md)
 @@@
 
 You can find out which cameras are available and what data they have using the `lscams` subcommand:

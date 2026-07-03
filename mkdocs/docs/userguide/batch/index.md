@@ -27,7 +27,7 @@ That PDF will look something like this:
 This is great, but we might want to run this on multiple images. We can
 do that using batch files. For example, this file will use the same
 settings for all the nodes and inputs, but replace the input filenames
-with those specified (we're using a [multifile](/userguide/multifile) input
+with those specified (we're using a [multifile](../multifile.md) input
 here):
 
 ```txt
@@ -97,7 +97,7 @@ Here, we are running the graph once as above and then making some changes:
 
 @@@todo
 Write more on how the inputs work - intro here, more in params.md or
-elsewhere. Write more in general. Note [autodocs](/autodocs/).
+elsewhere. Write more in general. Note [autodocs](../../autodocs/).
 
 Finish.
 @@@

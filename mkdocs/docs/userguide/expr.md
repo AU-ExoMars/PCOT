@@ -35,8 +35,8 @@ which *a* if it has a value, but 0.5 otherwise (i.e. 0.5 is the default value fo
 ## Functions
 
 `default` and `merge` are two of the large number of functions that *expr* supports, and more can be added
-using the [plug-in mechanism](/devguide/plugins/). Full details of built-in functions 
-can be found [in the autodocs](/autodocs/#expr-functions)
+using the [plug-in mechanism](../devguide/plugins.md). Full details of built-in functions 
+can be found [in the autodocs](../autodocs/#expr-functions)
 
 ## Properties
 
@@ -44,11 +44,11 @@ Certain types of value have "properties" which can be extracted with the dot ope
 For example, `a.w` will extract the width of the image in variable $a$, and 
 `(a+b).n` will return the number of pixels in the image which results from adding images
 $a$ and $b$. There aren't many properties, but those that exist are listed
-[in the autodocs](/autodocs/#expr-properties).
+[in the autodocs](../autodocs/#expr-properties).
 
 ## Autodocs
 @@@info
-The text below is drawn from the [automatically generated documentation](/autodocs/) for
+The text below is drawn from the [automatically generated documentation](../autodocs/) for
 the node, and is the authoritative documentation.
 @@@
 
