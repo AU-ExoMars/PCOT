@@ -13,18 +13,22 @@
         <title>reflectance - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
 
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -188,6 +204,11 @@ The calibration target can be selected by the user.</p>
 <p>The image must know what camera and filters it came from, and the camera
 must have filter information including nominal reflectances for each
 patch on that target.</p>
+<p>The <strong>target angles</strong>  are the theta (polar) and phi (azimuth) angles for incident light on
+the patch; the reflectance angle is fixed at 24 degrees theta and 0 degrees phi.</p>
+<p>Phi is measured clockwise from 0 at a line running from the centre of the PCT
+to the right, assuming the PCT is held with the two large patches at the top.</p>
+<p>The <strong>filter angle</strong> is the angle of transmission through the filter, with 0=straight through.</p>
 <p>The outputs are the gradient and intercept of the fit for each filter. All source
 data is removed, so it does not obscure image data in subsequent operations. The
 next operation should be an expr node performing out=(in-c)/m.</p>
@@ -239,11 +260,11 @@ next operation should be an expr node performing out=(in-c)/m.</p>
 </tbody>
 </table>
 <h3 id="parameters">Parameters</h3>
-<table border='1' style='border-collapse: collapse;'><tr><td rowspan="5" style="border-right: none;">reflectance</td><td rowspan="1" style="border-right: none;">target: string (default None)</td><td rowspan="1" style="border-left: none;">The calibration target to use</td></tr><tr><td rowspan="1" style="border-right: none;">show_patches: boolean (default True)</td><td rowspan="1" style="border-left: none;">Show the patch names on the plot</td></tr><tr><td rowspan="1" style="border-right: none;">sep_plots: boolean (default False)</td><td rowspan="1" style="border-left: none;">Show the plots as separate small plots for each filter</td></tr><tr><td rowspan="1" style="border-right: none;">zero_fudge: boolean (default False)</td><td rowspan="1" style="border-left: none;">Add an extra zero point</td></tr><tr><td rowspan="1" style="border-right: none;">simpler_data_fudge: boolean (default False)</td><td rowspan="1" style="border-left: none;">Force all points to have same number of pixels and same SD</td></tr></table>
+<table border='1' style='border-collapse: collapse;'><tr><td rowspan="8" style="border-right: none;">reflectance</td><td rowspan="1" style="border-right: none;">target: string (default None)</td><td rowspan="1" style="border-left: none;">The calibration target to use</td></tr><tr><td rowspan="1" style="border-right: none;">show_patches: boolean (default True)</td><td rowspan="1" style="border-left: none;">Show the patch names on the plot</td></tr><tr><td rowspan="1" style="border-right: none;">sep_plots: boolean (default False)</td><td rowspan="1" style="border-left: none;">Show the plots as separate small plots for each filter</td></tr><tr><td rowspan="1" style="border-right: none;">theta_target: float (default 0.0)</td><td rowspan="1" style="border-left: none;">Theta (polar) angle of target (degs)</td></tr><tr><td rowspan="1" style="border-right: none;">phi_target: float (default 270.0)</td><td rowspan="1" style="border-left: none;">Phi (azimuth) angle of target (degs)</td></tr><tr><td rowspan="1" style="border-right: none;">filter_angle: float (default 0.0)</td><td rowspan="1" style="border-left: none;">Filter transmission angle (degs)</td></tr><tr><td rowspan="1" style="border-right: none;">zero_fudge: boolean (default False)</td><td rowspan="1" style="border-left: none;">Add an extra zero point</td></tr><tr><td rowspan="1" style="border-right: none;">simpler_data_fudge: boolean (default False)</td><td rowspan="1" style="border-left: none;">Force all points to have same number of pixels and same SD</td></tr></table>
 
 <hr />
 <p>Automatically generated by generate_autodocs.py</p>
-<p>Date: 2026-03-05T22:20:48.599151</p></div>
+<p>Date: 2026-07-03T12:59:18.429440</p></div>
             </div>
         </div>
 
@@ -251,13 +272,14 @@ next operation should be an expr node performing out=(in-c)/m.</p>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

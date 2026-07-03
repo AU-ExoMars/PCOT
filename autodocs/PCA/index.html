@@ -10,21 +10,25 @@
         <link rel="shortcut icon" href="../../img/favicon.ico">
     <meta name="robots" content="noindex,nofollow">
 
-        <title>edge - PCOT Documentation</title>
+        <title>PCA - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
 
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -161,7 +177,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#edge" class="nav-link">edge</a>
+            <li class="nav-item" data-bs-level="1"><a href="#pca" class="nav-link">PCA</a>
               <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="2"><a href="#description" class="nav-link">Description</a>
               <ul class="nav flex-column">
@@ -178,16 +194,50 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="edge">edge</h1>
+<h1 id="pca">PCA</h1>
 <h2 id="description">Description</h2>
-<p>This is an edge detector node. It takes an image and performs Canny edge detection, currently with
-    fixed thresholds. It does not take account of ROIs, since this would be pointless when we're converting
-    from a potentially multispectral image to greyscale (well, boolean).
-    Exercise for the reader - add variable thresholds, either as numeric inputs or as
-    numeric parameters settable from the node tab.</p>
-<pre><code>DQ bits of the bands in the source are combined together for the single
-band of the result. Uncertainty is discarded.
-</code></pre>
+<p>Perform a principal component analysis and optionally a whitening transform or decorrelation
+stretch.</p>
+<p><strong>Ignores DQ and uncertainty</strong></p>
+<h2>Standard recipe for <strong>decorrelation stretch</strong>:</h2>
+<ul>
+<li>Mode = decorrelation stretch</li>
+<li>Stretch/whitening = stretch</li>
+<li>Clip outliers to around 2%</li>
+<li>Set both RGB normalisation and histogram equalisation</li>
+</ul>
+<p>See below for what this actually does!</p>
+<h2>Details</h2>
+<p>This node first performs a Principle Component Analysis (PCA) on all bands of an image.
+The output image consists of the principal components, with the most significant first.
+The RGB output - also shown in the canvas - is selected from these bands by the Component RGB Mapping,
+and some further processing can take place on this (see below).</p>
+<p>On the PCA image we optionally perform a whitening transform or a stretch.</p>
+<ul>
+<li>A <strong>whitening transform</strong> will divide each PC by its standard deviation (so that the
+  resulting data has an identity covariance matrix).</li>
+<li>A <strong>stretch</strong> will apply a stretch factor to the PCs, (mean of eigenvalues / eigenvalue)</li>
+</ul>
+<p>We then either leave the result in the PCA space, so that channel 0 holds the component
+with the most variation, channel 1 holds the next most varying component etc., or we
+transform the image back into the original colour space, so the node performs a <strong>decorrelation
+stretch</strong>.</p>
+<p>Then a contrast stretch is done in which all outliers above and below a certain percentile
+of the entire image are set to 0 or 1, and remaining values are stretched to fill the gaps.</p>
+<p>The resulting image is sent to the PCA output before further processing.</p>
+<p>The remaining steps only take place on the RGB representation of the image, whose bands
+are selected by the "Component RGB mapping" boxes.</p>
+<ul>
+<li><strong>Normalize RGB</strong> will normalise the RGB bands <strong>separately</strong> to the [0,1] range. This
+  is usually required because the PCA image bands have very different amplitudes.</li>
+<li><strong>Histogram equalisation</strong> can be applied to the RGB image. This
+  redistributes the intensity values of an image so that they occupy the available dynamic
+  range more evenly. It works by computing the image’s histogram,
+  converting it into a cumulative distribution function (CDF), and then remapping each pixe
+  according to this CDF.</li>
+</ul>
+<p>The standard deviations of the original input image and the eigenvalues (i.e. magnitudes)
+of the principal components are also shown and output.</p>
 
 <hr />
 <h2 id="connections">Connections</h2>
@@ -206,7 +256,7 @@ band of the result. Uncertainty is discarded.
 <td>0</td>
 <td>(none)</td>
 <td>img</td>
-<td>(none)</td>
+<td>input image</td>
 </tr>
 </tbody>
 </table>
@@ -223,17 +273,36 @@ band of the result. Uncertainty is discarded.
 <tbody>
 <tr>
 <td>0</td>
-<td>(none)</td>
+<td>rgb</td>
 <td>img</td>
-<td>(none)</td>
+<td>RGB image selected by component mapping</td>
+</tr>
+<tr>
+<td>1</td>
+<td>PCA</td>
+<td>img</td>
+<td>PCA image</td>
+</tr>
+<tr>
+<td>2</td>
+<td>eigs</td>
+<td>number</td>
+<td>eigenvalues of principal components</td>
+</tr>
+<tr>
+<td>3</td>
+<td>sds</td>
+<td>number</td>
+<td>standard deviations of original image bands</td>
 </tr>
 </tbody>
 </table>
 <h3 id="parameters">Parameters</h3>
-<p>No automatic parameter documentation available for edge</p>
+<table border='1' style='border-collapse: collapse;'><tr><td rowspan="6" style="border-right: none;">PCA</td><td rowspan="1" style="border-right: none;">rgbmapping: list of integer (default [0, 1, 2])</td><td rowspan="1" style="border-left: none;">rgb mapping</td></tr><tr><td rowspan="1" style="border-right: none;">mode: string (pca, decorr) (default 'pca')</td><td rowspan="1" style="border-left: none;">PCA or decorr stretch mode</td></tr><tr><td rowspan="1" style="border-right: none;">stretch: string (none, whiten, stretch) (default 'none')</td><td rowspan="1" style="border-left: none;">Stretch/decorr mode</td></tr><tr><td rowspan="1" style="border-right: none;">clip: float (default 5.0)</td><td rowspan="1" style="border-left: none;">percentile outliers to clip in postprocessing</td></tr><tr><td rowspan="1" style="border-right: none;">normalize: boolean (default True)</td><td rowspan="1" style="border-left: none;">normalise RGB output</td></tr><tr><td rowspan="1" style="border-right: none;">histequal: boolean (default False)</td><td rowspan="1" style="border-left: none;">apply histogram equalization to RGB output</td></tr></table>
+
 <hr />
 <p>Automatically generated by generate_autodocs.py</p>
-<p>Date: 2026-03-05T22:20:48.599151</p></div>
+<p>Date: 2026-07-03T12:59:18.429440</p></div>
             </div>
         </div>
 
@@ -241,13 +310,14 @@ band of the result. Uncertainty is discarded.
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

@@ -13,18 +13,22 @@
         <title>dqmod - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
 
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -182,6 +198,7 @@
 <h2 id="description">Description</h2>
 <p>Modify DQ bits based on conditions in the existing nominal or uncertainty for all bands
 or just a single band.</p>
+<p>It is also possible to test a condition on a single band and apply modifications to all bands.</p>
 <blockquote style="background-color: #ffd0d0;">
 **WARNING**: This may set "bad" bits which will be masked in any calculation. For some settings,
 these bad bits can mask bands other than those from which they are derived. Calculations involving
@@ -231,11 +248,11 @@ can be lost. (Issue #69)
 </tbody>
 </table>
 <h3 id="parameters">Parameters</h3>
-<table border='1' style='border-collapse: collapse;'><tr><td rowspan="6" style="border-right: none;">dqmod</td><td rowspan="1" style="border-right: none;">val: float (default 0.0)</td><td rowspan="1" style="border-left: none;">Value to test against</td></tr><tr><td rowspan="1" style="border-right: none;">dq: integer (default 0)</td><td rowspan="1" style="border-left: none;">DQ bits to set</td></tr><tr><td rowspan="1" style="border-right: none;">mod: string (set, clear) (default 'set')</td><td rowspan="1" style="border-left: none;">Set or clear bits</td></tr><tr><td rowspan="1" style="border-right: none;">test: string (le, ge, gt, lt, always) (default 'le')</td><td rowspan="1" style="border-left: none;">Test to perform</td></tr><tr><td rowspan="1" style="border-right: none;">data: string (nominal, uncertainty) (default 'nominal')</td><td rowspan="1" style="border-left: none;">Data to test</td></tr><tr><td rowspan="1" style="border-right: none;">band: integer (default None)</td><td rowspan="1" style="border-left: none;">Band to test (or None for all)</td></tr></table>
+<table border='1' style='border-collapse: collapse;'><tr><td rowspan="7" style="border-right: none;">dqmod</td><td rowspan="1" style="border-right: none;">val: float (default 0.0)</td><td rowspan="1" style="border-left: none;">Value to test against</td></tr><tr><td rowspan="1" style="border-right: none;">dq: integer (default 0)</td><td rowspan="1" style="border-left: none;">DQ bits to set</td></tr><tr><td rowspan="1" style="border-right: none;">mod: string (set, clear) (default 'set')</td><td rowspan="1" style="border-left: none;">Set or clear bits</td></tr><tr><td rowspan="1" style="border-right: none;">test: string (le, ge, gt, lt, always) (default 'le')</td><td rowspan="1" style="border-left: none;">Test to perform</td></tr><tr><td rowspan="1" style="border-right: none;">data: string (nominal, uncertainty) (default 'nominal')</td><td rowspan="1" style="border-left: none;">Data to test</td></tr><tr><td rowspan="1" style="border-right: none;">band: integer (default None)</td><td rowspan="1" style="border-left: none;">Band to test (or None for all)</td></tr><tr><td rowspan="1" style="border-right: none;">allbands: boolean (default False)</td><td rowspan="1" style="border-left: none;">Set or clear the bit(s) in all bands, regardless of bands tested</td></tr></table>
 
 <hr />
 <p>Automatically generated by generate_autodocs.py</p>
-<p>Date: 2026-03-05T22:20:48.599151</p></div>
+<p>Date: 2026-07-03T12:59:18.429440</p></div>
             </div>
         </div>
 
@@ -243,13 +260,14 @@ can be lost. (Issue #69)
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

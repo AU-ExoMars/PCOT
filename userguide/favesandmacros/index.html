@@ -1,0 +1,507 @@
+<!DOCTYPE html><html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>Favorites and macros - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container ">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../settings/" class="dropdown-item">Settings dialog</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../../autodocs/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../settings/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container ">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#favourites-and-macros" class="nav-link">Favourites and Macros</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#favourites" class="nav-link">Favourites</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#macros" class="nav-link">Macros</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#deleting-favourites-and-macros" class="nav-link">Deleting favourites and macros</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#importing-favourites-and-macros" class="nav-link">Importing favourites and macros</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#a-more-complex-example" class="nav-link">A more complex example</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#macro-parameters" class="nav-link">Macro parameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="favourites-and-macros">Favourites and Macros</h1>
+<p>Favourites and macros provide two complementary ways to reuse pieces of your dataflow graphs.</p>
+<ul>
+<li><strong>Favourites</strong> capture a single node together with its configuration. They are ideal for things like a commonly used expression node or a PCA node with settings you rely on.</li>
+<li><strong>Macros</strong> package up a set of connected nodes into a single, self-contained unit. In the graph they behave like ordinary nodes, but internally they expand to the full subgraph you saved.</li>
+</ul>
+<h2 id="favourites">Favourites</h2>
+<p>To create a favourite, right-click on a node in the graph and select
+"Save as favorite" from the menu. You will be asked for a name. When
+you click OK, the node and all its settings will be saved, and it will
+now appear in the "favourites" section of the palette.</p>
+<p>This section will not appear if you have no favourites, and unlike other
+sections it cannot be "collapsed."</p>
+<p>For example, if you create a PCA node and give it the standard settings
+for doing a decorrelation stretch:</p>
+<ul>
+<li>set mode to "Decorrelation stretch"</li>
+<li>set stretch/whitening to "stretch"</li>
+<li>turn on "Normalize RGB output"</li>
+<li>turn on "Apply hist equal to RGB"</li>
+</ul>
+<p>you can then right-click on the node and save it with the name "decorr stretch."
+Your palette will then look like this:
+<figure class="text-center"><a data-lightbox="favepalette.png" href="favepalette.png"><img alt="The palette with a new PCA favourite, &quot;decorr stretch&quot;" src="favepalette.png" /></a><figcaption class="figure-caption text-center">Figure: The palette with a new PCA favourite, "decorr stretch". Click on image to expand.</figcaption></figure></p>
+<p>Note that the favourite name includes the name of the node type automatically.</p>
+<p>Favourites are saved with the document and can be imported into other
+documents. They can also be saved in an archive which can be imported
+manually or automatically (see <a href="#below">Importing</a> below).</p>
+<h2 id="macros">Macros</h2>
+<p>Macros allow several connected nodes and their settings to be stored
+as if they were a single node. The nodes "inside" the macro can be connected
+to each other, and can also be connected to nodes outside the macro
+via special connector nodes.</p>
+<h3 id="an-example">An example</h3>
+<p>This is best understood by an example. Let's imagine we want to normalize
+every pixel in an RGB image so that it has the magnitude 1 when considered
+as a vector (that is, we're L2-normalizing the image). For each pixel:</p>
+<div class="arithmatex">
+<div class="MathJax_Preview">\begin{align}
+k &amp;= \sqrt{r^2 + g^2 + b^2}\\
+r' &amp;= r/k\\
+g' &amp;= g/k\\
+b' &amp;= b/k
+\end{align}</div>
+<script type="math/tex; mode=display">\begin{align}
+k &= \sqrt{r^2 + g^2 + b^2}\\
+r' &= r/k\\
+g' &= g/k\\
+b' &= b/k
+\end{align}</script>
+</div>
+<p>We can do that with nodes like this:</p>
+<p><figure class="text-center"><a data-lightbox="macros1.png" href="macros1.png"><img alt="Calculating a &quot;vector normalized&quot; pixel, input node omitted" src="macros1.png" /></a><figcaption class="figure-caption text-center">Figure: Calculating a "vector normalized" pixel, input node omitted. Click on image to expand.</figcaption></figure></p>
+<p>We might want to use this operation a lot, so it would be useful if it
+could work like a single node type we could drag from the palette.</p>
+<p>To do this, we need to create a macro. Once the macro is defined, we create
+a new <strong>instance</strong> of the macro by dragging it into our graph just like 
+any other node. Internally, this makes a copy of the graph (called the 
+"instance graph") which runs whenever the node runs.
+Any changes in the macro's <strong>prototype</strong> graph - the graph
+defining its internals - will be reflected in its instances.</p>
+<h3 id="creating-the-example-l2-normalization-macro">Creating the example L2-normalization macro</h3>
+<p>It's usual to create a macro by creating its nodes in the main graph,
+then cutting and pasting them into a new macro, so I'll walk you
+through those steps to create the above operation as a macro:</p>
+<p>Creating the operation as a graph:</p>
+<ul>
+<li>Create a new graph.</li>
+<li>Pull an RGB image into input 0 using the Input boxes,
+and create the two expression nodes as in the figure above to
+do the L2-norm of that image. <ul>
+<li>First node: <code>sqrt(a$R*a$R + a$G*a$G + a$B*a$B)</code></li>
+<li>Second node: <code>a/merge(b,b,b)</code></li>
+</ul>
+</li>
+</ul>
+<p>Creating the macro and its input/output connections:</p>
+<ul>
+<li>Now use the <strong>File/New Macro</strong> main menu option to create a new macro. This will
+open a new window with a yellow background to indicate we are in a macro
+prototype.</li>
+<li>Rename the macro with the "Rename macro" button in the global
+settings area to something like "L2 norm".</li>
+<li>Add an input to the macro with the "Add input" button. This creates a 
+special node in the prototype that brings data into the macro from the
+outside. Optionally rename this node by right-clicking on it in the graph and selecting
+the "Rename" option (as with renaming any node) and call it "img" or "input"
+or something else useful. This text will appear next to that input on the macro
+instance's node in the main graph.</li>
+<li>Macro inputs need to know what kind of data to expect: 
+double-click the node to open it, and set its type to "img".</li>
+<li>Add an output to the macro with "Add output" and set its type to "img"
+in a similar way.</li>
+</ul>
+<p>Copying in the operation:</p>
+<ul>
+<li>Return to the main graph, select the two nodes that perform the 
+operations, and cut them with Ctrl+X.</li>
+<li>Switch to the macro and paste the nodes with Ctrl+V.</li>
+</ul>
+<p>Connecting the inputs and outputs, and adding documentation:</p>
+<ul>
+<li>Connect the macro's input node to the first input of the first <em>expr</em> node (the square root) and
+to the first input of the second <em>expr</em> node (which forms the numerator of
+the division).</li>
+<li>Connect the output of the second <em>expr</em> node to the macro's output node.</li>
+<li>You may also wish to add a <em>comment</em> to the
+macro graph which says "DOC performs L2-normalisation on all pixels."
+Any comment starting with "DOC" followed by a space will pop up
+when the macro instance node's help is selected, as with any other node.</li>
+</ul>
+<p>The result should look like this:</p>
+<p><figure class="text-center"><a data-lightbox="macros2.png" href="macros2.png"><img alt="The L2 norm macro" src="macros2.png" /></a><figcaption class="figure-caption text-center">Figure: The L2 norm macro. Click on image to expand.</figcaption></figure></p>
+<div class="alert alert-info" role="alert">
+<p>Note that you won't get warnings about out-of-date nodes while in a macro,
+because these nodes never run - they are just copied. You also won't see bad connections
+(normally marked as red arrows)
+to outputs with no value (such as <em>expr</em> nodes which haven't run). Again, these nodes
+will never set their output type, so such warnings would be pointless.</p>
+</div>
+<h3 id="using-macros">Using macros</h3>
+<p>Once you have defined a macro, it will be available in the "macros"
+group of the palette. This appears at the bottom of the list.
+Like favourites, macro node buttons are different colour from normal
+node buttons.</p>
+<p>If you have followed the steps above, you can drag the "L2 norm" macro
+into your graph and use it like any other node. It will be saved with
+the document.</p>
+<h3 id="editing-macros-and-sink-nodes">Editing macros and "sink" nodes.</h3>
+<p>Once a macro has been created, it can be edited by opening its prototype
+graph. You can do this by double-clicking the macro's node and selecting
+"Open Prototype." Any changes made will be reflected in each macro
+instance (that is, each copy of the macro that's actually running inside
+the main graph).</p>
+<ul>
+<li>Open the prototype for the L2 norm macro as described above, and 
+create a <em>sink</em> node (from the "utilities" group). Add this to the 
+macro graph, and connect it to the output of the second <em>expr</em>.</li>
+<li>You should notice that the macro node's view now contains the normalised
+image.</li>
+</ul>
+<p>If there is a <em>sink</em> node inside the macro, its contents will show
+in each instance's node view.</p>
+<p>The macro prototype graph should look like this:</p>
+<p><figure class="text-center"><a data-lightbox="macros3.png" href="macros3.png"><img alt="The L2 norm macro with a sink" src="macros3.png" /></a><figcaption class="figure-caption text-center">Figure: The L2 norm macro with a sink. Click on image to expand.</figcaption></figure></p>
+<h2 id="deleting-favourites-and-macros">Deleting favourites and macros</h2>
+<p>Favourites and macros can be deleted from the palette using the 
+right-click menu on the relevant button. Any instances of a deleted
+macro will be deleted; favourites will remain (they are nodes in their
+own right).</p>
+<h2 id="importing-favourites-and-macros">Importing favourites and macros</h2>
+<p>It's possible to import from other PCOT documents by using 
+<strong>File / Import Macros and Favourites</strong> from the main menu. This will
+open a file dialog. Once you have selected a file, all the macros
+and favourites in that file will be shown and you can select those you 
+wish to import. If that item already exists it will be skipped, so you
+should delete items you wish to overwrite.</p>
+<h3 id="archives">Archives</h3>
+<p>It's often useful to build an archive of favourites and macros. You can
+easily do this by creating an empty PCOT document and importing items
+you like into it.</p>
+<p>The PCOT settings also allow a list of such archives to be specified,
+from which all items will automatically be imported when a new document
+is created. This can be found under Locations when you open the settings
+with Edit / Settings from the main menu.</p>
+<h2 id="a-more-complex-example">A more complex example</h2>
+<p><a href="calib/">This page</a>
+describes a more complex example which applies flatfielding
+and reflectance calibration using a Pancam Calibration Target.</p>
+<h2 id="macro-parameters">Macro parameters</h2>
+<p>Sometimes macros have numerical parameters. Consider the macro
+shown below, that performs a "direct decorrelation stretch" after Liu
+and Moore <sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>:</p>
+<div class="arithmatex">
+<div class="MathJax_Preview">\begin{align}
+r' &amp;= r - k \min(r, g, b)\\
+g' &amp;= g - k \min(r, g, b)\\
+b' &amp;= b - k \min(r, g, b)
+\end{align}</div>
+<script type="math/tex; mode=display">\begin{align}
+r' &= r - k \min(r, g, b)\\
+g' &= g - k \min(r, g, b)\\
+b' &= b - k \min(r, g, b)
+\end{align}</script>
+</div>
+<p><figure class="text-center"><a data-lightbox="directdecorr.png" href="directdecorr.png"><img alt="Direct decorrelation stretch" src="directdecorr.png" /></a><figcaption class="figure-caption text-center">Figure: Direct decorrelation stretch. Click on image to expand.</figcaption></figure></p>
+<p>This (pretty messy) macro has a parameter <span class="arithmatex"><span class="MathJax_Preview">k</span><script type="math/tex">k</script></span> which is brought into
+the graph by the <em>macro parameter</em> node on the right. When you open
+a macro instance's node, you'll now see this parameter can be edited:</p>
+<p><figure class="text-center"><a data-lightbox="directdecorr2.png" href="directdecorr2.png"><img alt="Direct decorrelation macro instance" src="directdecorr2.png" /></a><figcaption class="figure-caption text-center">Figure: Direct decorrelation macro instance. Click on image to expand.</figcaption></figure></p>
+<p>You can create a macro parameter inside a macro prototype graph thus:</p>
+<ul>
+<li>Click the the "Add parameter" button (near the add input/output buttons). This will
+create a new parameter node inside the prototype.</li>
+<li>Right click the node, select "Rename" and change the name of your parameter.</li>
+<li>Double clicking on the node to open an editor to change the type, description,
+range and default value. Parameters can be integer or float.</li>
+</ul>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>Liu, J.G., and Moore, J. (1996) Direct decorrelation stretch technique for RGB colour composition. International Journal of Remote Sensing, 17:5, 1005-1018.&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

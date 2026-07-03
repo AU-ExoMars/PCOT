@@ -13,18 +13,22 @@
         <title>Tutorial - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
 
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown active">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -177,7 +193,7 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#setting-up-the-camera-directory" class="nav-link">Setting up the camera directory</a>
+            <li class="nav-item" data-bs-level="2"><a href="#setting-up-the-cameras-and-reflectances-directories" class="nav-link">Setting up the cameras and reflectances directories</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -218,9 +234,9 @@ quickly but the basics will be the same.</p>
 <p>In this document, text written <mark>with a highlight like this</mark> is
 an instruction to follow.</p>
 <div class="alert alert-danger" role="alert">
-<p>Be aware that this is an early version and there are 
-no doubt a lot of serious problems! Also, the software is changing 
-very quickly, so it may not look exactly as it does in these pages.</p>
+<p>Be aware that the software is changing 
+very quickly, so it may not look exactly as it does in these pages. Different screenshots have been
+taken using different versions of PCOT, but the differences will be minor.</p>
 </div>
 <h2 id="preparation">Preparation</h2>
 <p>PCOT is primarily designed to work with multispectral images. For this tutorial
@@ -234,18 +250,26 @@ as <em>obj4-sand-subset.zip</em>. </p>
 of data. It is a subset of a larger image used in testing, and is shown below as an RGB image:</p>
 <p><figure class="text-center"><a data-lightbox="obj4-sand-subset.png" href="../obj4-sand-subset.png"><img alt="The example image (640nm, 550nm and 440nm bands)" src="../obj4-sand-subset.png" /></a><figcaption class="figure-caption text-center">Figure: The example image (640nm, 550nm and 440nm bands). Click on image to expand.</figcaption></figure></p>
 <p>Now you have this image you can <mark>start PCOT</mark>.</p>
-<h2 id="setting-up-the-camera-directory">Setting up the camera directory</h2>
+<h2 id="setting-up-the-cameras-and-reflectances-directories">Setting up the cameras and reflectances directories</h2>
 <p>Your data may come from a number of different cameras, and different
-cameras have different parameters and filter sets. PCOT needs to be able
-to find the files which describe these cameras. It does this when it starts
+cameras have different parameters and filter sets. You may also use different
+calibration targets (e.g. the PCT or a Macbeth/Babel Colorchecker, or just Spectralon patches) which have
+different reflectance values. PCOT needs to be able
+to find the files which describe these cameras and targets. It does this when it starts
 up.</p>
-<p>When it can't find these files, PCOT will pop up a dialog box asking
-if you want to set a camera directory. You should select either the 
-camera directory provided by your team, or the default camera directory -
-this will be the <code>cameras</code> directory inside the main PCOT directory.</p>
-<p>More cameras can be downloaded from the 
+<p>When it can't find these files, PCOT will pop up dialog boxes asking
+if you want to set these directories. You should either select the directories
+provided by your team, or use the default "cameras" and "reflectances" directories
+inside the PCOT installation.</p>
+<p>More cameras and reflectances can be downloaded from the 
 <a href="http://pcot.aber.ac.uk/">PCOT Cookbook site</a>, which also contains
-useful "recipes" for doing common operations.</p>
+useful "recipes" for doing common operations. </p>
+<p>You can change the locations of these directories - and many other things -
+from the <a href="/userguide/settings">settings dialog</a> which can be opened
+from the Edit menu.</p>
+<div class="alert alert-warning" role="alert">
+<p>Make sure you keep your camera files in a separate directory from the reflectances.</p>
+</div>
 <h2 id="introduction-to-the-user-interface">Introduction to the user interface</h2>
 <p>The image below shows the PCOT interface when the program has just been started,
 with text in red describing
@@ -254,7 +278,7 @@ each part.</p>
 <p>The window is divided into several areas:</p>
 <ul>
 <li>At the top, the <strong>input buttons</strong> each open one of PCOT's input windows.
-These describe how information is read into PCOT.</li>
+These describe how information is read into each of PCOT's four input channels.</li>
 <li>Below this and to the left is the <strong>node area</strong>, which will be empty
 on startup. Double-clicking on a node in the graph (see below) will
 open a detailed view for that node.
@@ -264,13 +288,15 @@ you can undock by double-clicking on the tab at the top of the view.</li>
 the document and their connections. A new document always has an <em>input 0</em> node,
 which brings input 0 into the graph.</li>
 <li>To the right of the graph is the <strong>palette</strong>, which consists of a number
-of sections which can be expanded or hidden. Each section a set of buttons, one for each node type. Drag a button onto the graph to create a new node of that type.</li>
+of sections which can be expanded or hidden. Each section has a set of buttons, one for each node type.
+Drag a button onto the graph to create a new node of that type. You can also search for nodes by name
+using the search box at the top.</li>
 <li>At the bottom is the <strong>log area</strong>, the <strong>status bar</strong>, and a set of
 <a href="../../userguide/globalcontrols/">global controls</a>.</li>
 </ul>
 <h2 id="working-with-graph-nodes">Working with graph nodes</h2>
 <p>Each node is shown as a box with input connections on the top and output connections on
-the bottom. To illustrate this, consider the following graph you've seen before:</p>
+the bottom, as shown in the following graph:</p>
 <p><figure class="text-center"><a data-lightbox="671438grad.png" href="../671438grad.png" name="671438grad"><img alt="R671_438 inset into source image RGB representation" src="../671438grad.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 inset into source image RGB representation. Click on image to expand.</figcaption></figure></p>
 <h3 id="node-boxes">Node boxes</h3>
 <p>Looking at a pair of nodes in the graph:
@@ -285,7 +311,8 @@ on inputs.</li>
 calculated (see below).</li>
 <li>Nodes can have a "display text" in blue. These show extra data, such as the output of a calculation in an <em>expr</em> node
 or the annotation given to a region of interest.</li>
-<li>Currently nodes without a display text also show the number of times they have been calculated as a debugging aid.</li>
+<li>Currently nodes without a display text also show the number of times they have been calculated.
+This appears in green, and is a debugging aid.</li>
 </ul>
 <h3 id="creating-new-nodes">Creating new nodes</h3>
 <p>This is done by <strong>clicking a node type button in the palette and dragging the button onto the graph.</strong> </p>
@@ -327,8 +354,8 @@ in the node area as before.</p>
 which can be edited.</p>
 <ul>
 <li>For <em>constant</em> nodes, the value in the box 
-will be the numeric output of the node. This node has no view, and double-clicking
-has no effect.</li>
+will be the numeric output of the node. This node has no view: double-clicking will
+have no effect.</li>
 <li>For <em>comment</em> nodes, the value in the box is a text comment that can help
 other users navigate the graph. Once edited, the box can be resized by
 clicking and dragging its bottom-right corner. The text will flow to fit
@@ -362,7 +389,7 @@ you extracted earlier</li>
 <p>You should see something like this:</p>
 <p><figure class="text-center"><a data-lightbox="inputenvi.png" href="../inputenvi.png" name="inputenvi"><img alt="An open ENVI input" src="../inputenvi.png" /></a><figcaption class="figure-caption text-center">Figure: An open ENVI input. Click on image to expand.</figcaption></figure></p>
 <h3 id="the-canvas">The Canvas</h3>
-<p>The right-hand side is a common component in PCOT known as a
+<p>The right-hand side of the input window is a common component in PCOT known as a
 <strong>canvas</strong> which will show the image selected. The canvas
 lets you modify how the RGB channels are mapped using the three combo boxes.
 Each box gives the band number, the input number and the wavelength. For
@@ -389,7 +416,8 @@ can be found <a href="/userguide/canvas">here</a>, but for now:</p>
 <li><mark>Click the <strong>spectrum</strong> button</mark> to open a spectrum view, and move
 the cursor over the image to show the spectrum at different pixels. You may
 need to resize the window, or drag the "double bar" which separates the
-image from the spectrum.</li>
+image from the spectrum. You can also change the size of the region over which the
+spectrum is sampled using the "spectrum region" control.</li>
 </ul>
 <h2 id="manipulating-an-image-obtaining-a-spectral-parameter-map">Manipulating an image: obtaining a spectral parameter map</h2>
 <p>Let's perform a simple manipulation on an image. Here we will generate
@@ -430,28 +458,33 @@ displaying</p>
 </code></pre>
 <p>This indicates that all three RGB channels shown in the canvas are getting
 their data from the 438 and 671 bands of input 0.</p>
-<h3 id="disconnecting-nodes-and-node-error-states">Disconnecting nodes and node error states</h3>
-<p><mark>Disconnect the input node</mark> by dragging the arrowhead from the <em>a</em> box and releasing it in empty space. This will cause an error:
-<figure class="text-center"><a data-lightbox="errornode.png" href="../errornode.png" name="errornode"><img alt="A node in an error state" src="../errornode.png" /></a><figcaption class="figure-caption text-center">Figure: A node in an error state. Click on image to expand.</figcaption></figure></p>
+<h3 id="disconnecting-nodes">Disconnecting nodes</h3>
+<p><mark>Disconnect the input node</mark> by dragging the arrowhead from the <em>a</em> box and releasing it in empty space. The node now has no input at
+<em>a</em> and so the output will be the "none" value, as shown below.</p>
+<p><figure class="text-center"><a data-lightbox="discoexpr.png" href="../discoexpr.png"><img alt="Disconnected *expr* node" src="../discoexpr.png" /></a><figcaption class="figure-caption text-center">Figure: Disconnected *expr* node. Click on image to expand.</figcaption></figure></p>
+<p>Now <mark>reconnect the node</mark>.</p>
+<h3 id="error-states-in-nodes">Error states in nodes</h3>
+<p>Now <mark>edit the expression in the <em>expr</em> node to read "a<span class="arithmatex"><span class="MathJax_Preview">671/a</span><script type="math/tex">671/a</script></span>430"</mark>
+You'll now see something like the image below:</p>
+<p><figure class="text-center"><a data-lightbox="errornode.png" href="../errornode.png"><img alt="Error in *expr* node" src="../errornode.png" /></a><figcaption class="figure-caption text-center">Figure: Error in *expr* node. Click on image to expand.</figcaption></figure></p>
 <p>The EXPR is the kind of error - EXPR is an error in expression
 parsing/execution. More details can be seen in the log window, which in this
 case reads </p>
-<pre><code class="language-txt">Error in expression: variable's input is not connected
+<pre><code class="language-txt">Error in expression: unable to get this wavelength from an image...
 </code></pre>
-<p>This is because there is no longer an image feeding into the <em>expr</em> node's input for variable <em>a</em>.
-Now <mark>reconnect the input node to the <em>expr</em> node</mark> to fix the error.</p>
+<p>This is because the image has no 430nm band.</p>
+<p><mark>Now change the expression back to <code>a$671/a$438</code></mark> so the node works again.</p>
 <h3 id="adding-a-region-of-interest">Adding a region of interest</h3>
 <p>It's a little hard to see what's going on, so we will add a region of interest.
 This will make the <em>expr</em> node treat the operation differently - only the area inside
-the rectangle will be <code>norm(a$671/a$438)</code>.
-Everywhere
+the rectangle will be <code>a$671/a$438</code>. Everywhere
 else in the image, the output will come from the left-hand side of the expression (the 671nm channel).
 The rules for ROIs are explained more fully <a href="../../userguide/principles">on this page</a>.</p>
 <p><mark>Open the <em>regions</em> section of the palette and add a <em>rect</em> node between the <em>input</em> and <em>expr</em> nodes</mark>
 (the latter of which will be
 labelled with its expression). Nothing will change, because the rectangle has not been set.
 <mark>Edit the <em>rect</em> node and draw a rectangle by clicking and dragging on the canvas.</mark>
-<mark>Set the scale to 5 pixels and type "671_438" in the Annotation box</mark>, something like this:</p>
+<mark>Set the scale to 5 pixels and type "671/438" in the Annotation box</mark>, something like this:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438b.png" href="../R671_438b.png" name="R671_438b"><img alt="R671_438 with a rectangle" src="../R671_438b.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle. Click on image to expand.</figcaption></figure></p>
 <p>Now the <em>expr</em> node shows this - only the rectangle has the 671/438 parameter, while the rest of
 the image shows the 671nm band. To see this, <mark>click on the <em>expr</em> tab</mark>:</p>
@@ -462,8 +495,8 @@ than those of the 671nm band.</p>
 <mark>try undocking the <em>rect</em> node and dragging it to a different part of the screen</mark> by double-clicking
 on the tab, so you can edit
 the rectangle while the <em>expr</em> output is visible. <mark>Dock it again by closing the undocked window</mark>.</p>
-<p>To make things more visible still, <mark>open the <em>data</em> section and add a <em>colourmap</em> node after the <em>expr</em> node and view it</mark>, clicking
-making sure <strong>Show ROIs</strong> is enabled on its canvas (ROIs are typically retained on derived
+<p>To make things more visible still, <mark>open the <em>data</em> section and add a <em>colourmap</em> node after the <em>expr</em> node and view it</mark>,
+making sure <strong>ROIs</strong> is enabled on its canvas (ROIs are typically retained on derived
 images):</p>
 <p><figure class="text-center"><a data-lightbox="R671_438d.png" href="../R671_438d.png" name="R671_438d"><img alt="R671_438 with a rectangle and colourmap" src="../R671_438d.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle and colourmap. Click on image to expand.</figcaption></figure></p>
 <p>The <em>colourmap</em> node creates a false colour image.
@@ -523,13 +556,14 @@ remote sensing payload."</a>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

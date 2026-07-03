@@ -13,18 +13,22 @@
         <title>The "expr" node for mathematical expressions - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
 
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown active">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -173,6 +189,10 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#the-expr-node" class="nav-link">The expr node</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#handling-unconnected-inputs" class="nav-link">Handling unconnected inputs</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#functions" class="nav-link">Functions</a>
               <ul class="nav flex-column">
               </ul>
@@ -220,8 +240,18 @@ with different bands (one visible light, one infra-red)
 are registered using the <em>manual register</em> node. They are then merged together using the
 <code>merge</code> function. The box shows this function, and also <code>IMG[12]</code> indicating that the
 result is a 12-band image.</p>
+<h2 id="handling-unconnected-inputs">Handling unconnected inputs</h2>
+<p>Any input which is not connected has the "none" value. You can test for this by using the <code>isnone</code> function.
+For example, the expression</p>
+<pre><code class="language-txt">ifelse(isnone(a),0.5,a)
+</code></pre>
+<p>will have the value 0.5 if <em>a</em> is not connected, otherwise it will have the value of <em>a</em>. There is a shorthand
+for this:</p>
+<pre><code class="language-txt">default(a,0.5)
+</code></pre>
+<p>which <em>a</em> if it has a value, but 0.5 otherwise (i.e. 0.5 is the default value for <em>a</em>).</p>
 <h2 id="functions">Functions</h2>
-<p>Merge is one of a large number of functions that <em>expr</em> supports, and more can be added
+<p><code>default</code> and <code>merge</code> are two of the large number of functions that <em>expr</em> supports, and more can be added
 using the <a href="/devguide/plugins/">plug-in mechanism</a>. Full details of built-in functions 
 can be found <a href="/autodocs/#expr-functions">in the autodocs</a></p>
 <h2 id="properties">Properties</h2>
@@ -241,7 +271,7 @@ the node, and is the authoritative documentation.</p>
 set the node to the new expression and perform it. The input can accept any type of data
 and the output type is determined when the node is run.</p>
 <p>The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
-or numeric values.</p>
+or numeric values. If an input is not connected it has the "none" value.</p>
 <p>The standard operators +,/,*,- and ^ all have their usual meanings. When applied to images they work in
 a pixel-wise fashion, so if <strong>a</strong> is an image, <strong>2*a</strong> will double the brightness. If <strong>b</strong> is also an image,
 <strong>a+b</strong> will add the two images, pixel by pixel. There are two non-standard operators: <strong>.</strong> for properties
@@ -284,7 +314,7 @@ and <strong>$</strong> for band extraction. These are described below.</p>
 <tr>
 <td>-A</td>
 <td>element-wise negation of A (can act on ROIs)</td>
-<td>50</td>
+<td>70</td>
 </tr>
 <tr>
 <td>A.B</td>
@@ -314,13 +344,25 @@ and <strong>$</strong> for band extraction. These are described below.</p>
 <tr>
 <td>!A</td>
 <td>element-wise 1-A (Zadeh's NOT operator)</td>
-<td>50</td>
+<td>80</td>
+</tr>
+<tr>
+<td>A &lt; B</td>
+<td>returns 1 if A is less than B (pixel-wise test if one argument is an image))</td>
+<td>60</td>
+</tr>
+<tr>
+<td>A &lt; B</td>
+<td>returns 1 if A is greater than B (pixel-wise test if one argument is an image))</td>
+<td>60</td>
 </tr>
 </tbody>
 </table>
 <p>All operators can act on images, 1D vectors and scalars
 with the exception of <strong>.</strong> and <strong>$</strong> which have images on the left-hand side and identifiers
 or integers on the right-hand side.</p>
+<p>Comparisons involving strict equality checks (equal, greater-or-equal, less-or-equal) have deliberately
+been omitted; rounding errors could cause problems.</p>
 <p>Those operators marked with <strong>(can act on ROIs)</strong> can also act on pairs of ROIs (regions of interest, see below).</p>
 <h3>Binary operations on image pairs</h3>
 <p>These act by performing the binary operation on the two underlying Numpy arrays. This means you may need to be
@@ -365,6 +407,14 @@ on bands in a single image.</p>
 taken from the image without an ROI. If both images have an ROI an error will result - it is likely that this
 is a mistake on the user's part, and doing something more "intelligent" might conceal this. The desired result
 can be achieved using expr nodes on ROIs and an importroi node.</p>
+<h3>Boolean values (true or false)</h3>
+<p>Some functions and operators work on boolean values, such as</p>
+<ul>
+<li>The | (or), &amp; (and) and ! (not) operators</li>
+<li>The comparison operators &lt; and &gt; which produce boolean output</li>
+<li>The <em>ifelse</em> function</li>
+</ul>
+<p>In PCOT, booleans are just numbers - any value greater than or equal to 0.5 is considered true.</p>
 <h3>Operations with vectors</h3>
 <p>Some functions can generate vectors, such as <code>mean</code> for getting the means of the bands, and <code>vec</code> for generating
 vectors by hand.</p>
@@ -568,7 +618,7 @@ not independent.</p>
 
 <hr />
 <p>Automatically generated by generate_autodocs.py</p>
-<p>Date: 2026-03-05T22:20:48.599151</p></div>
+<p>Date: 2026-07-03T12:59:18.429440</p></div>
             </div>
         </div>
 
@@ -576,13 +626,14 @@ not independent.</p>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

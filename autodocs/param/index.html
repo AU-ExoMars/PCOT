@@ -10,21 +10,25 @@
         <link rel="shortcut icon" href="../../img/favicon.ico">
     <meta name="robots" content="noindex,nofollow">
 
-        <title>example - PCOT Documentation</title>
+        <title>param - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
 
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -161,7 +177,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#example" class="nav-link">example</a>
+            <li class="nav-item" data-bs-level="1"><a href="#param" class="nav-link">param</a>
               <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="2"><a href="#description" class="nav-link">Description</a>
               <ul class="nav flex-column">
@@ -178,34 +194,13 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="example">example</h1>
+<h1 id="param">param</h1>
 <h2 id="description">Description</h2>
-<p>This object is not a node, but the singleton to which nodes of this type point to
-determine their behaviour.</p>
-<p>This docstring will form the help text for the node in the UI. Markdown is permitted
-and processed into HTML. Look at (say) XFormGradient for an example of how to write this.</p>
+<p>A parameter for a macro; or rather a connector for one. The displayName of the node is the name of the parameter
+    and should be set by the creating method</p>
 
 <hr />
 <h2 id="connections">Connections</h2>
-<h3 id="inputs">Inputs</h3>
-<table>
-<thead>
-<tr>
-<th>Index</th>
-<th>Name</th>
-<th>Type</th>
-<th>Desc</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>(none)</td>
-<td>img</td>
-<td>(none)</td>
-</tr>
-</tbody>
-</table>
 <h3 id="outputs">Outputs</h3>
 <table>
 <thead>
@@ -220,17 +215,17 @@ and processed into HTML. Look at (say) XFormGradient for an example of how to wr
 <tr>
 <td>0</td>
 <td>(none)</td>
-<td>img</td>
+<td>variant</td>
 <td>(none)</td>
 </tr>
 </tbody>
 </table>
 <h3 id="parameters">Parameters</h3>
-<table border='1' style='border-collapse: collapse;'><tr><td rowspan="2" style="border-right: none;">example</td><td rowspan="1" style="border-right: none;">parameter: float (default 0.0)</td><td rowspan="1" style="border-left: none;">Parameter 1</td></tr><tr><td rowspan="1" style="border-right: none;">parameter2: string (default 'default')</td><td rowspan="1" style="border-left: none;">Parameter 2</td></tr></table>
+<table border='1' style='border-collapse: collapse;'><tr><td rowspan="10" style="border-right: none;">param</td><td rowspan="10" style="border-right: none;">variant</td><td rowspan="10" style="border-left: none;">variant</td><td rowspan="5" style="border-right: none;">ptype = float</td><td rowspan="1" style="border-right: none;">ptype: string (float, int) (default 'float')</td><td rowspan="1" style="border-left: none;">type</td></tr><tr><td rowspan="1" style="border-right: none;">desc: string (default '')</td><td rowspan="1" style="border-left: none;">description</td></tr><tr><td rowspan="1" style="border-right: none;">min: float (default 0.0)</td><td rowspan="1" style="border-left: none;">min</td></tr><tr><td rowspan="1" style="border-right: none;">max: float (default 10.0)</td><td rowspan="1" style="border-left: none;">max</td></tr><tr><td rowspan="1" style="border-right: none;">default: float (default 0.0)</td><td rowspan="1" style="border-left: none;">default</td></tr><tr><td rowspan="5" style="border-right: none;">ptype = int</td><td rowspan="1" style="border-right: none;">ptype: string (float, int) (default 'int')</td><td rowspan="1" style="border-left: none;">type</td></tr><tr><td rowspan="1" style="border-right: none;">desc: string (default '')</td><td rowspan="1" style="border-left: none;">description</td></tr><tr><td rowspan="1" style="border-right: none;">min: integer (default 0)</td><td rowspan="1" style="border-left: none;">min</td></tr><tr><td rowspan="1" style="border-right: none;">max: integer (default 10)</td><td rowspan="1" style="border-left: none;">max</td></tr><tr><td rowspan="1" style="border-right: none;">default: integer (default 0)</td><td rowspan="1" style="border-left: none;">default</td></tr></table>
 
 <hr />
 <p>Automatically generated by generate_autodocs.py</p>
-<p>Date: 2026-03-05T22:20:48.599151</p></div>
+<p>Date: 2026-07-03T12:59:18.429440</p></div>
             </div>
         </div>
 
@@ -238,13 +233,14 @@ and processed into HTML. Look at (say) XFormGradient for an example of how to wr
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

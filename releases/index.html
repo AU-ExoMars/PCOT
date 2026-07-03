@@ -13,18 +13,22 @@
         <title>Releases - PCOT Documentation</title>
     
         <link href="../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../css/lightbox.min.css">
     <link rel="stylesheet" href="../css/site.css">
 
     
 
-        <script src="../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../gettingstarted/issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -168,6 +184,10 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#beta-releases" class="nav-link">Beta releases</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#0130-beta-2026-07-03-kenwyn-four-burrows" class="nav-link">0.13.0-beta 2026-07-03 KENWYN FOUR BURROWS</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -209,6 +229,55 @@ bit of info. You can look them up on the Megalithic Portal for more.</p>
 <h2 id="production-releases">Production releases</h2>
 <p>None</p>
 <h2 id="beta-releases">Beta releases</h2>
+<h2 id="0130-beta-2026-07-03-kenwyn-four-burrows">0.13.0-beta 2026-07-03 KENWYN FOUR BURROWS</h2>
+<p>Quite a lot in this one. We don't have HRC colour correction yet, but it's
+being worked on - it's a difficult problem (more accurately, getting it
+into PCOT without pulling in a library that's 20 times bigger than PCOT itself
+is difficult).</p>
+<ul>
+<li><a href="/userguide/favesandmacros">Favourites and macros</a> - save nodes with
+particular settings and also collections of nodes which work like a single node.
+Both favourites and macros can be saved to archives which can be loaded on startup.</li>
+<li>PCOT now also has Malvar-He-Cutler and Menon (DDFAPD) demosaicing algorithms.</li>
+<li>Demosaicing now uses the "classical" Bayer pattern names (e.g. RGGB) and
+not the rather weird OpenCV names.</li>
+<li><em>PCA</em> node does both principal component analysis and decorrelation
+stretches, and does so on all bands (not just the RGB representation).</li>
+<li><strong><em>decorrstretch</em> node deprecated</strong> - use <em>PCA</em> instead</li>
+<li>Search box for palette!</li>
+<li><a href="userguide/settings">Settings dialog</a> should make life easier for changing settings quickly.</li>
+<li>Unconnected <em>expr</em> inputs give a null datum rather than raising an
+exception.</li>
+<li><em>reflectance</em> node supports angle data (filter angle and <span class="arithmatex"><span class="MathJax_Preview">\phi</span><script type="math/tex">\phi</script></span>, <span class="arithmatex"><span class="MathJax_Preview">\theta</span><script type="math/tex">\theta</script></span> for target).</li>
+<li>Raw loader crops overlong data and warns.</li>
+<li><a href="/devguide/guppy">GUPPY</a>, the Guide to Uncertainty in PCOT Python - how to write code that
+propagates uncertainty.</li>
+<li>
+<p><code>TabData</code> is now <code>TabGeneric</code>, and if you use TaggedAggregate parameters
+in your node it will incorporate an editor for those parameters.</p>
+</li>
+<li>
+<p>Refactoring of the <code>func_wrapper</code> and <code>stats_wrapper</code> mechanisms for
+processing uncertainty.</p>
+</li>
+<li><code>genimg</code> datumfunc to quickly create images.</li>
+<li>Fixes to the <em>gen</em> node to make the pattern mode actually visible in the table columns.</li>
+<li>Better checking on "headless" setups (i.e. working on a server with no windowing system).</li>
+<li>New <code>config</code> subcommand for viewing/editing configuration from the command line.</li>
+<li>Better infinity/NaN handling when raising values to fractional powers (i.e. complex results).</li>
+<li>A lot of work on the system underlying the settings dialog: the
+<code>AggregateEditorDialog</code>; this can also be used for node and macro params.</li>
+<li>Comparison operators <code>&lt;</code> and <code>&gt;</code>, and <code>ifelse</code> and <code>isnone</code> datumfuncs.</li>
+<li>Icon on canvas reset button.</li>
+<li>Log window can clear all text.</li>
+</ul>
+<p>Site</p>
+<ul>
+<li><a href="https://maps.app.goo.gl/xAyB7ho1L7fWrxbM8">Google maps</a></li>
+<li><a href="https://maps.nls.uk/geo/explore/#zoom=17.6&amp;lat=50.29125&amp;lon=-5.14329&amp;layers=168&amp;b=osm&amp;o=100&amp;marker=50.291376,-5.143622">NLS map</a></li>
+<li>Barrow Cemetery in Cornwall, which straddles the old A30 just west of Chybucca.
+Three of the barrows lie to the south, and one to the north.</li>
+</ul>
 <h2 id="0120-beta-2026-03-04-joaney-how">0.12.0-beta 2026-03-04 JOANEY HOW</h2>
 <p>I've had to go quite a long way north to get a name I liked; this one's in
 Somerset. There is a minor backward compatibility issue (camera data) but I'll
@@ -392,7 +461,7 @@ there's a fort there because of the name (Cornish <em>dynas</em> is cognate with
 <h3 id="060-alpha-2023-09-11-drift-stones">0.6.0-alpha 2023-09-11 DRIFT STONES</h3>
 <ul>
 <li>uncertainty and error bit propagation in <em>expr</em> and all nodes </li>
-<li>Testing quality and propagation rules (see <a href="/userguide/principles">Principles</a>)</li>
+<li>Testing quality and propagation rules (see <a href="../userguide/principles/">Principles</a>)</li>
 <li>Test graphs for nodes and other high-level functionality</li>
 <li>Test nodes for those graphs</li>
 <li>Tabular output on spectrum and histogram nodes</li>
@@ -456,7 +525,7 @@ types to have operations defined on them</li>
 <li>Improved default RGB mapping in canvas</li>
 <li>Testing<ul>
 <li>Basics testing</li>
-<li>Testing of the operating principles (see <a href="/userguide/principles">Principles</a>)<ul>
+<li>Testing of the operating principles (see <a href="../userguide/principles/">Principles</a>)<ul>
 <li>Source rules</li>
 <li>ROI rules</li>
 </ul>
@@ -517,13 +586,14 @@ on MacOS pyinstaller)</li>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../search/main.js" defer></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

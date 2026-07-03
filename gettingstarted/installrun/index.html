@@ -13,18 +13,22 @@
         <title>Installing and running - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
 
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown active">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -250,8 +266,8 @@ PCOT as above:</p>
 <ul>
 <li>Open a bash shell</li>
 <li><strong>cd</strong> to the PCOT directory (which contains this file).</li>
-<li>Run the command <strong>conda create -n pcot python=3.8 poetry</strong>.
-This will create an environment called <strong>pcot</strong> which uses Python 3.8 and
+<li>Run the command <strong>conda create -n pcot python=3.10 poetry</strong>.
+This will create an environment called <strong>pcot</strong> which uses Python 3.10 and
 the Poetry dependency and packaging manager. It may take some time.</li>
 <li>Activate the environment with <strong>conda activate pcot</strong>.</li>
 <li>Now run <strong>poetry install</strong>. This will set up all the packages PCOT is
@@ -263,8 +279,8 @@ dependent on and install PCOT.</li>
 <ul>
 <li>Open the Anaconda PowerShell Prompt application from the Start Menu.</li>
 <li><strong>cd</strong> to the PCOT directory (which contains this file).</li>
-<li>Run the command <strong>conda create -n pcot python=3.8 poetry</strong>.
-This will create an environment called <strong>pcot</strong> which uses Python 3.8 and the Poetry dependency
+<li>Run the command <strong>conda create -n pcot python=3.10 poetry</strong>.
+This will create an environment called <strong>pcot</strong> which uses Python 3.10 and the Poetry dependency
 and packaging manager. It may take some time.</li>
 <li>Activate the environment with <strong>conda activate pcot</strong>.</li>
 <li>Now run <strong>poetry install</strong>. This will set up all the packages PCOT is dependent on and install
@@ -295,7 +311,7 @@ are testing a custom node.</p>
 <li>Open PyCharm and open the PCOT directory as an existing project.</li>
 <li>Open <strong>File/Settings..</strong> (Ctrl+Alt+S)</li>
 <li>Select <strong>Project:PCOT / Python Interpreter</strong></li>
-<li>If the Python Interpreter is not already Python 3.8 with something like <strong>anaconda3/envs/pcot/bin/python</strong><ul>
+<li>If the Python Interpreter is not already Python 3.10 with something like <strong>anaconda3/envs/pcot/bin/python</strong><ul>
 <li>Select the cogwheel to the right of the Python Interpreter dropdown and then select  <strong>Add</strong>.</li>
 <li>Select <strong>Conda Environment</strong>.</li>
 <li>Select <strong>Existing Environment</strong>.</li>
@@ -309,7 +325,7 @@ are testing a custom node.</p>
 <li>Select <strong>Edit Configurations...</strong> (or it might be <strong>Add Configuration...</strong>) from the configurations drop down in the menu bar</li>
 <li>Add a new configuration (the + symbol) and select <strong>Python</strong></li>
 <li>Set <strong>Script Path</strong> to <strong>PCOT/src/pcot/__main__.py</strong></li>
-<li>Make sure the interpreter is something like <strong>Project Default (Python 3.8 (pcot))</strong>, i.e. the Python interpreter of the pcot environment.</li>
+<li>Make sure the interpreter is something like <strong>Project Default (Python 3.10 (pcot))</strong>, i.e. the Python interpreter of the pcot environment.</li>
 </ul>
 </li>
 <li>You should now be able to run and debug PCOT.</li>
@@ -332,13 +348,14 @@ is not set, the username returned by Python's getpass module is used
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

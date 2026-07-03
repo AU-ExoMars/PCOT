@@ -13,18 +13,22 @@
         <title>Autodocs - PCOT Documentation</title>
     
         <link href="../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../css/lightbox.min.css">
     <link rel="stylesheet" href="../css/site.css">
 
     
 
-        <script src="../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown active">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="./" class="dropdown-item active" aria-current="page">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../gettingstarted/issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -149,7 +165,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../devguide/" class="nav-link">
+                                <a rel="next" href="../userguide/favesandmacros/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -206,61 +222,63 @@ script in the mkdocs directory.</p>
 <p>Nodes are the entities which make up a PCOT document's graph, taking
 inputs from various sources and manipulating them in various ways.</p>
 <ul>
-<li><a href="PCT_Patch_Detection">PCT Patch Detection</a></li>
-<li><a href="assignfilters">assignfilters</a></li>
-<li><a href="banddepth">banddepth</a></li>
-<li><a href="circle">circle</a></li>
-<li><a href="colorchecker">colorchecker</a></li>
-<li><a href="colourmap">colourmap</a></li>
-<li><a href="comment">comment</a></li>
-<li><a href="constant">constant</a></li>
-<li><a href="contrast_stretch">contrast stretch</a></li>
-<li><a href="croproi">croproi</a></li>
-<li><a href="crosscalib">crosscalib</a></li>
-<li><a href="curve">curve</a></li>
-<li><a href="decorr_stretch">decorr stretch</a></li>
-<li><a href="dqmod">dqmod</a></li>
-<li><a href="dummy">dummy</a></li>
-<li><a href="edge">edge</a></li>
-<li><a href="errortest">errortest</a></li>
-<li><a href="example">example</a></li>
-<li><a href="expr">expr</a></li>
-<li><a href="gen">gen</a></li>
-<li><a href="histequal">histequal</a></li>
-<li><a href="histogram">histogram</a></li>
-<li><a href="importroi">importroi</a></li>
-<li><a href="in">in</a></li>
-<li><a href="input_0">input 0</a></li>
-<li><a href="input_1">input 1</a></li>
-<li><a href="input_2">input 2</a></li>
-<li><a href="input_3">input 3</a></li>
-<li><a href="inset">inset</a></li>
-<li><a href="manual_register">manual register</a></li>
-<li><a href="mergetests">mergetests</a></li>
-<li><a href="multidot">multidot</a></li>
-<li><a href="normimage">normimage</a></li>
-<li><a href="offset">offset</a></li>
-<li><a href="out">out</a></li>
-<li><a href="painted">painted</a></li>
-<li><a href="pct">pct</a></li>
-<li><a href="pixtest">pixtest</a></li>
-<li><a href="poly">poly</a></li>
-<li><a href="rect">rect</a></li>
-<li><a href="reflectance">reflectance</a></li>
-<li><a href="roicull">roicull</a></li>
-<li><a href="roidq">roidq</a></li>
-<li><a href="roiexpr">roiexpr</a></li>
-<li><a href="scalartest">scalartest</a></li>
-<li><a href="sink">sink</a></li>
-<li><a href="spectrum">spectrum</a></li>
-<li><a href="stitch">stitch</a></li>
-<li><a href="stringtest">stringtest</a></li>
-<li><a href="striproi">striproi</a></li>
-<li><a href="tvl1_autoreg">tvl1 autoreg</a></li>
+<li><a href="PCA/">PCA</a></li>
+<li><a href="PCT_Patch_Detection/">PCT Patch Detection</a></li>
+<li><a href="assignfilters/">assignfilters</a></li>
+<li><a href="banddepth/">banddepth</a></li>
+<li><a href="circle/">circle</a></li>
+<li><a href="colorchecker/">colorchecker</a></li>
+<li><a href="colourmap/">colourmap</a></li>
+<li><a href="comment/">comment</a></li>
+<li><a href="constant/">constant</a></li>
+<li><a href="contrast_stretch/">contrast stretch</a></li>
+<li><a href="croproi/">croproi</a></li>
+<li><a href="crosscalib/">crosscalib</a></li>
+<li><a href="curve/">curve</a></li>
+<li><a href="customtabexample/">customtabexample</a></li>
+<li><a href="decorr_stretch/">decorr stretch</a></li>
+<li><a href="dqmod/">dqmod</a></li>
+<li><a href="dummy/">dummy</a></li>
+<li><a href="errortest/">errortest</a></li>
+<li><a href="expr/">expr</a></li>
+<li><a href="gen/">gen</a></li>
+<li><a href="histequal/">histequal</a></li>
+<li><a href="histogram/">histogram</a></li>
+<li><a href="importroi/">importroi</a></li>
+<li><a href="in/">in</a></li>
+<li><a href="input_0/">input 0</a></li>
+<li><a href="input_1/">input 1</a></li>
+<li><a href="input_2/">input 2</a></li>
+<li><a href="input_3/">input 3</a></li>
+<li><a href="inset/">inset</a></li>
+<li><a href="manual_register/">manual register</a></li>
+<li><a href="mergetests/">mergetests</a></li>
+<li><a href="multidot/">multidot</a></li>
+<li><a href="normimage/">normimage</a></li>
+<li><a href="offset/">offset</a></li>
+<li><a href="out/">out</a></li>
+<li><a href="painted/">painted</a></li>
+<li><a href="param/">param</a></li>
+<li><a href="pct/">pct</a></li>
+<li><a href="pixtest/">pixtest</a></li>
+<li><a href="poly/">poly</a></li>
+<li><a href="rect/">rect</a></li>
+<li><a href="reflectance/">reflectance</a></li>
+<li><a href="roicull/">roicull</a></li>
+<li><a href="roidq/">roidq</a></li>
+<li><a href="roiexpr/">roiexpr</a></li>
+<li><a href="scalartest/">scalartest</a></li>
+<li><a href="simpleexample/">simpleexample</a></li>
+<li><a href="sink/">sink</a></li>
+<li><a href="spectrum/">spectrum</a></li>
+<li><a href="stitch/">stitch</a></li>
+<li><a href="stringtest/">stringtest</a></li>
+<li><a href="striproi/">striproi</a></li>
+<li><a href="tvl1_autoreg/">tvl1 autoreg</a></li>
 </ul>
 <h2 id="expr-functions"><em>Expr</em> functions</h2>
 <p>Below are functions which can be used in the expression evaluation
-node, <a href="expr">expr</a>.</p>
+node, <a href="expr/">expr</a>.</p>
 <table>
 <thead>
 <tr>
@@ -310,20 +328,14 @@ node, <a href="expr">expr</a>.</p>
 <tr>
 <td>debayer</td>
 <td>img</td>
-<td>algorithm (bilinear),pattern (gb)</td>
-<td>Debayer an image. Only the first band of a multi-band image will be used.  Algorithms -  * bilinear : the default bilinear interpolation * EA : edge aware * VNG: variable number of gradients  Malvar / He / Cutler not yet supported.  Patterns - BG, GB, RG, GR. See OpenCV for more details.</td>
+<td>algorithm (bilinear),pattern (gbrg),negmethod (leave)</td>
+<td>Debayer an image. Only the first band of a multi-band image will be used.  Algorithms -  * bilinear : the default bilinear interpolation * EA : edge aware * VNG: variable number of gradients * MHC: Malvar / He / Cutler * Menon or DDFAPD: Menon's Demosaicing with Directional Filtering and A-Posteriori Decision    Patterns - RGGB, etc.</td>
 </tr>
 <tr>
-<td>decorrstretch</td>
-<td>img</td>
-<td>stretch (2.5),clip_percent (5)</td>
-<td>Perform a decorrelation stretch on an RGB image by applying a whitening transform with stretch.  This works by  * calculating the covariance matrix * calculating a transform to a space in which the diagonals of the covariance matrix are 1 and the   other elements are minimised (i.e. the bands are decorrelated) - so this is a form of PCA * applying that transform * applying a stretch factor to increase those diagonal variances - the principal components * apply the inverse transform * restore original image scaling * fix up the image mean * normalise each band after clipping a given percentile of outliers  <strong>Ignores DQ and uncertainty</strong></td>
-</tr>
-<tr>
-<td>dqset</td>
-<td>img,bits</td>
+<td>default</td>
+<td>val,deflt</td>
 <td></td>
-<td>sets DQ bits</td>
+<td>Provides a default value if val is None. If val is None, return deflt. Otherwise return val.</td>
 </tr>
 <tr>
 <td>flat</td>
@@ -344,6 +356,12 @@ node, <a href="expr">expr</a>.</p>
 <td>Flip an image vertically</td>
 </tr>
 <tr>
+<td>genimg</td>
+<td>width,height,val</td>
+<td></td>
+<td>Create a single-band image of the given width and height, with the given value (which can have uncertainty)</td>
+</tr>
+<tr>
 <td>getflats</td>
 <td>img</td>
 <td></td>
@@ -362,16 +380,22 @@ node, <a href="expr">expr</a>.</p>
 <td>Convert HSV to RGB colourspace. The result is H in [0:360), S in [0-1], V in [0-1].</td>
 </tr>
 <tr>
+<td>ifelse</td>
+<td>cond,true,false</td>
+<td></td>
+<td>If a condition (a single scalar value) is true (&gt;0.5) return the true parameter, selse return the false parameter.</td>
+</tr>
+<tr>
 <td>interp</td>
 <td>img,factor</td>
 <td>w (-1)</td>
 <td>Using trilinear interpolation, generate an image by interpolating between the bands of an existing image. If an ROI is attached, the image generated will be interpolated from the pixels in the ROI. The width of the image will be either given in an optional parameter, or will be the same as the input image.  WARNING - IS VERY SLOW</td>
 </tr>
 <tr>
-<td>makeunc</td>
-<td>v1,u1,v2,u2</td>
+<td>isnone</td>
+<td>val</td>
 <td></td>
-<td></td>
+<td>Returns 1 if the value is None, 0 otherwise.</td>
 </tr>
 <tr>
 <td>marksat</td>
@@ -506,18 +530,6 @@ node, <a href="expr">expr</a>.</p>
 <td>Calculate tangent of an angle in radians</td>
 </tr>
 <tr>
-<td>testf</td>
-<td>arg1,arg2</td>
-<td></td>
-<td>This "docstring" is mandatory in datumfuncs, because it contains the description and argument types.   The function calculates a+2*b, correctly combining sources and propagating uncertainty.</td>
-</tr>
-<tr>
-<td>testf2</td>
-<td>a</td>
-<td>b (2)</td>
-<td>Calculates a+b and a-b, creating a custom object to store that data.</td>
-</tr>
-<tr>
 <td>testimg</td>
 <td>index</td>
 <td>usetestfilters (0)</td>
@@ -551,7 +563,7 @@ node, <a href="expr">expr</a>.</p>
 </table>
 <h2 id="expr-properties"><em>Expr</em> properties</h2>
 <p>Below are properties which can be used in the expression evaluation
-node, <a href="autodocs/expr">expr</a>.
+node, <a href="expr/">expr</a>.
 Properties are names which can be used as identifiers on the
 right hand side of a "." operator, such as <em>a.w</em> to get the width of an
 image <em>a</em>.</p>
@@ -618,14 +630,14 @@ image <em>a</em>.</p>
 </table>
 <h2 id="input-and-output-parameters-for-the-parameter-file-batch-runner">Input and output parameters for the parameter file (batch) runner</h2>
 <p>Below are links to pages describing parameters for setting the inputs and outputs
-in batch files. See <a href="/userguide/batch">batch mode</a> for more details.</p>
+in batch files. See <a href="../userguide/batch">batch mode</a> for more details.</p>
 <ul>
 <li><a href="batchinputs">Input parameters</a></li>
 <li><a href="batchoutputs">Output parameters</a></li>
 </ul>
 <hr />
 <p>Automatically generated by generate_autodocs.py</p>
-<p>Date: 2026-03-05T22:20:48.599151</p></div>
+<p>Date: 2026-07-03T12:59:18.429440</p></div>
             </div>
         </div>
 
@@ -633,13 +645,14 @@ in batch files. See <a href="/userguide/batch">batch mode</a> for more details.<
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../search/main.js" defer></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

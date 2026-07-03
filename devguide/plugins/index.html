@@ -13,18 +13,22 @@
         <title>Writing PCOT plugins - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
 
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/lightbox-plus-jquery.min.js" defer></script>
         <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -42,8 +46,8 @@
                 <div id="navbar-collapse" class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -71,8 +75,8 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -106,10 +110,18 @@
 <li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="dropdown active">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -127,19 +139,23 @@
 <li>
     <a href="../nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
+                                    
+<li>
+    <a href="../guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
                                 </ul>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
-                            <li class="navitem">
+                            <li class="nav-item">
                                 <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
                             </li>
                         </ul>
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
@@ -372,7 +388,8 @@ pcot.config.addMainWindowHook(addMenus)
 (Nodes themselves are of type <code>XForm</code>, which stands for <em>transform</em> for
 historical reasons). Developing new <code>XFormType</code> subclasses is largely
 beyond the scope of this document, but you can learn a lot from looking at the
-<code>pcot.xforms</code> package and the modules therein. A commented example node can be found in <code>xforms/xformexample.py</code>.</p>
+<code>pcot.xforms</code> package and the modules therein. A commented example node
+can be found in <code>xforms/xformsimpleexample.py</code>.</p>
 <p>To create a new node type, declare a new subclass of <code>XFormType</code> and decorate
 it with the <code>@xformtype</code> decorator. This will make the type autoregister:
 the singleton will be constructed and added to the internal type registry.</p>
@@ -384,8 +401,10 @@ palette), and version. It will add the input and output connectors.</li>
 <li><strong>init(self, node)</strong> will initialise any private data in the node itself
 (which is an <code>XForm</code>). Don't confuse this with <code>__init__</code>!</li>
 <li><strong>createTab(self, node, window)</strong> will create a new node area (i.e. tab).
-Often, this can be a <code>TabData</code> which will look at the node's <code>out</code>
-attribute, which should be a <code>Datum.</code></li>
+Often, this can be a <code>TabGeneric</code> which will look at the node's <code>out</code>
+attribute, which should be a <code>Datum.</code>
+This tab class will also provide an editor for your node's parameters
+if those parameters are <a href="/devguide/nodeser/#using-taggedaggregates-to-serialise-nodes">TaggedAggregate parameters</a>.</li>
 <li><strong>perform(self, node)</strong> will actually perform the node's action, reading inputs 
 and setting outputs.</li>
 </ul>
@@ -399,7 +418,7 @@ import numpy as np
 
 from pcot.sources import SourceSet
 from pcot.xform import XFormType, xformtype, Datum
-from pcot.xforms.tabdata import TabData
+from pcot.xforms.tabgeneric import TabGeneric
 from pcot.imagecube import ImageCube
 
 import pcot.config
@@ -425,9 +444,11 @@ class XFormEdgeDetect(XFormType):
         self.addOutputConnector(&quot;&quot;, Datum.IMG)
 
     def createTab(self, n, w):
-        # there is no custom tab, we just use a data canvas. This expects &quot;node.out&quot; to be set to
-        # either None or a Datum.
-        return TabData(n, w)
+        # This expects &quot;node.out&quot; to be set to either None or a Datum.
+        # It can also look at the node's output 0 if you wish.
+        # If your node has TaggedDict parameters will automatically
+        # provide an editor for them.
+        return TabGeneric(n, w)
 
     def init(self, n):
         # No initialisation required.
@@ -457,10 +478,11 @@ class XFormEdgeDetect(XFormType):
 </code></pre>
 <h3 id="writing-custom-tabs">Writing custom Tabs</h3>
 <p>As noted above, a new <code>XFormType</code> subclass (i.e. a new node type)
-can often just use <code>TabData</code>, which will display the Datum stored on
+can often just use <code>TabGeneric</code>, which will display the Datum stored in
+the node's <code>out</code> attribute or in
 its first output (output 0). Sometimes, however, a custom tab needs to be
 written. This can be a complex task, but an example is given in
-<code>xformexample.py</code> in the <code>xforms</code> package. All the standard XFormTypes
+<code>xformcustomtabexample.py</code> in the <code>xforms</code> package. All the standard XFormTypes
 are in this package, so you can also look at them. </p>
 <p>The basic idea is:</p>
 <ul>
@@ -478,7 +500,7 @@ and write code to update the node from the tab in these methods, calling
 will change after an undo operation!)</p>
 <h3 id="using-canvas-in-custom-tabs">Using Canvas in custom tabs</h3>
 <p>Creating a Canvas programmatically is straightforward, and there is an example of this
-in <code>xformexample.py</code>. 
+in <code>TabExample</code> in <code>xformcustomtabexample.py</code>. 
 If you are creating a tab in Designer, you need to add a canvas as a QWidget which you then "promote"
 to a custom control (the canvas). In the promote dialog, the class should be <code>Canvas</code> and the
 header file <code>pcot.ui.canvas</code> (i.e. the package name). </p>
@@ -520,13 +542,14 @@ lists, dicts and tuples.</p>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
