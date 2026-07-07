@@ -23,6 +23,8 @@ conditionShortNames = {
     "someabsent": 3
 }
 
+conditionShortNamesByIndex = {v:k for k,v in conditionShortNames.items()}
+
 
 @xformtype
 class XFormROIDQ(XFormType):
@@ -174,7 +176,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
 
     def whenChanged(self, i):
         self.mark()
-        self.node.params.condition = conditionShortNames[i]
+        self.node.params.condition = conditionShortNamesByIndex[i]
         self.changed()
 
     def dqChanged(self):

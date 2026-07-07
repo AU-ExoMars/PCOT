@@ -1,5 +1,7 @@
 # How Values work
 
+Note - read this in conjunction with [GUPPY](guppy.md).
+
 Value is PCOT's fundamental type for working with uncertain numerical data.
 Values are triplets of:
 
@@ -10,7 +12,8 @@ Values are triplets of:
 These are usually scalar, but 1D vectors can also be created.
 
 As a user of PCOT you may never encounter Values, but they are used internally
-whenever any operations involving uncertainty are done. Here are the typical
+whenever any operations involving uncertainty are done. 
+Here are the typical
 situations where that occurs:
 
 ## Binary and unary operations on *Value* objects
@@ -32,7 +35,7 @@ Examples - the multiplication operator:
                      combineDQs(self, other))
 ```
 The AND operator:
-```
+```python
     def __and__(self, other):
         """The & operator actually finds the minimum (Zadeh fuzzy op)"""
         n = np.where(self.n > other.n, other.n, self.n)
@@ -70,7 +73,7 @@ returned, we just wrap that in a Datum.
 
 For other types - not Datum.NUMBER or Datum.IMG - other semantics methods will have been written. For example,
 the ROI types have binary operators which construct ROIBinop objects using dunder methods:
-```
+```python
     def regROIBinopSemantics(op, fn):
         """Used to register binops for ROIs, which support a subset of ops."""
         registerBinopSemantics(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
@@ -130,10 +133,32 @@ all Datum objects.
 
 ### Datumfuncs of single numeric/scalar arguments
 
-Functions of a single numeric or image Datum are sometimes written using an "inner wrapper", which will
+Functions of a single numeric or image Datum are sometimes written using the `func_wrapper` function
+in `pcot.datum`, which will
 turn imagecubes and numbers into Value objects in a similar way to how the semantic binop
 wrappers work for operations. It will also wrap the resulting Value in a Datum.
-An example is `pcot.datumfuncs.func_wrapper`. Here is the datumfunc `sin` in full:
+
+An example is `Datum.sin`, a method that finds the sine of a numeric or image Datum. Here is the method in full:
+```python
+    def sin(self):
+        return func_wrapper(lambda x: x.sin(), self)
+```
+The wrapper takes a function and the Datum on which perform the function. It
+returns a Datum. The function passed must take and return a Value. In this case, we use
+a lambda to call the Value class' `sin` method.
+
+* If the Datum is a Value (has type `Datum.NUMBER`), the wrapper will just call the function
+on the Value and wrap the returned value in a Datum.
+* If the Datum is an ImageCube (`Datum.IMG`), the wrapper will extract the mean, uncertainty and DQ arrays
+and put them into a Value and pass that to the function instead. If the returned value is a number, it will
+return that as a Datum. If it is an image it will splice it back into a copy of the original image (so that
+the function will only act within a region of interest if one is present) and return that.
+
+We don't need worry about whether the argument is an image or a scalar, because the func_wrapper
+will deal with it. However, func_wrapper can only deal with images and scalars.
+
+
+The datumfunc for `sin` simply delegates the operation to Datum:
 ```python
 @datumfunc
 def sin(a):
@@ -141,15 +166,13 @@ def sin(a):
     Calculate sine of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return func_wrapper(lambda xx: xx.sin(), a)
+    return a.sin()
 ```
-We don't need worry about whether the argument is an image or a scalar, because the func_wrapper
-will deal with it. However, func_wrapper can only deal with images and scalars.
 
 ### The stats wrapper
 
-Another datumfunc inner wrapper which can be used is stats_wrapper. This wraps a function
-which takes a (nominal,uncertainty,dq) tuple and returns another tuple of the same type.
+Another Datum wrapper which can be used is `stats_wrapper`. This wraps a function
+which takes a (mean,uncertainty,dq) tuple and returns another tuple of the same type.
 It does the following:
 
 * If provided with a numeric value, calls the wrapped function and creates a Value from the
@@ -158,17 +181,31 @@ returned data.
 wrapped function on the non-BAD values in each band. The results for each band - assumed to be
 scalar - are converted into a vector Value with one value for each band.
 
-This lets us write the `mean` like this:
-```
-@datumfunc
-def mean(val):
-    return stats_wrapper(val,
+This lets us write Datum's `mean` method like this:
+```python
+def mean(self):
+    return stats_wrapper(self,
         lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
 ```
 and it will work on scalar Values, vector Values and images - in the latter case, producing a vector
 Value.
 
 The `pooled_sd` function will take the nominal and uncertainty arrays and pool their variation into
-a single value. This is done using the method in 
-Rudmin, J. W. (2010) "Calculating the exact pooled variance" arXiv preprint arXiv:1007.1012. We assume
-that each value in the array was obtained from sample sets of the same size.
+a single value, as described in [GUPPY](guppy.md).
+
+The datumfunc is simple:
+```python
+@datumfunc
+def mean(val):
+    """
+    Find the mean and sd of a Datum. This does different things depending on what kind of Datum we are dealing with.
+    For a scalar, it just returns the scalar. For a vector, it returns the mean and sd of the vector. For an
+    image, it returns a vector of the means and sds of each channel.
+    Pixels with "bad" DQ bits will be ignored.
+
+
+    @param val:img,number:the value to process
+    """
+    return val.mean()
+```
+    

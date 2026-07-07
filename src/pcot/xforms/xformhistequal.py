@@ -4,7 +4,7 @@ from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.utils import image
 from pcot.xform import xformtype, XFormType
-from pcot.xforms.tabdata import TabData
+from pcot.xforms.tabgeneric import TabGeneric
 
 # perform equalisation with a mask. Unfortunately cv.equalizeHist doesn't
 # support masks.
@@ -14,7 +14,7 @@ from pcot.xforms.tabdata import TabData
 BINS = 2000
 
 
-def equalize(img, mask):
+def equalize_band(img, mask, bins=BINS):
     img = np.ma.masked_array(img, mask=~mask)
     mask = mask.astype(np.ubyte)
     # clip masked image
@@ -25,7 +25,7 @@ def equalize(img, mask):
     # get histogram; N bins in range 0-1. Set the weight of all unmasked
     # pixels to zero so they don't get counted.
 
-    hist, bins = np.histogram(img, BINS, weights=mask, range=[0, 1])
+    hist, bins = np.histogram(img, bins, weights=mask, range=(0, 1))
 
     # work out the cumulative dist. function and normalize it
     cdf = hist.cumsum()
@@ -41,6 +41,18 @@ def equalize(img, mask):
     i2 = (img * (BINS - 1)).astype(np.int32)
     # and apply it to the masked region of the image
     np.putmask(img, mask, cdf[i2].astype(np.float32))
+
+
+def equalize(img, mask, bins=BINS):
+    if len(img.shape) == 2:     # single band
+        equalized = img.copy()
+        equalize_band(equalized, mask, bins)
+    else:                       # multiple bands
+        lst = [x.copy() for x in image.imgsplit(img)]
+        for band in lst:
+            equalize_band(band, mask, bins)
+        equalized = image.imgmerge(lst)
+    return equalized
 
 
 @xformtype
@@ -59,7 +71,7 @@ class XformHistEqual(XFormType):
         self.params = TaggedDictType()  # no parameters
 
     def createTab(self, n, w):
-        return TabData(n, w)
+        return TabGeneric(n, w)
 
     def init(self, node):
         node.out = None
@@ -80,15 +92,8 @@ class XformHistEqual(XFormType):
             # the nice OpenCV equalizeHist function doesn't do masks.
             # So the equalize() function above does that.
 
-            # deal with 3-channel and 1-channel images
-            if img.channels == 1:
-                equalized = subimage.img.copy()
-                equalize(equalized, subimage.mask)
-            else:
-                lst = [x.copy() for x in image.imgsplit(subimage.img)]
-                for band in lst:
-                    equalize(band, subimage.mask)
-                equalized = image.imgmerge(lst)
+            # deal with n-channel and 1-channel images
+            equalized = equalize(subimage.img, subimage.mask)
 
             # make a copy of the image and paste the modified version of the subimage into it
             out = img.modifyWithSub(subimage, equalized)

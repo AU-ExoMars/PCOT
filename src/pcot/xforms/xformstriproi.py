@@ -1,7 +1,7 @@
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
-from pcot.xforms.tabdata import TabData
+from pcot.xforms.tabgeneric import TabGeneric
 
 
 @xformtype
@@ -22,7 +22,7 @@ class XformStripROI(XFormType):
     def createTab(self, n, w):
         # it doesn't use a custom tab - just the standard tab for
         # showing images (maybe later this will show other data types too)
-        return TabData(n, w)
+        return TabGeneric(n, w)
 
     def init(self, node):
         # the node stores no state data - the output image will be accessed by the tab.
@@ -42,5 +42,5 @@ class XformStripROI(XFormType):
             # will not respond to mapping changes
             out.mapping = node.mapping
             out.rois = []
-        # build a new Datum to hold the output, and output it. The TabData will read this.
+        # build a new Datum to hold the output, and output it. The generic tab will read this.
         node.setOutput(0, Datum(Datum.IMG, out))

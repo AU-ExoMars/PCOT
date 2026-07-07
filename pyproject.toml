@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pcot"
-version = "0.11.0-alpha"
+version = "0.13.0-beta"
 description = "PanCam Operations Toolkit"
 authors = ["Jim Finnis <jcf12@aber.ac.uk>"]
 license = "MIT"
@@ -9,7 +9,7 @@ keywords = ["calibration", "processing", "image", "research"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
 ]

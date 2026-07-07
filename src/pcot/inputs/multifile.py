@@ -4,6 +4,7 @@ import logging
 import os
 import re
 from typing import Any, Dict
+from pathlib import Path
 
 import PySide2
 from PySide2 import QtWidgets, QtGui
@@ -42,17 +43,20 @@ class MultifileInputMethod(InputMethod):
     def __init__(self, inp):
         super().__init__(inp)
         # directory we're looking at
-        self.dir = pcot.config.getDefaultDir('images')
-        if not os.path.isdir(self.dir):
-            self.dir = os.path.expanduser("~")
+        tmp = pcot.config.getDefaultDir('images')
+        self.dir = Path(tmp) if tmp is not None else None
+
+        if not self.dir or not self.dir.is_dir():
+            self.dir = Path.home()
+
         # files we have checked in the file list
         self.files = []
         # bit depth - how many bits are used in the data. For example, if the data is 16 bit and only 10 bits
         # are used, set this to 10. The data will then by divided by 1023 (2^10-1) rather than 65535 (2^16-1).
         # If it is None, the data is always divided by 65535 for 16 bit data, 255 for 8 bit.
         self.bitdepth = None
-        self.camera = pcot.config.get('default_camera')
-        self.filterpat = pcot.config.get('multifile_pattern')
+        self.camera = pcot.config.data.default_camera
+        self.filterpat = pcot.config.data.multifile_pattern
         self.filterre = None
         self.rawLoader = RawLoader(offset=0, bigendian=False)
 
@@ -70,6 +74,15 @@ class MultifileInputMethod(InputMethod):
         except re.error:
             self.filterre = None
             logger.error("Cannot compile RE!!!!")
+
+    def setRawLoader(self, loader):
+        if loader:
+            self.rawLoader = loader
+
+    def invalidate(self):
+        """Invalidates the internal cache for this method as well as clearing the output"""
+        self.cachedFiles = {}
+        super().invalidate()
 
     def readData(self):
         # we force the mapping to have to be "reguessed"
@@ -90,15 +103,16 @@ class MultifileInputMethod(InputMethod):
         return "Multifile"
 
     # used from external code. Filterpat == none means leave unchanged.
-    def setFileNames(self, directory, fnames, filterpat=None, camera=None) -> InputMethod:
+    def setFileNames(self, directory, fnames, filterpat=None, camera=None, bitdepth=None) -> InputMethod:
         """This is used in scripts to set the input method to a read a set of files. It also
         takes a camera name (e.g. PANCAM) and a filter pattern. The filter pattern is a regular
         expression that is used to extract the filter name from the filename. See the class documentation
-        for more information."""
+        for more information. We also accept bitdepth - None means the full depth is used."""
 
         self.dir = directory
         self.files = fnames
         self.camera = camera
+        self.bitdepth = bitdepth
         if filterpat is not None:
             self.filterpat = filterpat
         self.mapping = ChannelMapping()
@@ -109,7 +123,7 @@ class MultifileInputMethod(InputMethod):
 
     def serialise(self, internal):
         x = {
-            'dir': self.dir,
+            'dir': str(self.dir),
             'files': self.files,
             'bitdepth': self.bitdepth,
             'filterpat': self.filterpat,
@@ -123,7 +137,7 @@ class MultifileInputMethod(InputMethod):
         return x
 
     def deserialise(self, data, internal):
-        self.dir = data['dir']
+        self.dir = Path(data['dir'])
         self.files = data['files']
         self.bitdepth = data.get('bitdepth', None)
         self.filterpat = data['filterpat']
@@ -246,9 +260,13 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
 
         # if the method doesn't have a directory, reset to the default.
 
-        if self.method.dir is None or len(self.method.dir) == 0:
+        if self.method.dir is None:
             self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
+
+    def onClose(self):
+        super().onClose()
+        self.canvas.onClose()
 
     def applyPreset(self, preset):
         # see comments in presetPressed for why this is here and not in the input method
@@ -281,7 +299,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
     def loaderSettings(self):
         self.method.rawLoader.edit(self)
         # clear the cache, we'll need to reload those files!
-        self.method.cachedFiles = {}
+        self.method.invalidate()
         self.loaderSettingsText.setText(str(self.method.rawLoader))
 
     def onInputChanged(self):
@@ -331,13 +349,13 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         if self.method.dir != dr:  # if the directory has changed reset the selected file list
             self.method.files = []
             ## TODO self.method.type.clearImages(self.node)
-        self.dir.setText(dr)
+        self.dir.setText(str(dr))
         # get all the files in dir which are images
         try:
             self.allFiles = sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
                                     and IMAGETYPERE.match(f) is not None])
             # using the absolute, real path
-            self.method.dir = os.path.realpath(dr)
+            self.method.dir = Path(os.path.realpath(dr))
             # only set the default directory for images when this is called "manually" - typically in response
             # to the "get directory" button.
             if setDefaultDir:
@@ -347,6 +365,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             e = str(e)
             self.method.input.exception = str(e)
             ui.error(e)
+            self.method.files= []
+            self.method.dir = str(Path.home())
 
         # rebuild the model
         self.buildModel()
@@ -360,6 +380,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             # strings in the combobox are typically "10 bits" or "FulL"
             if s == "Full":
                 self.method.bitdepth = None
+                self.onInputChanged()
             else:
                 ll = s.split()
                 if len(ll) > 0:

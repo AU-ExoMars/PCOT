@@ -66,6 +66,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="allbands">
+            <property name="text">
+             <string>Set/clear bit in ALL bands</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="DQWidgetVertical" name="dqbits" native="true"/>
           </item>
          </layout>

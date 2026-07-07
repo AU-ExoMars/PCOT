@@ -285,10 +285,11 @@ class TabStitch(Tab):
 
         n = self.node
         for r in self.getSelected():
-            xx, yy = n.offsets[r]
+            item = n.order[r]   # get the actual item from the selected item index - we may have reordered them
+            xx, yy = n.offsets[item]
             xx += scale * x
             yy += scale * y
-            n.offsets[r] = int(xx), int(yy)
+            n.offsets[item] = int(xx), int(yy)
         if len(self.getSelected()):
             self.changed()
 

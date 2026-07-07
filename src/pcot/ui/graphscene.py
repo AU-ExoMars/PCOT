@@ -8,7 +8,7 @@ from typing import List, Optional
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, QPointF
 from PySide2.QtGui import QColor, QFont, QTransform, QPen, QBrush
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QInputDialog
 
 import pcot.datum as datum
 import pcot.ui as ui
@@ -274,6 +274,9 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         valignact = m.addAction("Align vertically")
         halignact = m.addAction("Align horizontally")
 
+        faveact = m.addAction("Save as favourite")
+        faveact.setToolTip("Save this node and its parameters as a favourite to drag from the palette")
+
         # only worth doing if there are menu items! Note that by now this is always true
         # but I'll leave the condition here.
         if not m.isEmpty():
@@ -305,6 +308,22 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                 s = self.scene()
                 if isinstance(s, XFormGraphScene):
                     s.alignH()
+            elif action == faveact:
+                self.createFavourite()
+
+    def createFavourite(self):
+        from pcot.xforms.favourite import Favourite
+        # dialog to get name
+        name,ok  = QInputDialog.getText(self.window(), "Favourite", "Enter favourite name:",
+                                   QtWidgets.QLineEdit.Normal, "")
+        if name and ok and len(name):
+            doc = self.scene().graph.doc
+            if name in doc.favourites:
+                ui.warn("Can't create favourites with duplicate names, sorry!")
+                return
+            fav = Favourite(name=name, node=self.node)
+            doc.favourites[name]=fav
+            ui.mainwindow.MainUI.rebuildPalettes(doc=doc)
 
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):
@@ -699,7 +718,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     x1 = x1 + outsize * (output + 0.5)
                     x2 = x2 + insize * (inputIdx + 0.5)
                     y1 += n1.h
-                    compat = datum.isCompatibleConnection(outtype, intype)
+                    compat = datum.isCompatibleConnection(outtype, intype, self.graph.isMacro)
 
                     #                    if not compat:
                     #                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")
@@ -736,14 +755,19 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     ui.log(f"Performing {n.debugName()}")
                     b = 100
                     g = 100
-                elif n.outdated:    # child nodes of more recently run parents.
+                elif n.outdated and not self.graph.isMacro:
+                    # out-of-date node recolouring: child nodes of more recently run parents in non-macros!
                     b //= 2
                 n.rect.setBrush(QColor(r, g, b))
                 r, g, b = (0, 0, 0) if n.enabled else (255, 0, 0)
                 rect_pen = QPen(QColor(r,g,b))
                 n.rect.setPen(rect_pen)
 
-                n.rect.outdatedWarning.setVisible(n.outdated)
+                if self.graph.isMacro:
+                    # we never warn about out-of-date nodes in macros because they never run!
+                    n.rect.outdatedWarning.setVisible(False)
+                else:
+                    n.rect.outdatedWarning.setVisible(n.outdated)
 
                 r, g, b = n.type.getTextColour(n) if n.enabled else (255, 0, 0)
                 n.rect.text.setColour(QColor(r, g, b))

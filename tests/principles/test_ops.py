@@ -312,7 +312,8 @@ def test_unconnected_input_binop():
         doc.run()
         out = expr.getOutputDatum(0)
         assert out is Datum.null
-        assert expr.error.message == "variable's input is not connected"
+        # And we're not erroring the expr any more
+        #   assert expr.error.message == "variable's input is not connected"
 
 
 def test_null_datum_input_binop():
@@ -361,3 +362,5 @@ def test_null_image_input_binop():
         out = expr.getOutputDatum(0)
         assert out is Datum.null
         assert expr.error.message == "cannot perform binary operation on None image"
+
+

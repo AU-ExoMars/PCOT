@@ -8,8 +8,10 @@ from pcot.subcommands.subcommands import \
 
 # import the subcommand modules - these should only import from other modules locally.
 import pcot.subcommands.lscams
-import pcot.subcommands.gencam
-import pcot.subcommands.parcutils
 import pcot.subcommands.config
 import pcot.subcommands.batch
+import pcot.subcommands.parcutils
+import pcot.subcommands.gencam
+import pcot.subcommands.genrefl
+import pcot.subcommands.lsrefls
 

@@ -101,9 +101,8 @@ class datumfunc:
         # up to the first @param line.
         if "@param" in docstring:
             descs = docstring.split("@param")
-            # remove leading and trailing whitespace from lines in the description, and then remove
-            # all line breaks (because this will be turned into a Markdown table cell)
-            self.description = " ".join([x.strip() for x in descs[0].split('\n')])
+            # remove leading and trailing whitespace from lines in the description.
+            self.description = inspect.cleandoc(descs[0])
             # now we can parse the parameter descriptions
             for d in descs[1:]:
                 # split the parameter description into three parts - the parameter name,

@@ -22,7 +22,8 @@
 
 import os
 import sys
-from typing import List
+from pathlib import Path
+from typing import List, Tuple
 
 import numpy as np
 
@@ -141,7 +142,7 @@ class ENVIHeader:
             self.ignoreValue = None
 
 
-def load(fn):
+def load(fn:Path|str) -> Tuple[ENVIHeader, np.ndarray]:
     """Takes the ENVI header name. Actually loads the envi, returning a tuple of (header, ndarray)"""
 
     if not fn:
@@ -152,7 +153,11 @@ def load(fn):
     (path, _) = os.path.splitext(fn)
 
     datfile = None
-    for x in ['.img', '.dat', '.IMG', '.DAT']:
+    FILETYPES = ['.img','.dat']
+    # so we get [format1,FORMAT1,format2,FORMAT2...]. Nested comprehension.
+    FILETYPES = [y for x in FILETYPES for y in (x,x.upper())]
+
+    for x in FILETYPES:
         if os.path.isfile(path + x):
             datfile = path + x
             break

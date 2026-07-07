@@ -111,7 +111,7 @@ doc.run()
 # get the output of the spectrum node, which will be a Datum,
 # and dereference the Datum, ensuring that the data is of the right type.
 # The result will be a Table object.
-output = specnode.getOutput(0, Datum.DATA)
+output = specnode.getOutput(0, Datum.TABLE)
 
 # print the table as CSV.
 print(output)

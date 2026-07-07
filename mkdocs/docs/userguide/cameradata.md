@@ -1,29 +1,28 @@
-# Camera data
+# Camera and reflectance target data
 
 Each camera used with PCOT has different filters and other associated data.
 PCOT needs to know about these, and stores them in camera data files.
 These are in PCOT's archive format and so have the PARC extension.
 
+Similarly, reflectance targets you calibrate against have data, such
+as spectra for each patch.
+
 When you start PCOT for the first time 
 you will need to tell it where to find these files. PCOT will load all
-the camera files from the provided directory, storing them under
-names given in the files themselves.
+the camera and reflectance files from the provided directories,
+storing them under names given in the files themselves.
 
-## Obtaining camera files
+## Obtaining camera and reflectance files
 
-Initial version of the files are stored in the PCOT repository with
-PCOT itself, in the `cameras` directory. For example, a file for PANCAM
-can be found in `PCOT/cameras/pancam.parc`. Currently these files hold
-very little calibration data, just the filter information.
+You should be able to download camera and reflectance files containing full
+data for AUPE and PanCam from the [PCOT Cookbook](https://pcot.aber.ac.uk) site.
 
-You should be able to download camera files containing full
-data for AUPE and PanCam
-from the [PCOT Cookbook](pcot.aber.ac.uk) site. Data will be added
-to this server when it becomes available.
-
+Store the camera files in a separate directory from the reflectances.
+In my own system, I've created `cameras` and `reflectances` directories
+in my PCOT install directory.
 
 The rest of this page describes how to make your own data files if you
-are working with a new camera.
+are working with a new camera or target.
 
 ## Creating camera files
 
@@ -70,6 +69,47 @@ filters:
     description: "Green broadband"
 (and so on)
 ```
+
+## Filter response data
+
+As well as the above parameters, filters typically have a CSV file containing filter response data
+at each wavelength.
+You should add a "response" field to the filter in this case, with the name of the file. For example:
+
+```yaml
+  G11:
+    cwl: 950
+    fwhm: 50
+    position: R10
+    transmission: 0.994
+    description: Medium band infrared
+    response: ../wac_filters/Geol 950_50.csv
+```
+In the CSV file, the lines can be in one of two forms. In simple data, it is just wavelength and response at that
+wavelength. For example:
+```csv
+wavelength,response
+200,0.0
+250,10.0
+```
+In more complex data each wavelength has a different response at different angles. Here, the first column is the wavelength
+and the remaining columns are the responses at different angles. The angles themselves are extracted from the header.
+For example:
+```csv
+Wavelength (nm),0degs,3degs,6degs,9degs,12degs,15degs,18degs,21degs,24degs,27degs,30degs
+761,0.0534,0.0581,0.0756,0.071,0.0838,0.1026,0.1114,0.1513,0.1563,0.1915,0.3277
+762,0.0539,0.0543,0.0718,0.0757,0.0995,0.0858,0.1162,0.1539,0.1599,0.1947,0.3684
+```
+The system will extract any numerical angles from the header, disregarding other text, but the
+angles must be in degrees.
+
+There are two other important fields that may be added to the filter definition:
+
+* ```response_percentage``` indicates that the filter responses are percentages. This is true by default,
+and setting it to false says that the responses are in the range 0-1.
+* ```response_clip_percentage``` tells the system how to deal with filter responses that are greater than 100%. 
+Usually this will cause an error. If this is set to a value, the responses will be clipped at this level.
+This will cause a warning when the data is loaded and will be visible in the Show Filters dialog.
 
 ## Flatfield data
 
@@ -152,7 +192,7 @@ flats:
       preset: pancam-rawloader  # use this multifile preset for loading PANCAM files
 ```
 where the preset has been created in the multifile input. However, It's best to specify the data fully rather than risk another user not having the preset when
-trying to reconstruct the data. See the [multifile docs](/userguide/multifile.md) for more details on presets for loading binary
+trying to reconstruct the data. See the [multifile docs](multifile.md) for more details on presets for loading binary
 files. 
 
 ### Remapping filter names in flatfield data
@@ -176,51 +216,84 @@ Note that every filter position must be listed in the `directory_map` dictionary
 
 ## Reflectance data
 
-@@@warn
-This section is likely to change in the future as reflectance data becomes more complex!
-@@@
+Reflectance data is also stored in `.parc` files, and these are created by the `pcot genrefl` command in a similar
+manner, from a YAML file and some extra data.
 
-You can store the reflectance data for each filter in the camera data file for a given calibration target.
-To do this, you need to add a `reflectance` section to the YAML file, like this:
+### Simple reflectances
+Simple reflectance data records the spectrum of each patch at a single angle only. We typically use it
+for lab targets such as Spectralon patches or the Macbeth/Babel ColorChecker. The YAML file looks like this:
 
 ```yaml
-reflectance:
+name: Spectralon
+date: 2026-01-14
+author: Jim Finnis <jcf12@aber.ac.uk>
 
-  # PCT Colourimetry data from this directory:
-  # ABU-Exomars - Colourimetry\2023-11-21_colour_targets\pct\*-full-br\*BS* images
+short: Spectralon patches
+description: |
+  Data captured from spectralon patches
 
-  PCT: lwac_from_colourimetry_pct.csv
-  
-  # reflectance data from the Babelcolour ColourChecker dataset
-  # https://babelcolor.com/colorchecker-2.htm#CCP2_data
-  
-  macbeth: lwac_from_babelcolour_colorchecker.csv
+format: simple
+
+file: spectralon_refl.csv
 ```
-The CSV files contain the reflectance per filter for each patch in the target, with the
-following columns:
-
-* `ROI`: (region of interest) the name of the patch in the target
-* `filter`: the name of the filter
-* `n`: the mean of the reflectance for that patch in that filter
-* `u`: the uncertainty in the reflectance for that patch in that filter
-
-Here are the first few lines of the `lwac_from_colourimetry_pct.csv` file:
-
-```csv
-ROI,filter,n,u
-NG4,C03L,0.07009,0.0052
-NG4,C02L,0.07165,0.00442
-NG4,C01L,0.07126,0.00565
-NG4,G0a,0.07174,0.0043
-NG4,G0b,0.06581,0.00508
-NG4,G0c,0.07276,0.00456
+and the referenced CSV file like this:
+```
+patch,wavelength,mean,sd
+S20,250,0.2007,0.0
+S20,251,0.2004,0.0
+S20,252,0.2001,0.0
+S20,253,0.1996,0.0
 ...
+S99,250,0.9725,0.0
+S99,251,0.9723,0.0
+S99,252,0.9737,0.0
+S99,253,0.9742,0.0
+S99,254,0.9741,0.0
+S99,255,0.9745,0.0
 ```
+with entries for each patch at every wavelength (and the same wavelengths for all patches). 
+The reflectances should in the range 0-1.
+
+### Complex reflectance data
+
+This is data in which each patch has a different response at different angles, typically
+given as $(\phi,\theta)$ where $\phi$ is the azimuth and $\theta$ is the polar angle.
+
+@@@warn
+This format is currently temporary; I refer to it as "Jack's format" because the data
+comes from processing Jack Langston's data as little as possible (there's a lot of it!)
+@@@
+
+Instead of a single `file` element, the YAML file has a `patches` map. This gives the directory
+in which the data for each patch is stored. Here's an example:
+```yaml
+patches:
+    NG4: black
+    Pyroceram: white
+    BG18: green
+    WCT2065: brown
+    NG11: grey
+    RG610: red
+    BG3: blue
+    OG515: yellow
+```
+The keys are the patch names, the values are the directories.
+
+Within each patch directory are subdirectories for each $\phi$ angle. These have names in the form
+`Phi_angle` where `angle` is `00` for zero or some other angle in degrees (e.g. `Phi_00`, `Phi_90`, `Phi_210`).
+
+Within each of these $\phi$ directories is a large number of `.sed` files, each named `*_scannumber.sed` (where
+`*` can be anything). The scan number maps onto $\theta$:
+$$
+\theta = 5n-80
+$$
+Each `.sed` file is directly taken from the RS-3500 instrument; we use the Reflect. (reflectance) percentage field.
+
 
 ## Listing camera data using PCOT
 
 @@@info
-Some of this information is duplicated in [the multifile input docs ](/userguide/multifile/)
+Some of this information is duplicated in [the multifile input docs ](multifile.md)
 @@@
 
 You can find out which cameras are available and what data they have using the `lscams` subcommand:
@@ -247,6 +320,17 @@ run
 ```commandline
 pcot lscams -fl AUPE_LEFT
 ```
+
+## Listing reflectance data using PCOT
+
+Similarly, the `lsrefls` command will show the reflectance data the system knows about. The basic command
+lists the reflectances, and providing an argument will show only that target. Options are:
+
+* `-l` will show a long-format result with all patch details and the angles stored
+* `-p` will plot the reflectances (at $\phi=0$ and $\theta=0$)
+* `-F` will take a filename rather than a reflectance target name
+
+
 
 
 ## Further work

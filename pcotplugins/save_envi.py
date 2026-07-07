@@ -16,11 +16,11 @@ def test(w):
         return
     node = sel[0]
 
-    directory = os.path.expanduser(pcot.config.getDefaultDir('pcotfiles'))
+    directory = os.path.expanduser(pcot.config.getDefaultDir('savedimages'))
     print(f"directory is {directory}")
     res = QtWidgets.QFileDialog.getSaveFileName(w,
                                                 "ENVI file ",
-                                                os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
+                                                directory,
                                                 "ENVI files (*.hdr)",
                                                 options=pcot.config.getFileDialogOptions())
     if res[0] != '':

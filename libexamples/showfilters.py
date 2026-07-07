@@ -5,16 +5,9 @@ is a colourised representation of the band, where the colour is an RGB
 approximation of the filter colour. Used primarily for outreach.
 """
 
-
-
-import numpy as np
-
-from pcot import dq
-from pcot.datum import Datum
-from pcot.value import Value
-import pcot.datumfuncs as df
+from pcot.cameras.filters import wav2RGB
 from pcot.dataformats import load
-from pcot.filters import wav2RGB
+from pcot.datum import Datum
 from pcot.datumfuncs import merge
 
 d = load.envi("/media/xfer/PCOTdata/RStar_AUPE/AUPE_LWAC_Caltarg_RStar.hdr")

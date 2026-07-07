@@ -107,7 +107,7 @@ class PDS4InputMethod(InputMethod):
 
             # generate a list of PDS4Product objects
             self.products = ProductList(products)
-            pcot.config.setDefaultDir('images', self.dir)
+            pcot.config.setDefaultDir('images', Path(self.dir))
             pcot.config.save()
 
     def setProducts(self, products: List[DataProduct]) -> InputMethod:
@@ -149,7 +149,7 @@ class PDS4InputMethod(InputMethod):
              'mult': self.multValue,
              'selected': self.selected,
              'products': self.products.serialise() if self.products is not None else None,
-             'dir': self.dir,
+             'dir': str(self.dir) if self.dir is not None else None,
              'mapping': self.mapping.serialise()}
         if internal:
             x['out'] = self.out
@@ -162,7 +162,7 @@ class PDS4InputMethod(InputMethod):
             self.recurse = data['recurse']
             self.selected = data['selected']
             self.products = ProductList.deserialise(data['products']) if data['products'] is not None else None
-            self.dir = data['dir']
+            self.dir = Path(data['dir']) if data['dir'] is not None else None
             self.mapping = ChannelMapping.deserialise(data['mapping'])
             if internal:
                 self.out = data['out']
@@ -224,7 +224,7 @@ class PDS4ImageMethodWidget(MethodWidget):
             d = pcot.config.getDefaultDir('images')
             d = '.' if d is None or d == '' else d
             self.method.dir = d
-        self.fileEdit.setText(self.method.dir)
+        self.fileEdit.setText(str(self.method.dir))
 
         self.recurseBox.setCheckState(Qt.Checked if self.method.recurse else Qt.Unchecked)
 
@@ -263,6 +263,10 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.populateTableAndTimeline()
         self.showSelectedItems()
         self.updateDisplay()
+
+    def onClose(self):
+        super().onClose()
+        self.canvas.onClose()
 
     def getProducts(self):
         """get the list of products from the method's ProductList.

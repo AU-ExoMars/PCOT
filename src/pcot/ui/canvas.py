@@ -3,28 +3,27 @@ import logging
 import math
 import os
 import platform
-import sys
-import time
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 
 import cv2 as cv
 import numpy as np
 from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt, QSize, QTimer
-from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont
-from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu
+from PySide2.QtCore import Qt, QTimer, QPoint
+from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
+from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel
 
 import pcot
+import pcot.dq
 import pcot.ui as ui
 from pcot import canvasnormalise, dq
+from pcot.assets import getAssetAsFile
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.collapser import Collapser, CollapserSection
 from pcot.ui.spectrumwidget import SpectrumWidget
-import pcot.dq
 from pcot.utils.deb import Timer
+from pcot.utils.maths import pooled_sd
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
@@ -35,32 +34,81 @@ logger = logging.getLogger(__name__)
 NUMDQS = 3
 
 
+class SpectrumCircleOverlay(QtWidgets.QWidget):
+    """This widget overlays the inner canvas, and is forced to be
+    the same geometry. We use it to draw an overlay for the spectrum circle,
+    potentially we could use it for other stuff"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.radius = 10
+        self.center = QPoint(0, 0)
+
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+    def set_radius(self, rad):
+        """Radius in widget coordinates. It's actually edge width + 1. For example, if the "radius" is 2,
+        we render a 5x5 square (2 each side of the centre)"""
+        self.radius = rad
+        self.update()
+
+    def set_center(self, pos):
+        """Pixel position in widget coordinates"""
+        self.center = pos
+        self.update()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(QPen(Qt.red, 2))
+        x,y = self.center.toTuple()
+        r = self.radius
+        p.drawEllipse(x, y, 2,2)
+        p.drawRect(x-r,y-r, r*2,r*2)
+
+
 class PersistBlock:
     """This is the block owned by a node which has a canvas, to store data which is persisted
     for the canvas only."""
     showROIs: bool  # should we show all ROIs and not just the ones defined in this node?
     normToCropped: bool  # boolean, should we normalise to only the visible part of the image?
     normMode: int  # normalisation mode e.g. NormToRGB, see canvasnormalise.py
+    specCursorSize: int # size of spectrum cursor
     dqs: List[CanvasDQSpec]  # settings for each DQ layer
 
     def __init__(self, d=None):
         """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
         of these objects"""
         if d is None:
-            self.showROIs = True
-            self.dqs = [CanvasDQSpec(showBad=(x == 0)) for x in range(NUMDQS)]  # 3 of these set to defaults
-            self.normToCropped = False
-            self.normMode = canvasnormalise.NormToImg
-        else:
+            d = {}  # create an empty dict to "deserialise" - we'll get the defaults.
+        if isinstance(d, list):
+            # deserialising legacy lists
             self.showROIs, self.normMode, self.normToCropped, dqs = d
-            self.normMode = int(self.normMode)  # deal with legacy files
-            self.normToCropped = bool(self.normToCropped)
             self.dqs = [CanvasDQSpec(d) for d in dqs]
+            self.gamma = 1.0
+            self.specCursorSize = 0
+        else:
+            self.showROIs = d.get('showROIs', True)
+            self.normMode = d.get('normMode', canvasnormalise.NormToImg)
+            self.normToCropped = d.get('normToCropped', False)
+            self.specCursorSize = d.get('specCursorSize', 0)
+            if 'dqs' in d:
+                self.dqs = [CanvasDQSpec(d) for d in d['dqs']]
+            else:
+                self.dqs = [CanvasDQSpec(showBad=(x == 0)) for x in range(NUMDQS)]
+            self.gamma = d.get('gamma', 1.0)
+        self.normMode = int(self.normMode)  # deal with legacy files
+        self.normToCropped = bool(self.normToCropped)
 
     def serialise(self):
         """return a version of this type which can be serialised into JSON"""
-        dqs = [d.serialise() for d in self.dqs]
-        return [self.showROIs, self.normMode, self.normToCropped, dqs]
+        return {'showROIs': self.showROIs,
+                'normMode': self.normMode,
+                'normToCropped': self.normToCropped,
+                'specCursorSize': self.specCursorSize,
+                'gamma': self.gamma,
+                'dqs': [d.serialise() for d in self.dqs]}
 
 
 # the actual drawing widget, contained within the Canvas widget
@@ -87,7 +135,7 @@ class InnerCanvas(QtWidgets.QWidget):
     cutw: int
     cuth: int
 
-    cursor = None  # custom cursor; created once on first use
+    cursor: QCursor = None
 
     def __init__(self, canv, parent=None):
         super().__init__(parent)
@@ -98,6 +146,7 @@ class InnerCanvas(QtWidgets.QWidget):
         self.scale = 1
         self.cursorX = 0  # coords of cursor in image space
         self.cursorY = 0
+        self.cursor = None  # getCursor makes (or replaces) this
 
         self.x = 0  # coords of top left of img in view
         self.y = 0
@@ -115,10 +164,15 @@ class InnerCanvas(QtWidgets.QWidget):
         self.timer.timeout.connect(self.tick)
         self.timer.start(300)  # flash rate
 
+        # create the circle overlay for spectrum area
+        self.specOverlay = SpectrumCircleOverlay(self)
+        self.specOverlay.setGeometry(self.rect())
+        self.specOverlay.setHidden(True)
+
         # needs to do this to get key events
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.setCursor(InnerCanvas.getCursor())
         self.setMouseTracking(True)  # so we get move events with no button press
+        self.setCursor(InnerCanvas.getCursor())
         self.reset()
 
     def img2qimage(self, img):
@@ -141,46 +195,48 @@ class InnerCanvas(QtWidgets.QWidget):
 
     @classmethod
     def getCursor(cls):
-        """Get the custom cursor, creating it if necessary as a class attribute"""
-        if cls.cursor is None:
+        """Get the custom cursor"""
+        if cls.cursor is not None:
+            return cls.cursor
+
+        bm = QBitmap(32, 32)
+        CROSSHAIRLENTHICK = 4
+        CROSSHAIRLENTHIN = 10
+        bm.clear()
+        ptr = QPainter(bm)
+        p = QPen()
+        p.setWidth(3)
+        ptr.setPen(p)
+        ptr.drawLine(0, 16, CROSSHAIRLENTHICK, 16)
+        ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHICK, 16)
+        ptr.drawLine(16, 0, 16, CROSSHAIRLENTHICK)
+        ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHICK)
+
+        p.setWidth(1)
+        ptr.setPen(p)
+        ptr.drawLine(0, 16, CROSSHAIRLENTHIN, 16)
+        ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHIN, 16)
+        ptr.drawLine(16, 0, 16, CROSSHAIRLENTHIN)
+        ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHIN)
+        ptr.drawPoint(16, 16)
+
+        ptr.end()
+        # BM and MASK work like this:
+        # B=0 M=0 gives transparent
+        # B=0 M=1 gives white
+        # B=1 M=1 gives black
+        # B=1 M=0 is XOR under Windows, but undefined elsewhere!
+        if platform.system() == 'Windows':
+            # we want to use XOR under windows
+            mask = QBitmap(32, 32)
+            mask.clear()
+        else:
+            # on other platforms we want white on transparent.
+            mask = bm  # gives white
             bm = QBitmap(32, 32)
-            CROSSHAIRLENTHICK = 4
-            CROSSHAIRLENTHIN = 10
             bm.clear()
-            ptr = QPainter(bm)
-            p = QPen()
-            p.setWidth(3)
-            ptr.setPen(p)
-            ptr.drawLine(0, 16, CROSSHAIRLENTHICK, 16)
-            ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHICK, 16)
-            ptr.drawLine(16, 0, 16, CROSSHAIRLENTHICK)
-            ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHICK)
 
-            p.setWidth(1)
-            ptr.setPen(p)
-            ptr.drawLine(0, 16, CROSSHAIRLENTHIN, 16)
-            ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHIN, 16)
-            ptr.drawLine(16, 0, 16, CROSSHAIRLENTHIN)
-            ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHIN)
-            ptr.drawPoint(16, 16)
-
-            ptr.end()
-            # BM and MASK work like this:
-            # B=0 M=0 gives transparent
-            # B=0 M=1 gives white
-            # B=1 M=1 gives black
-            # B=1 M=0 is XOR under Windows, but undefined elsewhere!
-            if platform.system() == 'Windows':
-                # we want to use XOR under windows
-                mask = QBitmap(32, 32)
-                mask.clear()
-            else:
-                # on other platforms we want white on transparent.
-                mask = bm  # gives white
-                bm = QBitmap(32, 32)
-                bm.clear()
-
-            cls.cursor = QCursor(bm, mask, 16, 16)
+        cls.cursor = QCursor(bm, mask, 16, 16)
         return cls.cursor
 
     ## resets the canvas to zoom level 1, top left pan
@@ -194,15 +250,16 @@ class InnerCanvas(QtWidgets.QWidget):
 
     def tick(self):
         """Timer tick"""
-        if self.redrawOnTick:
-            self.flashCycle = 1 - self.flashCycle
-            self.update()
+        if self.isVisible():
+            if self.redrawOnTick:
+                self.flashCycle = 1 - self.flashCycle
+                self.update()
 
     ## returns the graph this canvas is part of
     def getGraph(self):
         return self.canv.graph
 
-    def display(self, img: 'ImageCube', isPremapped: bool, ):
+    def display(self, img: 'ImageCube', isPremapped: bool):
         """display an image next time paintEvent happens, and update to cause that.
         Will also handle None (by doing nothing)"""
         self.imgCube = img
@@ -227,6 +284,7 @@ class InnerCanvas(QtWidgets.QWidget):
         else:
             self.rgb = None
             self.reset()
+        self.setOverlayRadius()
         self.update()
 
     def drawCursor(self, img, cutx, cuty):
@@ -291,6 +349,11 @@ class InnerCanvas(QtWidgets.QWidget):
                                                          self.canv.canvaspersist.normMode,
                                                          self.canv.canvaspersist.normToCropped,
                                                          (cutx, cuty, self.cutw, self.cuth))
+
+            # we now apply the canvas gamma, before we apply any kind of overlay or annotation
+            gamma = self.canv.canvaspersist.gamma
+            rgbcropped = rgbcropped ** gamma if abs(gamma - 1.0) > 0.01 else rgbcropped
+
             tt.mark("norm")
             # Here we draw the overlays and get any extra text required
             rgbcropped, dqtext = self.drawDQOverlays(rgbcropped, cutx, cuty, cutw, cuth)
@@ -393,7 +456,7 @@ class InnerCanvas(QtWidgets.QWidget):
                             data = (data - mn) / rng
                         else:
                             data = np.zeros(data.shape, dtype=float)
-                    mask = data > 0     # we'll need to mask the bits where there's a value present for later.
+                    mask = data > 0  # we'll need to mask the bits where there's a value present for later.
                 elif d.data > 0:
                     # otherwise it's a DQ bit (or BAD dq bits), so cut that out
                     data = self.imgCube.dq[cuty:cuty + cuth, cutx:cutx + cutw]
@@ -428,7 +491,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
                 if (not flash or self.flashCycle) and data is not None:
                     zeroes = np.zeros(data.shape, dtype=float)
-                    data = data ** 2*d.contrast
+                    data = data ** 2 * d.contrast
                     t.mark("contrast")
                     # set the data opacity
                     data *= 1 - d.trans
@@ -467,6 +530,10 @@ class InnerCanvas(QtWidgets.QWidget):
                     img = data
         return img, txt
 
+    def setOverlayRadius(self):
+        rad = (self.canv.canvaspersist.specCursorSize+0.5) / self.getScale()
+        self.specOverlay.set_radius(rad)
+
     def getScale(self):
         return self.scale * self.zoomscale
 
@@ -501,9 +568,15 @@ class InnerCanvas(QtWidgets.QWidget):
             self.canv.mouseHook.canvasMousePressEvent(x, y, e)
         return super().mousePressEvent(e)
 
+    def resizeEvent(self, e: QResizeEvent):
+        self.specOverlay.setGeometry(self.rect())
+        super().resizeEvent(e)
+
     ## mouse move handler, can delegate to a hook
     def mouseMoveEvent(self, e):
+
         x, y = self.getImgCoords(e.pos())
+        self.specOverlay.set_center(e.pos())
         self.cursorX, self.cursorY = x, y
         if self.panning:
             dx = x - self.panX
@@ -572,11 +645,44 @@ class InnerCanvas(QtWidgets.QWidget):
         self.cursorX, self.cursorY = self.getImgCoords(e.pos())
         self.update()
 
+    def __del__(self):
+        logger.debug(f"Cleaning up {self}")
+
+    def update(self):
+        super().update()
+        self.setOverlayRadius()
+        self.specOverlay.update()
+
+
+
 
 def makesidebarLabel(t):
     lab = QtWidgets.QLabel(t)
     lab.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
     return lab
+
+
+# gamma/slider conversions - assume a range of 0-99 for the slider.
+def slider2gamma(x):
+    return float(x - 50) / 100.0 + 1.0
+
+
+def gamma2slider(x):
+    x = (x - 1.0) * 100 + 50
+    return x
+
+
+def collectData(imgarray, x, y, size):
+    """Collect the data for size pixels in a rectangle around x,y; e.g. size=2
+    collects [x-2:x+2][y-2:y+2]"""
+    height, width = imgarray.shape[:2]
+    minx = max(x-size, 0)
+    maxx = min(x+size+1, width)
+    miny = max(y-size, 0)
+    maxy = min(y+size+1, height)
+
+    return imgarray[miny:maxy, minx:maxx]  # returns (n,depth) array
+
 
 
 class Canvas(QtWidgets.QWidget):
@@ -608,6 +714,10 @@ class Canvas(QtWidgets.QWidget):
     # images it's the node that applies the mapping)
     nodeToUIChange: Optional['XForm']
 
+    # Node to do a full change if the RGB mapping has changed. Used if a node has an
+    # RGB output.
+    nodeToRerunIfMappingChanged: Optional['XForm']
+
     ## @var isPremapped
     # is this a premapped image?
     isPremapped: bool
@@ -628,7 +738,7 @@ class Canvas(QtWidgets.QWidget):
     isDQHidden: bool
 
     # List of the DQ section widgets
-    dqSections: List[CollapserSection]#
+    dqSections: List[CollapserSection]  #
 
     # warning to indicate the filter data is missing
     missingFilterDataLabel: QtWidgets.QLabel
@@ -644,6 +754,7 @@ class Canvas(QtWidgets.QWidget):
         self.keyHook = None
         self.graph = None
         self.nodeToUIChange = None
+        self.nodeToRerunIfMappingChanged = None
         self.ROInode = None
         self.mapping = None  # mapping used in either the image, or the image we are rendering a "premapped" RGB of
         self.isDQHidden = False  # does not persist!
@@ -671,6 +782,7 @@ class Canvas(QtWidgets.QWidget):
         self.createWidgets()
         self.collapser.end()
 
+        # splitter with main canvas and spectrum widget(s)
         splitter = QtWidgets.QSplitter()
         splitter.setHandleWidth(10)
         outerlayout.addWidget(splitter)
@@ -686,11 +798,31 @@ class Canvas(QtWidgets.QWidget):
         outerlayout.setContentsMargins(0, 0, 0, 0)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        # spectrum stuff
+
+        self.spectrumContainerWidget = QtWidgets.QWidget()
+        specLayout = QtWidgets.QGridLayout()
+        self.spectrumContainerWidget.setLayout(specLayout)
+
+        # spectrum widget itself
         self.spectrumWidget = SpectrumWidget()
         self.spectrumWidget.setMinimumSize(300, 300)
         self.spectrumWidget.setMaximumWidth(600)
-        self.spectrumWidget.setHidden(True)
-        splitter.addWidget(self.spectrumWidget)
+        specLayout.addWidget(self.spectrumWidget, 0, 0, 1, 2)
+
+        # cursor size widgets
+        specLayout.addWidget(QLabel("Spectrum region"), 1, 0, 1, 1)
+        self.specCursorSizeCombo = QtWidgets.QComboBox(self.spectrumContainerWidget)
+        for x in range(0,6):
+            width = x*2+1
+            self.specCursorSizeCombo.addItem(f"{width}x{width}")
+            self.specCursorSizeCombo.setItemData(x, x)
+
+        self.specCursorSizeCombo.currentTextChanged.connect(self.cursorSizeChanged)
+        specLayout.addWidget(self.specCursorSizeCombo, 1, 1, 1, 1)
+
+        self.spectrumContainerWidget.setHidden(True)
+        splitter.addWidget(self.spectrumContainerWidget)
 
         ## now the canvas and scrollbars
 
@@ -706,7 +838,9 @@ class Canvas(QtWidgets.QWidget):
         self.scrollH.valueChanged.connect(self.horzScrollChanged)
         layout.addWidget(self.scrollH, 1, 0)
 
+        icon = pcot.assets.Icons.get("maximize-2.svg")
         self.resetButton = QtWidgets.QPushButton()
+        self.resetButton.setIcon(icon)
         self.resetButton.setMaximumWidth(20)
         layout.addWidget(self.resetButton, 1, 1)
         self.resetButton.clicked.connect(self.reset)
@@ -725,7 +859,6 @@ class Canvas(QtWidgets.QWidget):
 
         self.hideablebuttons = QtWidgets.QWidget()
         self.hideablebuttons.setContentsMargins(0, 0, 0, 0)
-
 
         hideable = QtWidgets.QGridLayout()
         hideable.setContentsMargins(3, 10, 3, 10)  # LTRB
@@ -749,6 +882,23 @@ class Canvas(QtWidgets.QWidget):
         self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
         hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
         self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
+
+        hideable.addWidget(makesidebarLabel("gamma"), 4, 0)
+        self.gammaLabel = makesidebarLabel("1.1")
+        hideable.addWidget(self.gammaLabel, 4, 1)
+
+        class GammaSlider(QtWidgets.QSlider):
+            # subclass of a slider which zeroes on doubleclick
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+            def mouseDoubleClickEvent(self, event):
+                self.setValue(50)
+                # If you call this, the slider gets a move event too and we end up at slightly off centre.
+                # super().mouseDoubleClickEvent(event)
+
+        self.gammaSlider = GammaSlider(Qt.Orientation.Horizontal)
+        hideable.addWidget(self.gammaSlider, 5, 0, 1, 2)
+        self.gammaSlider.valueChanged.connect(self.gammaChanged)
 
         self.hideablebuttons.setLayout(hideable)  # add layout to widget
         self.blueChanCombo.setMinimumWidth(100)
@@ -925,15 +1075,24 @@ class Canvas(QtWidgets.QWidget):
             self.recursing = False
             self.redisplay()
 
+    def gammaChanged(self, v):
+        self.canvaspersist.gamma = slider2gamma(v)
+        self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
+        self.redisplay()
+
+    def cursorSizeChanged(self, v):
+        self.canvaspersist.specCursorSize = self.specCursorSizeCombo.itemData(self.specCursorSizeCombo.currentIndex())
+        self.canvas.setOverlayRadius()
+        self.redisplay()
+
     def contextMenuEvent(self, ev: QtGui.QContextMenuEvent) -> None:
-        super().contextMenuEvent(ev)   # run the super's menu, which will run any item's menu
-        if not ev.isAccepted():        # if the event wasn't accepted, run our menu
+        super().contextMenuEvent(ev)  # run the super's menu, which will run any item's menu
+        if not ev.isAccepted():  # if the event wasn't accepted, run our menu
             menu = QMenu()
             save = menu.addAction("Save as image, PDF, SVG or PARC")
             a = menu.exec_(ev.globalPos())
             if a == save:
-              self.saveAction()
-
+                self.saveAction()
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
@@ -1054,6 +1213,8 @@ class Canvas(QtWidgets.QWidget):
         self.ensureDQValid()
 
     def mouseMove(self, x, y, event):
+        """This is NOT an event handler; it's taking image coordinates and
+        not widget coordinates. It's called from the inner canvas' moveMoveEvent"""
         self.coordsText.setText(f"{x},{y}")
         self.showSpectrum()
         if self.mouseHook is not None:
@@ -1103,7 +1264,6 @@ class Canvas(QtWidgets.QWidget):
         if self.previmg is not None:
             self.previmg.defaultMapping = None  # force a guess even if there is a default mat
             self.previmg.mapping.generateMappingFromDefaultOrGuess(self.previmg)
-        self.redisplay()
         self.updateChannelSelections()
 
     # set the graph I'm part of
@@ -1115,21 +1275,21 @@ class Canvas(QtWidgets.QWidget):
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.red = i
-            self.redisplay()
+            self.mappingModified()
 
     def greenIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.green = i
-            self.redisplay()
+            self.mappingModified()
 
     def blueIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.blue = i
-            self.redisplay()
+            self.mappingModified()
 
     def roiToggleChanged(self, v):
         # can only work when a persister is there; if there isn't, will crash.
@@ -1144,7 +1304,8 @@ class Canvas(QtWidgets.QWidget):
             self.redisplay()
 
     def spectrumToggleChanged(self, v):
-        self.spectrumWidget.setHidden(not v)
+        self.spectrumContainerWidget.setHidden(not v)
+        self.canvas.specOverlay.setHidden(not v)
 
     def hideDQChanged(self, v):
         self.isDQHidden = self.hideDQ.isChecked()
@@ -1199,7 +1360,7 @@ class Canvas(QtWidgets.QWidget):
                 annotations = (r == QMessageBox.Yes)
                 desc = ''
 
-            self.previmg.save(path, annotations=annotations, description=desc)
+            self.previmg.save(path, annotations=annotations, description=desc, gamma=self.canvaspersist.gamma)
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
@@ -1225,7 +1386,8 @@ class Canvas(QtWidgets.QWidget):
     # In the normal case (where the Canvas does the RGB mapping) just call with the image.
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
-    def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource:'ImageCube'=None, nodeToUIChange=None):
+    def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource: 'ImageCube' = None,
+                nodeToUIChange=None):
         self.firstDisplayDone = True
 
         if isinstance(img, Datum):
@@ -1235,7 +1397,7 @@ class Canvas(QtWidgets.QWidget):
         # if we are using a "premapped" image.
         mapSourceImg = alreadyRGBMappedImageSource if alreadyRGBMappedImageSource is not None else img
         if mapSourceImg:
-            self.mapping = mapSourceImg.mapping     # this is a reference
+            self.mapping = mapSourceImg.mapping  # this is a reference
 
         if self.graph is None:
             raise Exception(
@@ -1263,6 +1425,12 @@ class Canvas(QtWidgets.QWidget):
         # when we change the mapping (which is why we would redisplay) it's the node code which regenerates
         # the remapped image.
         self.nodeToUIChange = nodeToUIChange
+        # set the gamma slider
+        self.gammaSlider.setValue(gamma2slider(self.canvaspersist.gamma))
+        self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
+        # set the cursor size
+        idx = self.specCursorSizeCombo.findData(self.canvaspersist.specCursorSize)
+        self.specCursorSizeCombo.setCurrentIndex(idx)
         # This will clear the screen if img is None
         self.redisplay()
 
@@ -1274,6 +1442,14 @@ class Canvas(QtWidgets.QWidget):
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
+            self.mappingModified()
+
+    def mappingModified(self):
+        # the RGB mapping has been modified; redisplay and rerun if the node generates RGB output
+        if self.nodeToRerunIfMappingChanged:
+            n = self.nodeToRerunIfMappingChanged
+            n.graph.changed(n)
+        self.redisplay()
 
     def redisplay(self):
         # similar to the below; avoid redisplay when we haven't displayed anything yet!
@@ -1385,22 +1561,46 @@ class Canvas(QtWidgets.QWidget):
         if self.previmg is None:
             self.spectrumWidget.set(None, "No image in canvas")
             return
+        size = self.canvaspersist.specCursorSize
         if self.previmg.channels < 2:
             if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h:
-                val = self.previmg.img[y, x]
-                unc = self.previmg.uncertainty[y, x]
-                dqval = self.previmg.dq[y, x]
-                dq = pcot.dq.names(dqval)
-                self.spectrumWidget.set(None, f"Single channel:  {val:.3} +/- {unc:.3}. DQ:{dq} ({dqval})")
-            return
+                # get the values in a square around the centre
+                vals = collectData(self.previmg.img, x, y, size).flatten()
+                uncs = collectData(self.previmg.uncertainty, x, y, size).flatten()
+                dqvals = collectData(self.previmg.dq, x, y, size).flatten()
+
+                if vals.shape[0] > 0:
+                    val = np.mean(vals)
+                    # do variance pooling - the mean of the variances plus the variance of the means
+                    unc = pooled_sd(vals, uncs)
+                    # and or all the bits in the elements of dqvals together
+                    dqval = np.bitwise_or.reduce(dqvals, axis=None)
+                    dq = pcot.dq.names(dqval)
+                    self.spectrumWidget.set(None, f"Single channel:  {val:.3} +/- {unc:.3}. DQ:{dq} ({dqval})")
+            return  # early return
 
         # within the coords, and multichannel image present
 
         if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
             img = self.previmg
-            pixel = img.img[y, x, :]  # get the pixel data
-            pixuncs = img.uncertainty[y, x, :]
-            pixdqs = img.dq[y, x, :]
+
+            pixels = collectData(img.img, x, y, size)
+            pixunc = collectData(img.uncertainty, x, y, size)
+            pixdqs = collectData(img.dq, x, y, size)
+
+            pixel = pixels.mean(axis=(0,1)) # get an array of shape (depth) of the means of each channel
+
+            # reshape(-1,c) turns a (h,w,c) array into a (h*w, c) array - flattening only the top
+            # two dimensions but leaving the individual multiband pixels alone
+            bandpixels = pixels.reshape(-1, img.channels)
+            banduncs = pixunc.reshape(-1, img.channels)
+
+            # pool the uncertainties of each band
+            pixuncs = [pooled_sd(bandpixels[:, i], banduncs[:, i]) for i in range(img.channels)]
+
+            # similarly collapse the pixel DQ bits and then do bitwise OR on each band
+            pixdqs = pixdqs.reshape(-1, img.channels)
+            pixdqs = np.bitwise_or.reduce(pixdqs, axis=0)
 
             # build text string
             text = ""
@@ -1439,5 +1639,12 @@ class Canvas(QtWidgets.QWidget):
         process, so the different operations are available separately. But we have to do this in nodes before
         every redisplay, because the node may have been replaced by an undo operation."""
 
-        self.setGraph(node.graph)           # tell the canvas what the graph is
-        self.setPersister(node)             # and where it should store its data (ugly, yes).
+        self.setGraph(node.graph)  # tell the canvas what the graph is
+        self.setPersister(node)  # and where it should store its data (ugly, yes).
+
+    def onClose(self):
+        logger.debug(f"Closing canvas {self}")
+        self.canvas.timer.stop()
+        self.canvas.timer = None
+        self.canvas = None  # MAYBE this will delete the damn thing
+

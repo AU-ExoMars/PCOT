@@ -1,22 +1,18 @@
 ## the RGB file input method
 import logging
-from collections import OrderedDict
 from typing import Optional
 
 import pcot.config
-from pcot.imagecube import ChannelMapping
+from pcot.imagecube import ChannelMapping, VALID_RASTER_FORMATS
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
 from .inputmethod import InputMethod
 from ..dataformats import load
 from ..datum import Datum
 from ..parameters.taggedaggregates import TaggedDict
+from ..utils.demosaicing import DEBAYER_ALGOS, NEGATIVE_PROCESSING_METHODS, VALID_BAYER_PATTERNS
 
 logger = logging.getLogger(__name__)
-
-
-DEBAYER_PATTERNS = ["GB","BG","GR","RG"]
-DEBAYER_ALGOS = ["BILINEAR","EA","VNG","NONE"]
 
 
 class RGBInputMethod(InputMethod):
@@ -30,14 +26,22 @@ class RGBInputMethod(InputMethod):
         self.img = None         # we keep this around to speed up internal ser/deser
         self.mapping = ChannelMapping()
         self.debayer_algo = "NONE"
-        self.debayer_pattern = pcot.config.defaultBayerPattern
+        self.debayer_pattern = pcot.config.data.defaultbayerpattern
+        self.camera = "NONE"
+        self.neg_method = "Leave"
 
     def readData(self):
         logger.debug(f"RGB readData fname={self.fname}")
-        self.img = load.rgb(self.fname,
-                            self.input.idx if self.input else None,
-                            self.mapping,
-                            self.debayer_algo, self.debayer_pattern)
+        if self.debayer_pattern is None:
+            print("no debayer pat")
+        if self.fname is not None:
+            self.img = load.rgb(self.fname,
+                                self.input.idx if self.input else None,
+                                self.mapping,
+                                self.debayer_algo, self.debayer_pattern, None if self.camera=="NONE" else self.camera,
+                                self.neg_method)
+        else:
+            self.img = Datum.null
         return self.img
 
     def getName(self):
@@ -56,7 +60,10 @@ class RGBInputMethod(InputMethod):
 
     def serialise(self, internal):
         x = {'fname': self.fname,
-             'debayer-algo': self.debayer_algo, 'debayer-pattern': self.debayer_pattern}
+             'debayer-algo': self.debayer_algo, 'debayer-pattern': self.debayer_pattern,
+             'camera' : self.camera,
+             "neg_method": self.neg_method
+             }
         if internal:
             x['image'] = self.img.get(Datum.IMG) if self.img is not None else None
         Canvas.serialise(self, x)
@@ -66,6 +73,8 @@ class RGBInputMethod(InputMethod):
         self.fname = data['fname']
         self.debayer_algo = data.get('debayer-algo', 'NONE')
         self.debayer_pattern = data.get('debayer-pattern', 'GB')
+        self.camera = data.get("camera", "NONE")
+        self.neg_method = data.get('neg_method', NEGATIVE_PROCESSING_METHODS[0])
         if internal:
             x = data['image']
             self.img = Datum(Datum.IMG, x) if x is not None else None
@@ -82,6 +91,10 @@ class RGBInputMethod(InputMethod):
                 self.debayer_algo = d.rgb.debayer_algo.upper()
             if d.rgb.debayer_pattern is not None:
                 self.debayer_pattern = d.rgb.debayer_pattern.upper()
+            if d.rgb.camera is not None:
+                self.camera = d.rgb.camera
+            if d.rgb.neg_method is not None:
+                self.neg_method = d.rgb.neg_method
             return True
         return False
 
@@ -89,27 +102,36 @@ class RGBInputMethod(InputMethod):
 class RGBMethodWidget(TreeMethodWidget):
     def __init__(self, m):
         super().__init__(m, 'inputrgb.ui',
-                         ["*.jpg", "*.png", "*.ppm", "*.tga", "*.tif"])
+                         [f"*.{x}" for x in VALID_RASTER_FORMATS])
         self.treeView.setMinimumSize(300, 400)
         self.treeView.setMaximumHeight(700)
 
-        self.patternCombo.addItems(DEBAYER_PATTERNS)
+        self.patternCombo.addItems(VALID_BAYER_PATTERNS)
         self.algoCombo.addItems(DEBAYER_ALGOS)
+        self.negCombo.addItems(NEGATIVE_PROCESSING_METHODS)
+        from ..cameras import getCameraNames
+        self.cameraCombo.addItem("NONE")
+        self.cameraCombo.addItems(getCameraNames())
 
         self.patternCombo.currentIndexChanged.connect(self.patternChanged)
         self.algoCombo.currentIndexChanged.connect(self.algoChanged)
+        self.cameraCombo.currentTextChanged.connect(self.cameraChanged)
+        self.negCombo.currentTextChanged.connect(self.negChanged)
+
 
         self.onInputChanged()
 
     def onInputChanged(self):
         self.patternCombo.setCurrentText(self.method.debayer_pattern)
         self.algoCombo.setCurrentText(self.method.debayer_algo)
+        self.cameraCombo.setCurrentText(self.method.camera)
+        self.negCombo.setCurrentText(self.method.neg_method)
 
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
-        self.canvas.display(self.method.img)
+        self.canvas.display(self.method.get())
 
     def patternChanged(self, i):
         self.method.debayer_pattern = self.patternCombo.currentText()
@@ -119,6 +141,12 @@ class RGBMethodWidget(TreeMethodWidget):
         self.method.debayer_algo = self.algoCombo.currentText()
         self.onInputChanged()
 
+    def negChanged(self, i):
+        self.method.neg_method = self.negCombo.currentText()
+        self.onInputChanged()
 
-
-
+    def cameraChanged(self, text):
+        from pcot import ui
+        self.method.camera = text
+        ui.log(f"CAM {text}")
+        self.onInputChanged()

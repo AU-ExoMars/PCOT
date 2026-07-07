@@ -32,6 +32,8 @@ class Operator(Enum):
     OR = auto()
     NOT = auto()
     DOLLAR = auto()
+    LESSTHAN = auto()
+    GREATERTHAN = auto()
 
 
 # binary operations are stored in a dictionary of (Type,Type,Operator) tuples mapping onto
@@ -296,6 +298,9 @@ def initOps():
     regAllBinopSemantics(Operator.POW, lambda x, y: x ** y)
     regAllBinopSemantics(Operator.AND, lambda x, y: x & y)
     regAllBinopSemantics(Operator.OR, lambda x, y: x | y)
+
+    regAllBinopSemantics(Operator.LESSTHAN, lambda x, y: x < y)
+    regAllBinopSemantics(Operator.GREATERTHAN, lambda x, y: x > y)
 
     def regROIBinopSemantics(op, fn):
         """Used to register binops for ROIs, which support a subset of ops."""

@@ -10,15 +10,30 @@ from pcot.parameters.parameterfile import ParameterFile
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, Maybe
 
 import logging
+
+from pcot.utils.demosaicing import VALID_BAYER_PATTERNS, NEGATIVE_PROCESSING_METHODS, DEBAYER_ALGOS
+
 logger = logging.getLogger(__name__)
+
+def case_insensitive(ss):
+    ss = [s.lower() for s in ss]
+    ss = ss + list(map(lambda a: a.upper(),ss))
+    ss = ss + list(map(lambda a: a.capitalize(),ss))
+    return ss
+
+
 
 # RGB inputs don't have much - just a filename.
 rgbDictType = TaggedDictType(
     filename=("filename", Maybe(str), None),
-    debayer_algo=("Debayering algorithm (or None if we're not debayering)", Maybe(str), 'None',
-                  ["ea","EA","vng","VNG","None","none","NONE","bilinear","Bilinear","BILINEAR"]),
-    debayer_pattern=("Bayer pattern (see OpenCV docs)", Maybe(str), pcot.config.defaultBayerPattern,
-                     ["GB","gb","BG","bg","RG","rg","GR","gr"]),
+    debayer_algo=("Demosaic algorithm (or None if we're not demosaicing)", Maybe(str), None,
+                  case_insensitive(DEBAYER_ALGOS)),
+    debayer_pattern=("Bayer pattern (e.g. RGGB)", Maybe(str),
+                     pcot.config.data.defaultbayerpattern,
+                     case_insensitive(VALID_BAYER_PATTERNS)),
+    neg_method=("How to process negatives in e.g. MHC demosaicing", Maybe(str),
+                "Leave",case_insensitive(NEGATIVE_PROCESSING_METHODS)),
+    camera=("name of camera to use", Maybe(str), None),
 )
 
 # ENVI files also just have a filename WITHOUT an extension (remember that ENVI
@@ -36,7 +51,7 @@ multifileDictType = TaggedDictType(
     filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
                TaggedListType(str, [], '')),
     filter_pattern=("pattern for filter identification", Maybe(str), None),
-    camera=("name of camera to use", Maybe(str), pcot.config.get('default_camera')),
+    camera=("name of camera to use", Maybe(str), pcot.config.data.default_camera),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
     preset=("preset name for some params (can be overridden by other params)", Maybe(str), None),
     raw=("parameters for loading raw data", TaggedDictType(

@@ -6,16 +6,112 @@ Note that types which start with "img" are image types, and
 should all be renderable by Canvas.
 These types are also used by the expression evaluator.
 """
+import builtins
 import logging
 from typing import Any, Optional
+
+import numpy as np
 
 from pcot.dq import NOUNCERTAINTY
 from pcot.sources import SourcesObtainable, nullSource, nullSourceSet
 import pcot.datumtypes
 
 from pcot.datumexceptions import *
+from pcot.utils.maths import pooled_sd, minmax
 
 logger = logging.getLogger(__name__)
+
+
+def func_wrapper(fn, d):
+    """Takes a function which takes and and returns Value, and a datum.
+    Converts the datum into a Value if it's possible, passes it to the function, wraps the return value in a Datum.
+
+    This is a utility for dealing with
+    functions. For images, it strips out the relevant pixels (subject to ROIs) and creates a masked array. However, BAD
+    pixels are included. It then performs the operation and creates a new image which is a copy of the
+    input with the new data spliced in."""
+
+    from pcot.value import Value
+    from pcot.sources import SourceSet
+    from pcot.xform import XFormException
+
+    if d is None:
+        return None
+    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
+        # get sources for all arguments
+        ss = d.getSources()
+        rv = fn(d.val)
+        return Datum(Datum.NUMBER, rv, SourceSet(ss))
+    elif d.isImage():
+        img = d.val
+        ss = d.sources
+        subimage = img.subimage()
+
+        # make copies of the source data into which we will splice the results
+        imgcopy = subimage.img.copy()
+        unccopy = subimage.uncertainty.copy()
+        dqcopy = subimage.dq.copy()
+
+        # Perform the calculation on the entire subimage rectangle, but only the results covered by ROI
+        # will be spliced back into the image (modifyWithSub does this).
+        v = Value(imgcopy, unccopy, dqcopy)
+
+        rv = fn(v)
+        # depending on the result type..
+        if rv.isscalar():
+            # ...either use it as a number datum
+            return Datum(Datum.NUMBER, rv, ss)
+        else:
+            # ...or splice it back into the image
+            img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
+            return Datum(Datum.IMG, img)
+    else:
+        raise XFormException('EXPR', 'unsupported type for function')
+
+
+def stats_wrapper(val, func):
+    """Takes a function that operates on a tuple of val,unc,dq and returns same
+    """
+
+    from pcot.value import Value
+    from pcot.utils.image import imgsplit
+    from pcot.xform import XFormException
+
+    if val.tp == Datum.NUMBER:
+        ns = val.get(Datum.NUMBER).n
+        us = val.get(Datum.NUMBER).u
+        dqs = val.get(Datum.NUMBER).dq
+        nr, ur, dqr = func(ns, us, dqs)
+        return Datum(Datum.NUMBER, Value(nr, ur, dqr), sources=val.sources)
+    elif val.isImage():
+        img = val.get(Datum.IMG)
+        if img is None:
+            return None
+
+        # get the subimage (i.e. only the part covered by ROIs if there are any)
+        # and mask out the bad pixels
+        subimage = img.subimage()
+        # I was making a copy, but I don't think it's needed.
+        imgn_masked, imgu_masked, imgd_masked = subimage.masked_all(True)
+
+        if img.channels == 1:
+            # mono image
+            ns, us, ds = func(imgn_masked, imgu_masked, imgd_masked)
+        else:
+            # split the image into bands
+            ns = imgsplit(imgn_masked)
+            us = imgsplit(imgu_masked)
+            ds = imgsplit(imgd_masked)
+            v = [func(ns[i], us[i], ds[i]) for i in range(0, len(ns))]
+            # we now have a list of tuples. We want to get from this:
+            # [(n,u,d),(n,u,d),(n,u,d) .. ] to [(n,n,n,n),(u,u,u,u),(d,d,d,d)]
+            # so we use zip to transpose the list of tuples
+            ns, us, ds = list(zip(*v))
+        return Datum(Datum.NUMBER, Value(ns, us, ds), img.sources)
+    else:
+        # shouldn't happen because we check types
+        raise XFormException('DATA', 'stats functions can only take numbers or images')
+
 
 
 class Datum(SourcesObtainable):
@@ -31,17 +127,18 @@ class Datum(SourcesObtainable):
 
     # register built-in types; extras can be registered with registerType
     types = [
-        ANY := pcot.datumtypes.AnyType(),
-        IMG := pcot.datumtypes.ImgType(),
-        ROI := pcot.datumtypes.RoiType(),
-        NUMBER := pcot.datumtypes.NumberType(),
+        ANY := pcot.datumtypes.AnyType().setOKForConnectors(),
+        IMG := pcot.datumtypes.ImgType().setOKForConnectors(),
+        ROI := pcot.datumtypes.RoiType().setOKForConnectors(),
+        NUMBER := pcot.datumtypes.NumberType().setOKForConnectors().setOKForParameters(),
         # this special type means the node must have its output/input type specified
         # by the user. They don't appear on the graph until this has happened.
-        VARIANT := pcot.datumtypes.VariantType(),
-        # generic data
-        DATA := pcot.datumtypes.GenericDataType(),
+        VARIANT := pcot.datumtypes.VariantType().setOKForConnectors().setOKForParameters(),
+        # generic tabular
+        TABLE := pcot.datumtypes.TabularDataType().setOKForConnectors(),
+        DATA := pcot.datumtypes.GenericDataType().setOKForConnectors(),
         # test results - this is a list of failing tests, or an empty list for all passed.
-        TESTRESULT := pcot.datumtypes.TestResultType(),
+        TESTRESULT := pcot.datumtypes.TestResultType().setOKForConnectors(),
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
         IDENT := pcot.datumtypes.IdentType(),
@@ -188,6 +285,14 @@ class Datum(SourcesObtainable):
         from pcot.expressions import ops
         return ops.binop(ops.Operator.AND, self, other)
 
+    def __lt__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.LESSTHAN, self, other)
+
+    def __gt__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.GREATERTHAN, self, other)
+
     def __or__(self, other):
         from pcot.expressions import ops
         return ops.binop(ops.Operator.OR, self, other)
@@ -233,6 +338,82 @@ class Datum(SourcesObtainable):
         from pcot.expressions import ops
         return ops.binop(ops.Operator.DOLLAR, self, other)
 
+    ## wrapped functions! The wrapper will handle turning an ImageCube into Value.
+
+    def sin(self):
+        return func_wrapper(lambda x: x.sin(), self)
+    def cos(self):
+        return func_wrapper(lambda x: x.cos(), self)
+    def tan(self):
+        return func_wrapper(lambda x: x.tan(), self)
+    def sqrt(self):
+        return func_wrapper(lambda x: x.sqrt(), self)
+    def abs(self):
+        # We don't want to inadvertently recurse, so call the builtin
+        # abs function.
+        return func_wrapper(lambda x: builtins.abs(x), self)
+
+    def mean(self):
+        """
+        Find the mean±sd of a Datum. This does different things depending on what kind of Datum we are dealing with.
+        For a scalar, it just returns the scalar. For a vector, it returns the mean and sd of the vector. For an
+        image, it returns a vector of the means and sds of each channel.
+        Pixels with "bad" DQ bits will be ignored.
+        """
+        return stats_wrapper(self, lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
+
+    def sd(self):
+        """
+        Find the SD of a Datum. This does different things depending on what kind of Datum we are dealing with.
+        For a scalar, it just returns 0. For a vector or single-channel image, it returns a scalar. For an image, it returns a
+        vector of the SDs of each channel. Because each individual value in the input set can have its own uncertainty, the
+        uncertainty is pooled - the pooled variance is the mean of the variances plus the variance of the means
+        (Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012). For pooling, we make
+        the assumption that the number of items in each input subset (e.g. each pixel) is the same.
+        Pixels with "bad" DQ bits will be ignored.
+        """
+        return stats_wrapper(self, lambda n, u, d: (pooled_sd(n, u), 0, pcot.dq.NOUNCERTAINTY))
+
+    def min(self):
+        """
+        Find the minimum of a Datum. For a multiband image, returns a vector of the minimum value of each band.
+        For a single band image, a scalar, or a vector, returns a scalar.
+        Pixels with "bad" DQ bits will be ignored.
+        See also the | (OR) operator, which will find the minimum of two values (or images, vectors etc).
+
+        """
+        return stats_wrapper(self, lambda n, u, d: minmax(np.argmin, n, u, d))
+
+    def max(self):
+        """
+        Find the maximum of a Datum. For a multiband image, returns a vector of the maximum of each band.
+        For a single band image, a scalar, or a vector, returns a scalar.
+        Pixels with "bad" DQ bits will be ignored.
+        See also the & (AND) operator, which will find the minimum of two values (or images, vectors etc).
+
+        """
+        return stats_wrapper(self, lambda n, u, d: minmax(np.argmax, n, u, d))
+
+    def sum(self):
+        """
+        Find the sum of a Datum. For a multiband image, returns a vector of the sums of each band.
+        For a single band image, a scalar, or a vector, returns a scalar.
+        The uncertainty is pooled differently as this is a sum. The variance will be the variance of
+        the means plus the sum of the variances (still following
+        Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012).
+
+        Pixels with "bad" DQ bits will be ignored.
+        """
+        def sum_of_variances(n, u):
+            # we calculate variance of the values in the set
+            varianceOfMeans = n.var()
+            # we calculate the sum of the variances (not the mean this time!)
+            sumOfVariances = np.sum(u ** 2)
+            # and return the sum of those two.
+            return np.sqrt(varianceOfMeans + sumOfVariances)
+
+        return stats_wrapper(self, lambda n, u, d: (np.sum(n), sum_of_variances(n, u), pcot.dq.NOUNCERTAINTY))
+
 
 # a handy null datum object
 Datum.null = Datum(Datum.NONE, None)
@@ -247,12 +428,18 @@ def deserialise(tp):
         raise UnknownDatumTypeException(tp)
 
 
-def isCompatibleConnection(outtype, intype):
+def isCompatibleConnection(outtype, intype, inmacro=False):
     """are two connectors compatible?"""
     # this is a weird bug I would really like to catch.
     if intype is None or outtype is None:
         logger.critical("a connectin type is None")
         return False
+
+    # if we're editing a macro, don't flag connections to NONE connectors as being bad - it's
+    # likely to be an expr node, which doesn't set its connection type until it runs, and it
+    # never will in a macro.
+    if inmacro and (intype == Datum.NONE or outtype == Datum.NONE):
+        return True
 
     # variants - used where a node must have a connection type
     # set by the user - cannot connect until they have been so set.

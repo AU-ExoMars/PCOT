@@ -152,7 +152,7 @@ def test_direct_load_multifile(globaldatadir):
         path = globaldatadir / "multi"
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
-        assert s.long() == f"none: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos {pos}, {desc} {path / fn}"
+        assert s.long() == f"none: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos={pos} desc={desc} resp=sim,3300 ext={path / fn}"
 
 
 def test_direct_load_multifile_cwl(globaldatadir):
@@ -196,7 +196,7 @@ def test_direct_load_multifile_cwl(globaldatadir):
         path = globaldatadir / "multi"
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
-        assert s.long() == f"none: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos {pos}, {desc} {path / fn}"
+        assert s.long() == f"none: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos={pos} desc={desc} resp=sim,3300 ext={path / fn}"
 
 
 def test_direct_load_multifile_cwl_multiple_matches(globaldatadir):

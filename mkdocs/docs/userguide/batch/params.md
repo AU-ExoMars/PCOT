@@ -22,7 +22,7 @@ Another change could be:
 k.val = 2
 ```
 which assumes that there is a node called `k`, whose parameter `val`
-we now set to 2 (this is probably a [constant](/autodocs/constant) node).
+we now set to 2 (this is probably a [constant](../../autodocs/constant.md) node).
 
 
 ## Lists
@@ -135,7 +135,7 @@ lets us go back up the path one level, to `output.`, so we can now add a new out
 ### List notation for ordered parameters
 
 Some parameters have an implicit ordering. These are marked in the documentation as
-"(ordered)". For example, the *circle* node type [autodocs](/autodocs/circle/) contain
+"(ordered)". For example, the *circle* node type [autodocs](../../autodocs/circle.md) contain
 this:
 
 <table border='1' style='border-collapse: collapse;'>

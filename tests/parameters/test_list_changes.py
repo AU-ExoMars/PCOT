@@ -68,8 +68,21 @@ def test_add_multiple_items_shorthand1():
     assert [x for x in td.lst2] == [23, 24, 200, 25, 26, 27]
 
 
+def test_spaces_in_params():
+    """Can we allow spaces in parameters"""
+    td = tdt.create()
+    f = ParameterFile().parse("""
+    foo.lst.+.a = flibble is here
+    """)
+    f.apply({"foo": td})
+
+    assert td.lst[0].a == "flibble is here"
+
+
+
+
 def test_add_multiple_items_shorthand2():
-    """Using the singledot method to add to items - this time TD"""
+    """Using the singledot method to add to items - this time TD."""
     td = tdt.create()
     f = ParameterFile().parse("""
     foo.lst.+.a = flibble

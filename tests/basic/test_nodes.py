@@ -41,9 +41,9 @@ def test_node_output_none():
                     raise AssertionError("Constant should output a Datum.NUMBER even when not connected")
             elif x == 'spectrum':
                 try:
-                    assert node.getOutput(0, Datum.DATA) is not None, f"Spectrum should return something always"
+                    assert node.getOutput(0, Datum.TABLE) is not None, f"Spectrum should return something always"
                 except BadTypeException:
-                    pytest.fail("Spectrum should output Datum.DATA even when not connected")
+                    pytest.fail("Spectrum should output Datum.TABLE even when not connected")
             elif x == 'gen':
                 if node.getOutput(0, Datum.NONE) is not None:
                     pytest.fail("Gen should return None with no args")
@@ -82,6 +82,12 @@ def test_node_output_none():
                     assert out[0] == 'NO INPUT', f"Errortest should 'NO INPUT' in list when not connected"
                 except BadTypeException:
                     pytest.fail("Stringtests should return a list")
+            elif x == 'param':
+                try:
+                    out = node.getOutput(0, Datum.NUMBER)
+                    assert out.n == 0, "param should return 0 when not connected"
+                except BadTypeException:
+                    pytest.fail("param should return a number")
             else:
                 assert out is None, f"XForm {x} should output None when not connected"
 

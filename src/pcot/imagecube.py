@@ -8,6 +8,7 @@ import logging
 
 import os.path
 from collections.abc import Iterable
+from pathlib import Path
 from typing import List, Optional, Tuple, Sequence, Union
 
 import cv2 as cv
@@ -22,7 +23,7 @@ from pcot.sources import MultiBandSource, SourcesObtainable, Source
 from pcot.utils import annotations, debayering
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
-from pcot.utils.archive import FileArchive
+from pcot.utils.archive import FileArchive,ArchiveType
 from pcot.utils.geom import Rect
 import pcot.dq
 from pcot.value import Value
@@ -110,6 +111,14 @@ class SubImageCube:
             self.uncertainty = img.uncertainty
             self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
+
+    def selectBands(self, bands:List[int]):
+        """
+        Make this subimage only have certain bands in it
+        """
+        self.img = self.img[:,:,bands]
+        self.dq = self.dq[:,:,bands]
+        self.uncertainty = self.uncertainty[:,:,bands]
 
     def fullmask(self, maskBadPixels=False):
         """the main mask is just a single channel - this will generate a mask
@@ -319,12 +328,13 @@ class CannotLoadImageBadFormatException(CannotLoadImageException):
         super().__init__(fname, "not a valid raster format")
 
 
-def load_rgb_image(fname, bitdepth=None, debayer_algo=None, debayer_pattern=None) -> np.ndarray:
+def load_rgb_image(fname:str|Path, bitdepth=None, debayer_algo=None, debayer_pattern=None,
+                   neg_method="Leave") -> np.ndarray:
     """This is used by ImageCube to load its image data. It's a function because it's
     also used by the multifile loader. Can also debayer given an algorithm and pattern. In this case only
-    the first band will be used (see pcot.utils.debayering)"""
+    the first band will be used (see pcot.utils.demosaicing). See pcot.dataformats.load.rgb()"""
     fname = str(fname)  # fname could potentially be some kind of Path object.
-    debayer_pattern = pcot.config.defaultBayerPattern if not debayer_pattern else debayer_pattern
+    debayer_pattern = pcot.config.data.defaultbayerpattern if not debayer_pattern else debayer_pattern
 
     # imread with this argument will load any depth, any
     # number of channels
@@ -350,15 +360,16 @@ def load_rgb_image(fname, bitdepth=None, debayer_algo=None, debayer_pattern=None
     # convert from BGR to RGB (OpenCV is weird)
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
+    # convert to floats (32 bit)
+    img = img.astype(np.float32)
+    # scale to 0..1
+    img /= scale
+
     # handle debayering
     if debayer_algo and debayer_algo.upper() != 'NONE':
         img = debayering.debayer(img, debayer_algo, debayer_pattern)
 
 
-    # convert to floats (32 bit)
-    img = img.astype(np.float32)
-    # scale to 0..1
-    img /= scale
     return img
 
 
@@ -508,20 +519,41 @@ class ImageCube(SourcesObtainable):
         return self
 
     @classmethod
-    def load(cls, fname, mapping, sources, bitdepth=None, debayer_algo='NONE', debayer_pattern=None):
+    def load(cls, fname:str|Path, mapping, sources, bitdepth=None, debayer_algo='NONE', debayer_pattern=None,
+             neg_method="Leave"):
         """
-        Load an RGB image using opencv's imread. Can also debayer - see pcot.utils.debayering.
+        Load an RGB image using opencv's imread. Can also debayer - see pcot.utils.demosaicing.
+        For more details, see pcot.dataformats.load.rgb
         Sources must be provided.
         """
-        logger.info(f"ImageCube load: {fname}")
-        img = load_rgb_image(fname, bitdepth=bitdepth, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern)
+        logger.info(f"ImageCube load: {str(fname)}")
+        img = load_rgb_image(fname, bitdepth=bitdepth, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern,
+                             neg_method=neg_method)
         # create sources if none given
         if sources is None:
             sources = MultiBandSource([Source().setBand('R'),
                                        Source().setBand('G'),
                                        Source().setBand('B')])
-        # and construct the image
-        return cls(img, mapping, sources)
+        # construct the image
+        img = cls(img, mapping, sources)
+        # process debayering problems
+        img.process_negatives_for_demosaic(neg_method=neg_method)
+        return img
+
+
+    def process_negatives_for_demosaic(self, neg_method="Leave"):
+        # handle debayer postprocessing (i.e. negatives that result from HMC/DDFAPD on iffy data)
+        neg_method = neg_method.lower()
+        if neg_method != "leave" or neg_method is None:
+            # first, mark.
+            if "mark" in neg_method:
+                # OR in an error for negative values
+                self.dq = np.where(self.img < 0, self.dq | dq.ERROR, self.dq)
+            if "clip" in neg_method:
+                self.img = np.clip(self.img, 0, None)
+
+
+
 
     def rgb(self, mapping: Optional[ChannelMapping] = None) -> np.ndarray:
         """get a numpy image (not another ImageCube) we can display on an RGB surface - see
@@ -537,6 +569,7 @@ class ImageCube(SourcesObtainable):
                 mapping = self.mapping
             if mapping is None:
                 raise Exception("trying to get rgb of an imagecube with no mapping")
+            self.mapping.ensureValid(self)
             red = self.img[:, :, mapping.red]
             green = self.img[:, :, mapping.green]
             blue = self.img[:, :, mapping.blue]
@@ -660,6 +693,31 @@ class ImageCube(SourcesObtainable):
             i.annotations = self.annotations.copy()
         return i
 
+    def _copybase(self, img: np.ndarray,
+                  uncs: np.ndarray,
+                  dq: np.ndarray,
+                  keepMapping=False, copyAnnotations=True):
+        """
+        Used to build "copies" of an image - real copies or ones with different data.
+        """
+        if self.mapping is None or keepMapping:
+            m = self.mapping
+        else:
+            m = self.mapping.copy()
+
+        srcs = self.sources.copy()
+
+        # we should be able to copy the default mapping reference OK, it won't change.
+        i = ImageCube(img, m, srcs, defaultMapping=self.defaultMapping,
+                      uncertainty=uncs,
+                      dq=dq)
+        i.rois = self.rois.copy()
+        if copyAnnotations:
+            i.annotations = self.annotations.copy()
+        return i
+
+
+
     def copy(self, keepMapping=False, copyAnnotations=True):
         """copy an image. If keepMapping is false, the image mapping will also be a copy. If true, the mapping
         is a reference to the same mapping as in the original image.
@@ -670,23 +728,20 @@ class ImageCube(SourcesObtainable):
         But it also might be because a child node is reading an image and changing its mapping to its own
         node mapping, which means that it also changes for the parent node - because the child node isn't making
         a copy of the image! If you want to make a shallow copy of the image, use shallowCopy.
-
         """
-        if self.mapping is None or keepMapping:
-            m = self.mapping
-        else:
-            m = self.mapping.copy()
 
-        srcs = self.sources.copy()
+        return self._copybase(self.img.copy(), self.uncertainty.copy(), self.dq.copy(),
+                              keepMapping = keepMapping, copyAnnotations = copyAnnotations)
 
-        # we should be able to copy the default mapping reference OK, it won't change.
-        i = ImageCube(self.img.copy(), m, srcs, defaultMapping=self.defaultMapping,
-                      uncertainty=self.uncertainty.copy(),
-                      dq=self.dq.copy())
-        i.rois = self.rois.copy()
-        if copyAnnotations:
-            i.annotations = self.annotations.copy()
-        return i
+    def zeros_like(self, keepMapping=False, copyAnnotations=True):
+        """
+        Rather like copy, but instead creates a zero image of the same dimensions.
+        """
+        return self._copybase(np.zeros_like(self.img.copy()),
+                              np.zeros_like(self.uncertainty.copy()),
+                              np.zeros_like(self.dq.copy()),
+                              keepMapping = keepMapping, copyAnnotations = copyAnnotations)
+
 
     def hasROI(self):
         return len(self.rois) > 0
@@ -1105,7 +1160,7 @@ class ImageCube(SourcesObtainable):
 
     def save(self, filename, annotations=False, format: str = None,
              name: str = None, description: str = "", append: bool = False,
-             pixelWidth=None):
+             pixelWidth=None,gamma=1.0):
         """Write the image to a file, with or without annotations. If format is provided, it will be used
         otherwise the format will be inferred from the filename extension. Note that this will always clobber -
         determining if the file already exists must be handled by the caller.
@@ -1138,15 +1193,15 @@ class ImageCube(SourcesObtainable):
                 raise ValueError("Append is not supported for image formats other than PARC")
 
         if format == 'pdf':
-            imageexport.exportPDF(self, filename, annotations=annotations)
+            imageexport.exportPDF(self, filename, annotations=annotations, gamma=gamma)
         elif format == 'svg':
-            imageexport.exportSVG(self, filename, annotations=annotations)
+            imageexport.exportSVG(self, filename, annotations=annotations, gamma=gamma)
         elif format in VALID_RASTER_FORMATS:
             if annotations:
-                imageexport.exportRaster(self, filename, annotations=annotations, pixelWidth=pixelWidth)
+                imageexport.exportRaster(self, filename, annotations=annotations, pixelWidth=pixelWidth, gamma=gamma)
             else:
                 # direct write with imwrite - this used to be its own method, rgbWrite()
-                img = self.rgb()
+                img = self.rgb() ** gamma
                 # convert to 8-bit integer from 32-bit float
                 img8 = (img * 256).clip(max=255).astype(np.ubyte)
                 # and change endianness
@@ -1158,7 +1213,7 @@ class ImageCube(SourcesObtainable):
             if annotations:
                 raise ValueError("PARC format does not support annotations")
             else:
-                with FileArchive(filename, "a" if append else "w") as a:
+                with FileArchive(filename, "a" if append else "w", type=ArchiveType.IMAGECUBE) as a:
                     from pcot.datum import Datum  # late import otherwise cyclic fun
                     ds = DatumStore(a)
                     ds.writeDatum(name, Datum(Datum.IMG, self), description)

@@ -1,6 +1,7 @@
 import errno
 import logging
 import os
+from pathlib import Path
 from typing import List, Tuple, Optional, Union, Dict, Any
 
 import numpy as np
@@ -21,33 +22,51 @@ from pcot.utils.datumstore import readParc
 logger = logging.getLogger(__name__)
 
 
-def rgb(fname: str, inpidx: int = None, mapping: ChannelMapping = None,
-        debayer_algo:str = 'NONE', debayer_pattern: str = None) -> Datum:
+def rgb(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None,
+        debayer_algo:str = 'NONE', debayer_pattern: str = None, camera=None, neg_method="Leave") -> Datum:
     """Load an imagecube from an RGB file (png, jpeg etc.)
 
     - fname: the filename
     - inpidx: the input index to use or None if not connected to a graph input
     - mapping: the channel mapping to use or None if the default
-    - debayer_algo: None, or "None" or a debayering algorithm (see the "pcot.utils.debayering" module). If
+    - debayer_algo: None, or "None" or a debayering algorithm (see pcot.utils.demosaicing). If
       the image is multiband, only the first band will be used.
-    - debayer_pattern: the pattern of the pixels for debayering (see the OpenCV docs and "pcot.utils.debayering")
+    - debayer_pattern: the pattern of the pixels for debayering (see pcot.utils.demosaicing).
+    - camera: the camera, which must have R, G and B filters.
+    - neg_method: "Leave" to leave untouched, otherwise one of NEGATIVE_PROCESSING_METHODS (see pcot.utils.demosaicing)
 
     """
 
-    # might seem a bit wasteful having three of them, but seems more logical to me.
-    e = StringExternal("RGB", fname)
-    sources = MultiBandSource([
-        Source().setBand("R").setExternal(e).setInputIdx(inpidx),
-        Source().setBand("G").setExternal(e).setInputIdx(inpidx),
-        Source().setBand("B").setExternal(e).setInputIdx(inpidx),
-    ])
+    if camera is None:
+        e = StringExternal("RGB", str(fname))
+        sources = MultiBandSource([
+            Source().setBand("R").setExternal(e).setInputIdx(inpidx),
+            Source().setBand("G").setExternal(e).setInputIdx(inpidx),
+            Source().setBand("B").setExternal(e).setInputIdx(inpidx),
+        ])
+    else:
+        import pcot.cameras
+        cam = pcot.cameras.getCamera(camera)
+        r = cam.getFilter("R")
+        g = cam.getFilter("G")
+        b = cam.getFilter("B")
+        e = StringExternal(camera, fname)
+        sources = MultiBandSource([
+            Source().setBand(r).setExternal(e).setInputIdx(inpidx),
+            Source().setBand(g).setExternal(e).setInputIdx(inpidx),
+            Source().setBand(b).setExternal(e).setInputIdx(inpidx),
+        ])
+
+
+
 
     # this can throw an exception if the file is not found
-    img = ImageCube.load(fname, mapping, sources, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern)
+    img = ImageCube.load(fname, mapping, sources, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern,
+                         neg_method = neg_method)
     return Datum(Datum.IMG, img)
 
 
-def envi(fname: str, inpidx: int = None, mapping: ChannelMapping = None) -> Datum:
+def envi(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None) -> Datum:
     """Load an imagecube from an ENVI file
 
     - fname: the name of the .hdr (header) file - the .dat (data) file must be in the same directory
@@ -61,7 +80,7 @@ def envi(fname: str, inpidx: int = None, mapping: ChannelMapping = None) -> Datu
     h, img = load(fname)
 
     # construct the source data
-    e = StringExternal("ENVI", f"ENVI:{fname}")
+    e = StringExternal("ENVI", f"ENVI:{str(fname)}")
     sources = [Source().setBand(f).setExternal(e).setInputIdx(inpidx) for f in h.filters]
     sources = MultiBandSource(sources)
     if mapping is None:
@@ -75,7 +94,7 @@ def envi(fname: str, inpidx: int = None, mapping: ChannelMapping = None) -> Datu
     return Datum(Datum.IMG, img)
 
 
-def multifile(directory: str,
+def multifile(directory: Path|str,
               fnames: List[str],
               preset: Optional[str] = None,
               filterpat: str = None,
@@ -147,7 +166,7 @@ def multifile(directory: str,
     """
 
     from pcot.inputs.multifile import presetModel
-    logger.debug(f"Multifile load from directory {directory} at bitdepth {bitdepth}")
+    logger.debug(f"Multifile load from directory {str(directory)} at bitdepth {bitdepth}")
     if rawloader is None:
         class RawPresets(PresetOwner):
             """
@@ -181,11 +200,11 @@ def multifile(directory: str,
         if preset is not None:
             r.applyPreset(presetModel.loadPresetByName(r, preset))
         # now we can use the settings in r
-        filterpat = r.filterpat or pcot.config.get('multifile_pattern')
+        filterpat = r.filterpat or pcot.config.data.multifile_pattern
         if really_no_camera:
             camera = None
         else:
-            camera = r.camera or pcot.config.get('default_camera')
+            camera = r.camera or pcot.config.data.default_camera
         rawloader = r.rawloader
 
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
@@ -228,6 +247,9 @@ def multifile(directory: str,
     sources = []  # array of source sets for each image
     imgs = []  # array of actual images (greyscale, numpy)
 
+    # make sure we're dealing with a Path
+    directory = Path(directory)
+
     # load each image - they must all be the same size and will be converted
     # to greyscale
 
@@ -239,17 +261,17 @@ def multifile(directory: str,
             # or network paths) so then we revert to the absolute path.
             # I'm really not sure about this code.
             try:
-                path = os.path.relpath(os.path.join(directory, fname), os.getcwd())
+                path = os.path.relpath(directory / fname, os.getcwd())
             except ValueError:
-                path = os.path.abspath(os.path.join(directory, fname))
+                path = os.path.abspath(directory / fname)
 
             if not os.path.exists(path):
                 # well, we'll just try the basic path then. Dammit.
-                path = os.path.join(directory, fname)
-                if not os.path.exists(path):
+                path = directory / fname
+                if not path.exists():
                         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
-            def load(path: str) -> np.ndarray:
+            def load(path: Path) -> np.ndarray:
                 logger.debug(f"Loading {path} at bitdepth {bitdepth}")
                 if rawloader is not None and rawloader.is_raw_file(path):
                     return rawloader.load(path, bitdepth=bitdepth)

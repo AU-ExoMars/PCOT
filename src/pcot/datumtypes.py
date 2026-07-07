@@ -39,8 +39,21 @@ class Type:
         self.__class__.instance = self
         typesByName[name] = self  # register by name
 
+        # these indicate whether we add entries for these types in the dialog
+        # when we set the type of macro connectors/params. Set using setOKForMacro
+        self.isOKForMacroConnectors = False
+        self.isOKForMacroParameters = False
+
     def __str__(self):
         return self.name
+
+    def setOKForConnectors(self):
+        self.isOKForMacroConnectors = True
+        return self
+
+    def setOKForParameters(self):
+        self.isOKForMacroParameters = True
+        return self
 
     def getSize(self, v):
         """Get the size of the value in bytes. This is used to manage the cache in a DatumStore (which is used to
@@ -54,9 +67,15 @@ class Type:
         return self.name
 
     def serialise(self, d: 'Datum'):
+        """
+        The general pattern here is something like
+                return self.name, data
+        Often the second element is itself a tuple containing source data.
+        """
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
 
     def deserialise(self, d) -> 'Datum':
+        """This must take the second element of the tuple returned from serialise()"""
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
         
     def view(self, d) -> str:
@@ -101,6 +120,11 @@ class Type:
                 f.write(outputDescription.prefix)
             s = str(d.val)
             f.write(s+"\n")
+
+    def getByIndices(self, d, args):
+        """Given that d is an Datum and args is a vector of Datum objects,
+        return what you would get with d[args0,args1...]"""
+        raise ValueError(f"Cannot index into datum type {self.name}")
 
 
 # Built-in datum types
@@ -172,6 +196,21 @@ class ImgType(Type):
                  pixelWidth=output.width,
                  append=output.append)
 
+    def getByIndices(self, d, args):
+        # turn the arguments into a list of band wavelengths or names
+        from pcot.datum import Datum
+        bands = []
+        for x in args:
+            if x.tp != Datum.NUMBER and x.tp != Datum.IDENT:
+                raise ValueError(f"Invalid datatype {x.tp} for band index")
+            if x.tp == Datum.NUMBER:
+                if not x.val.isscalar():
+                    raise ValueError(f"band index into image must be scalar")
+                bands.append(x.val.n)
+            else:
+                bands.append(x.val)
+        return Datum(Datum.IMG, d.val.getChannelImageByFilter(bands))
+
 
 class RoiType(Type):
     def __init__(self):
@@ -230,6 +269,20 @@ class NumberType(Type):
         else:
             return d.val.n.nbytes + d.val.u.nbytes + d.val.dq.nbytes
 
+    def getByIndices(self, d, args):
+        from pcot.datum import Datum
+        from pcot.sources import SourceSet
+        if len(args) > 1:
+            raise ValueError("only 1D vectors supported")
+        idx = args[0]
+        if idx.tp != Datum.NUMBER or not idx.val.isscalar():
+            raise ValueError("indices must be scalars")
+        i = idx.get(Datum.NUMBER)
+
+        res = d.val[i.n]
+        sources = SourceSet([d.sources, idx.sources])
+        return Datum(Datum.NUMBER, res, sources)
+
 
 class VariantType(Type):
     def __init__(self):
@@ -245,6 +298,17 @@ class GenericDataType(Type):
 
     def copy(self, d):
         return d    # this type is immutable
+
+
+class TabularDataType(Type):
+    def __init__(self):
+        super().__init__('table', valid=None)
+
+    def copy(self, d):
+        return d    # this type is immutable
+
+    def getByIndices(self, d, args):
+        return d.val.getByIndices(args, d.sources)
 
 
 class TestResultType(Type):
@@ -268,6 +332,9 @@ class IdentType(Type):
 
     def copy(self, d):
         return d    # this type is immutable
+
+    def getByIndices(self, d, args):
+        raise ValueError("unknown function '{}' ".format(d.val))
 
 
 class StringType(Type):

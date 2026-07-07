@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 def getvar(d):
     """check that a variable is not ANY (unwired). Also, if it's an image, make a shallow copy (see Issue #56, #65)"""
     if d.tp == Datum.ANY:
-        raise XFormException("DATA", "variable's input is not connected")
+        # raise XFormException("DATA", "variable's input is not connected")
+        d = Datum.null
     elif d.tp == Datum.IMG:
         if d.val is not None:
             d = Datum(Datum.IMG, d.val.shallowCopy())
@@ -31,7 +32,7 @@ class XFormExpr(XFormType):
     and the output type is determined when the node is run.
 
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
-    or numeric values.
+    or numeric values. If an input is not connected it has the "none" value.
     
     The standard operators +,/,\*,- and ^ all have their usual meanings. When applied to images they work in
     a pixel-wise fashion, so if **a** is an image, **2\*a** will double the brightness. If **b** is also an image,
@@ -47,21 +48,27 @@ class XFormExpr(XFormType):
     |A / B| divide A by B (can act on ROIs)| 20
     |A * B| multiply A by B (can act on ROIs)| 20
     |A ^ B| exponentiate A to the power B (can act on ROIs)| 30
-    |-A            |element-wise negation of A (can act on ROIs)|50
+    |-A            |element-wise negation of A (can act on ROIs)|70
     |A.B           |property B of entity A (e.g. a.h is height of image a)|80
     |A$546         |extract single band image of wavelength 546|100
     |A$_2          |extract single band image from band 2 explicitly|100
     |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|20
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
-    |!A            |element-wise 1-A (Zadeh's NOT operator)|50
+    |!A            |element-wise 1-A (Zadeh's NOT operator)|80
+    |A < B|returns 1 if A is less than B (pixel-wise test if one argument is an image))|60
+    |A < B|returns 1 if A is greater than B (pixel-wise test if one argument is an image))|60
 
     All operators can act on images, 1D vectors and scalars
     with the exception of **.** and **$** which have images on the left-hand side and identifiers
     or integers on the right-hand side.
 
+    Comparisons involving strict equality checks (equal, greater-or-equal, less-or-equal) have deliberately
+    been omitted; rounding errors could cause problems.
+
     Those operators marked with **(can act on ROIs)** can also act on pairs of ROIs (regions of interest, see below).
     
     ### Binary operations on image pairs
+
     These act by performing the binary operation on the two underlying Numpy arrays. This means you may need to be
     careful about the ordering of the bands in the two images, because they will simply be operated on in the order
     they appear.
@@ -79,10 +86,20 @@ class XFormExpr(XFormType):
     on bands in a single image.
 
     ### Binary operators on images with regions of interest
+
     If one of the two images has an ROI, the operation is only performed on that ROI; the remaining area of output is
     taken from the image without an ROI. If both images have an ROI an error will result - it is likely that this
     is a mistake on the user's part, and doing something more "intelligent" might conceal this. The desired result
     can be achieved using expr nodes on ROIs and an importroi node.
+
+    ### Boolean values (true or false)
+    Some functions and operators work on boolean values, such as
+
+    * The \| (or), & (and) and ! (not) operators
+    * The comparison operators < and > which produce boolean output
+    * The *ifelse* function
+
+    In PCOT, booleans are just numbers - any value greater than or equal to 0.5 is considered true.
 
     ### Operations with vectors
     Some functions can generate vectors, such as `mean` for getting the means of the bands, and `vec` for generating
@@ -91,8 +108,8 @@ class XFormExpr(XFormType):
     If an image is used in a binary operation with a vector on the other side, the vector must have the same number of
     elements as there are bands in the image. The operation will be performed on each band. Consider a 3-band image
     and the vector `[2,3,4]`. If we multiply them, the result will an image with the first band multiplied by 2,
-    the second band multiplied by 3, and the third band multiplied by 4. 
-    
+    the second band multiplied by 3, and the third band multiplied by 4.
+
     ### Operators on ROIs themselves (as opposed to images with ROIs)
 
     |operator    |description|
@@ -126,14 +143,43 @@ class XFormExpr(XFormType):
     | **(a+b)$G0** | **a$G0 + b$G0** |
     | **((a+b)/2)$780** | **(a$780+b$780)/2**  |
 
+    It's possible to **extract multiple bands from an image** using the square bracket notation (see below).
+    For example,
+    ```
+    a[640,550]
+    ```
+    will generate a single image from the 640nm and 550nm bands of the input. Names of filters can also be used, or
+    RGB names for images loaded by the RGB input:
+    ```
+    a[R,G]
+    ```
+    selects just the red and green channels from an RGB image.
+
     ### Brackets
 
     Round brackets are used to group expressions as usual, but square brackets are used for indexing into a vector.
-    For example, **a[3]** will extract the fourth element of the vector **a**. However, square brackets cannot
-    (yet) create a vector. To do this, use the `vec` function - so `vec(1,2,3)[1]` will return 2.
+    For example, **a[3]** will extract the fourth element of the vector **a**. Square brackets can also create a vector,
+    so **[1,2,3]** will create a vector.
+
+    Band extraction can be performed by giving a list of values (either numbers or identifiers) to an image in square
+    brackets:
     
+    | expression | meaning |
+    |-----|------|
+    |**a[640,540]**|create an image from the 640nm and 540nm bands of input *a*|
+    |**a[R,G]**|create an 2-band image from the R,G bands of input *a* (an RGB image)|
+    |**a[R,R,R]**|create an RGB image consisting of only the red band of input *a*|
+
     Band extraction can also be performed with vectors provided the vector elements are numeric (i.e. wavelengths):
-    `a $ vec(640,550,440)` is valid.
+    `a $ [640,550,440]` is valid, but it's better to use the form `a[640,550,440]`.
+
+    ### Extracting data from tables (e.g. spectra)
+
+    It's possible to use brackets to extract data from tables. In a spectrum, for example, the rows are
+    labelled by ROI and the columns by wavelength (prefixed by 'm' for mean, 's' for standard deviation).
+    We can extract a particular datum from such a table by using **a[row,column]**, e.g. `a[patchA, m440]`
+    would get the mean of the 440nm band for the roi "patchA". If two column names are given, a numeric value
+    made up of mean and standard deviation are extracted, e.g. `a[patchA, m440, s440]`.
     
 
     ### Properties
@@ -260,6 +306,8 @@ class TabExpr(pcot.ui.tabs.Tab):
         # clear the RUN button's red background
         self.w.run.setStyleSheet("")
         self.changed()
+        # rebuild the tab titles.
+        ui.mainwindow.MainUI.rebuildAll(scene=False)
 
     def onNodeChanged(self):
         self.w.data.canvas.setNode(self.node)

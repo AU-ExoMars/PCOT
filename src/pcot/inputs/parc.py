@@ -136,6 +136,10 @@ class PARCMethodWidget(MethodWidget):
 
         self.onInputChanged()
 
+    def onClose(self):
+        super().onClose()
+        self.data.canvas.onClose()
+
     def onInputChanged(self):
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
@@ -147,14 +151,14 @@ class PARCMethodWidget(MethodWidget):
         # use an file dialog to select a file
         res = QtWidgets.QFileDialog.getOpenFileName(self,
                                                     'Open file',
-                                                    os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
+                                                    os.path.expanduser(pcot.config.getDefaultDir('images')),
                                                     "PCOT datum archive files (*.parc)",
                                                     options=pcot.config.getFileDialogOptions())
         if res[0] != '':
             self.method.fname = res[0]
             self.method.loadManifest()
             self.tableView.setModel(Model(self, self.method.manifest))
-            pcot.config.setDefaultDir('pcotfiles', os.path.dirname(res[0]))
+            pcot.config.setDefaultDir('images', os.path.dirname(res[0]))
 
     def itemSelected(self):
         self.method.mark()

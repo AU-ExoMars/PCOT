@@ -2,11 +2,23 @@ import dataclasses
 import numbers
 from abc import ABC, abstractmethod
 from copy import copy
-from html import escape
 from numbers import Number
+from pathlib import Path
 from typing import Any, Dict, Union, List, Tuple, Optional
 
 import numpy as np
+
+"""
+A note on types within a TaggedAggregate "tag":
+    * str, float, int are all fine with int to float promotion done when required
+    * str can take a "valid_choices" argument: a list of valid choices
+    * int and float can also take a "valid_choices" argument: a tuple range (min,max)
+    * Path is weird, it can also take a "valid_choices" argument, which is True if only directories are allowed,
+      or a string like "Figures (*.png *.jpg) if only some types are allowed (i.e. a filter string, see 
+      https://doc.qt.io/qt-6/qfiledialog.html#getOpenFileName 
+      None or False permits any file.
+      This is only used in the graphical UI config.
+"""
 
 
 class Maybe:
@@ -47,12 +59,26 @@ def is_value_of_type(value, tp):
     return isinstance(value, tp)
 
 
-def process_numeric_type(value, tp):
+def type_convert(value, tp):
     """Handle int->float promotion"""
+
+    if isinstance(tp, Maybe):
+        # process the underlying type
+        if value is not None:
+            return type_convert(value, tp.type_if_exists)
+        else:
+            return None
+
     if tp is float and isinstance(value, int):
         return float(value)
     elif tp is int and isinstance(value, numbers.Integral):
         return int(value)
+    elif tp is Path:
+        if value is None:
+            print("Converting null path to cwd")
+            return Path().absolute()    # None as a default value is the full working dir.
+        elif isinstance(value, str):
+            return Path(value)  # could resolve(), but I won't.
     return value
 
 
@@ -123,8 +149,10 @@ class TaggedAggregate(ABC):
         return self._type
 
     @abstractmethod
-    def serialise(self):
-        """Serialise the type into a JSON-serialisable structure"""
+    def serialise(self, forceUnordered=False):
+        """Serialise the type into a JSON-serialisable structure. If this is an ordered TaggedDict it will
+        normally be serialised into a list, but we can override that with forceUnordered. This can be useful
+        for saving data in a more human-readable format."""
         raise NotImplementedError("serialise not implemented")
 
     @abstractmethod
@@ -138,7 +166,10 @@ class Tag:
     description: str
     type: Union[type, TaggedAggregateType]  # either a type or one of the TaggedAggregateType objects
     deflt: Any = None  # the default value is ignored (and none) if the type is a TaggedAggregateType
-    valid_strings: Union[List[str],None] = None # if the type is a string, these are the valid values (or any if none)
+    # if the type is a string, these are the valid values (or any if none).
+    # For a number, it's a (min,max) range tuple or None.
+    # For a Path, it's None or False for any file, True for a dir, or a getOpenFileName filter string.
+    valid_choices: Union[List[str],Tuple[Number,Number],None,bool] = None
 
     def assert_valid(self):
         """Check the tag is valid"""
@@ -153,6 +184,8 @@ class Tag:
                 return
             if t is Number or t is type(None):
                 return
+            if t is Path:       # paths are permissible!
+                return
             raise ValueError(f"Type {get_type_name(t)} is neither a JSON-serialisable type nor a TaggedAggregateType")
 
         if isinstance(self.type, Maybe):
@@ -161,6 +194,41 @@ class Tag:
         else:
             check_type(self.type)
 
+    def check_value(self, v):
+        """Check a value against the type and valid choices"""
+        def _check(t, v):
+            # strings and numbers require special checking
+            if t == str:
+                if not isinstance(v, str):
+                    raise ValueError(f"Value '{v}' is not a string, it's a {get_type_name(type(v))}")
+                if self.valid_choices:
+                    if v not in self.valid_choices:
+                        raise ValueError(f"Value '{v}' is not one of {self.valid_choices}")
+            elif t == int or t == float:
+                if not isinstance(v, t):
+                    raise ValueError(f"Value '{v}' is not a {get_type_name(t)}, it's a {get_type_name(type(v))}")
+                if self.valid_choices:
+                    mn, mx = self.valid_choices
+                    if v < mn or v > mx:
+                        raise ValueError(f"Value {v} is not in range [{mn},{mx}]")
+            elif isinstance(t, TaggedAggregateType):
+                if v.type != t:
+                    raise ValueError(f"Value {v} is not a {get_type_name(t)}")
+            elif not isinstance(t, type):
+                raise ValueError(f"Type {t} is not a type!")
+            elif not isinstance(v, t):
+                raise ValueError(f"Value {v} is not a {get_type_name(t)}")
+
+
+
+        # if this is a maybe, then check the underlying type if the value exists otherwise don't bother
+        if isinstance(self.type, Maybe):
+            # check the type is valid
+            if v is not None:
+                _check(self.type.type_if_exists, v)
+        else:
+            _check(self.type, v)
+
     def get_primitive_type_desc(self):
         """Only really valid for tags which are primitive types, this returns a descriptive string
         which holds the type name and extra details such as valid strings and defaults. It could be written
@@ -168,8 +236,8 @@ class Tag:
         tp = self.type.type_if_exists if isinstance(self.type, Maybe) else self.type
         deflt = self.deflt
         if tp == str:
-            if self.valid_strings is not None:
-                s = f"string ({', '.join(self.valid_strings)})"
+            if self.valid_choices is not None:
+                s = f"string ({', '.join(self.valid_choices)})"
             else:
                 s = "string"
             deflt = f"'{deflt}'" if deflt is not None else "None"
@@ -181,6 +249,8 @@ class Tag:
             s = "boolean"
         elif tp == Number:
             s = "int or float"
+        elif tp == Path:
+            s = "directory path" if self.valid_choices else "path"
         else:
             s = tp.__name__
         s += f" (default {deflt})"
@@ -233,8 +303,11 @@ class TaggedDictType(TaggedAggregateType):
         """Initialise the dictionary with a set of key-value pairs, where the value is a tuple of
         (description, type, default). You can also specify these as kwargs.
 
-        For strings, you can specify
+        For strings, you can optionally specify valid choices:
         (description, str, default, valid_strings) where valid_strings is a list of strings that are valid.
+
+        For floats and ints, you can specify a range:
+        (description, float or int, default, (min,max)))
 
         If the type is a TaggedAggregateType, then the default value is ignored and should be None or omitted (the
         create method for that type will create the correct default).
@@ -257,15 +330,18 @@ class TaggedDictType(TaggedAggregateType):
 
         for k, v in self.tags.items():
             v.assert_valid()
-            v.deflt = process_numeric_type(v.deflt, v.type)
+            v.deflt = type_convert(v.deflt, v.type)
             
             # if type is a TaggedAggregate the default has to be None
             if isinstance(v.type, TaggedAggregateType):
                 if v.deflt is not None:
-                    raise ValueError(f"Type {get_type_name(v.type)} is a TaggedAggregateType, so default must be None")
-            # otherwise the default has to be of the correct type
-            elif not is_value_of_type(v.deflt, v.type):
-                raise ValueError(f"Default {v.deflt} is not of type {get_type_name(v.type)}")
+                    raise ValueError(f"TaggedDictType entry {k} of type {get_type_name(v.type)} is a TaggedAggregateType, so default must be None")
+            else:
+                # otherwise the default has to be of the correct type
+                try:
+                    v.check_value(v.deflt)
+                except ValueError as e:
+                    raise ValueError(f"Error in setting '{k}' in a TaggedDictType default: {e}")
 
     def get_tag(self, key):
         """Return the tag for a given key - raises a key error on failure"""
@@ -282,6 +358,9 @@ class TaggedDictType(TaggedAggregateType):
         The key ordering will be that given in the constructor."""
         self.isOrdered = True
         return self
+
+    def __len__(self):
+        return len(self.tags)
 
     def create(self):
         """Create a the appropriate default values"""
@@ -309,8 +388,8 @@ class TaggedDict(TaggedAggregate):
         self._values = {}
 
         if isinstance(data, list) or isinstance(data, tuple):
-            # we have legacy data that has been serialised as tuple or list. Deal with it by converting to a dict -
-            # we need to know what the ordering is.
+            # we may have data that has been serialised as tuple or list. Deal with it by converting to a dict -
+            # but we need to know what the ordering is.
             if not td.isOrdered:
                 raise ValueError("TaggedDictType has no ordering, but data is a tuple")
             if len(td.ordering) > len(data):
@@ -332,25 +411,23 @@ class TaggedDict(TaggedAggregate):
                     # if we have a tagged aggregate, create it from the data stored in the serialised dict
                     self._values[k] = v.type.deserialise(d)
                 elif isinstance(v.type, Maybe):
-                    # handle int->float promotion
-                    d = process_numeric_type(d, v.type.type_if_exists)
                     # if we have a maybe, we have to check null.
                     if d is None:
                         self._values[k] = None
-                    elif isinstance(v.type.type_if_exists, TaggedAggregateType):
-                        # it's not a null, so use the underlying type to deserialise - first the TA case
-                        self._values[k] = v.type.type_if_exists.deserialise(d)
-                    elif not is_value_of_type(d, v.type.type_if_exists):
-                        # then the "normal" case.
-                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {get_type_name(v.type.type_if_exists)}")
                     else:
-                        self._values[k] = d
+                        # handle int->float promotion etc.
+                        d = type_convert(d, v.type.type_if_exists)
+                        if isinstance(v.type.type_if_exists, TaggedAggregateType):
+                            # it's not a null, so use the underlying type to deserialise - first the TA case
+                            self._values[k] = v.type.type_if_exists.deserialise(d)
+                        else:
+                            v.check_value(d)    # redundant, we do the check in the ctor of the type object
+                    self._values[k] = d
                 else:
                     # otherwise just use the data as is
-                    # handle int->float promotion
-                    d = process_numeric_type(d, v.type)
-                    if not is_value_of_type(d, v.type):
-                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {get_type_name(v.type)}")
+                    # handle int->float promotion etc.
+                    d = type_convert(d, v.type)
+                    v.check_value(d)  # redundant, we do the check in the ctor of the type object
                     self._values[k] = d
             else:
                 # we are creating from defaults
@@ -362,10 +439,9 @@ class TaggedDict(TaggedAggregate):
                     # (it could, in rare cases, be a mutable object like a dict).
                     self._values[k] = copy(v.deflt)
 
-            if v.type == str:
-                # if the type is a string, check it's in the list of valid strings
-                if v.valid_strings is not None and self._values[k] not in v.valid_strings:
-                    raise ValueError(f"TaggedDict key {k}: Value {self._values[k]} is not in the list of valid strings {v.valid_strings}")
+    def tag(self, k)->Tag :
+        """Return the tag object for the given key"""
+        return self._type.tags[k]
 
     def _intkey2str(self, key):
         """Convert an integer key to a string key"""
@@ -403,36 +479,18 @@ class TaggedDict(TaggedAggregate):
         key = self._intkey2str(key)
         if key not in tp.tags:
             raise KeyError(f"Key {key} not in tags")
-        correct_type = tp.tags[key].type
-        if isinstance(correct_type, Maybe):
-            if value is None:
-                self._values[key] = None
-                return
-            else:
-                correct_type = correct_type.type_if_exists
-        # handle int->float promotion
-        value = process_numeric_type(value, correct_type)
-        if isinstance(correct_type, TaggedAggregateType):
+        tag = tp.tags[key]
+        # handle int->float promotion etc.
+        value = type_convert(value, tag.type)
+        if isinstance(tag.type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
                 raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate, is a {get_type_name(type(value))}")
-            if correct_type != value._type:
-                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {get_type_name(correct_type)}, is a {get_type_name(type(value))}")
-        elif not is_value_of_type(value, correct_type):
-            # otherwise check the type
-            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {get_type_name(correct_type)}, is a {get_type_name(type(value))}")
-        # check string validity
-        if correct_type == str:
-            vstrs = tp.tags[key].valid_strings
-            if vstrs is not None and value not in vstrs:
-                ss = ",".join(vstrs)
-                raise ValueError(f"TaggedDict key {key}: Value '{value}' is not in the list of valid strings {ss}")
+            if tag.type != value._type:
+                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {get_type_name(tag.type)}, is a {get_type_name(type(value))}")
 
-        # this will convert the value to the exact type declared in the tag if possible
-        if correct_type in (int, float, str, bool):
-            self._values[key] = correct_type(value)
-        else:
-            self._values[key] = value
+        tag.check_value(value)
+        self._values[key] = value
 
     def set(self, *args) -> 'TaggedDict':
         """If there is an ordering, set the values in the order given. If fewer values are given than there are keys,
@@ -486,7 +544,10 @@ class TaggedDict(TaggedAggregate):
     def items(self):
         return self._values.items()
 
-    def serialise(self):
+    def as_dict(self):
+        return dict(self._values)
+
+    def serialise(self, forceUnordered=False):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
@@ -501,11 +562,13 @@ class TaggedDict(TaggedAggregate):
                 tp = tp.type_if_exists
                 # otherwise fall through with the underlying type, having assured the value isn't none.
             if isinstance(tp, TaggedAggregateType):
-                out[k] = v.serialise()
+                out[k] = v.serialise(forceUnordered=forceUnordered)
+            elif tp == Path:
+                out[k] = str(v)
             else:
                 out[k] = v
 
-        if self._type.isOrdered:
+        if self._type.isOrdered and not forceUnordered:
             # this is an ordered dict - we need to serialise as a tuple
             out = tuple([out[k] for k in self._type.ordering])
 
@@ -520,7 +583,7 @@ class TaggedListType(TaggedAggregateType):
     deflt_append: Optional[Any]    # if a list of non-tagged-aggs, adding will append this.
     tag: Tag
 
-    def __init__(self, tp, deflt=None, deflt_append=None):
+    def __init__(self, tp, deflt=None, deflt_append=None, valid_choices=None):
         """Constructor for tagged list types.
 
         The deflt field specifies the initial value of the TaggedList that
@@ -541,7 +604,7 @@ class TaggedListType(TaggedAggregateType):
         The deflt_append value must be provided for non-tagged-aggregate lists.
         """
         super().__init__()
-        self.tag = Tag("", tp, deflt)       # descriptions are pointless; the containing TaggedDict will have one.
+        self.tag = Tag("", tp, deflt, valid_choices)       # descriptions are pointless; the containing TaggedDict will have one.
         self.tag.assert_valid()
         self.deflt_append = deflt_append   # not always valid to provide one; we check later.
         # if type is a TaggedAggregate the default has to be an int!
@@ -556,12 +619,12 @@ class TaggedListType(TaggedAggregateType):
             # otherwise the default has to be a list, and all items must be of the correct type
             if not isinstance(self.tag.deflt, list):
                 raise ValueError(f"Default {self.tag.deflt} is not a list")
-            # handle int->float promotion
-            self.tag.deflt = [process_numeric_type(i, self.tag.type) for i in self.tag.deflt]
+            # handle int->float promotion etc.
+            self.tag.deflt = [type_convert(i, self.tag.type) for i in self.tag.deflt]
             for i in self.tag.deflt:
                 if not is_value_of_type(i, self.tag.type):
                     raise ValueError(f"Default {self.tag.deflt} contains an item {i} that is not of type {get_type_name(self.tag.type)}")
-            if self.deflt_append is None:
+            if self.deflt_append is None and not isinstance(self.tag.type, Maybe) :
                 raise ValueError("Default append not provided for non-TaggedAggregateType list")
             if not is_value_of_type(self.deflt_append, self.tag.type):
                 raise ValueError(f"Default append value {self.deflt_append} is not of type {get_type_name(self.tag.type)}")
@@ -594,8 +657,8 @@ class TaggedList(TaggedAggregate):
                 # if the type is a tagged aggregate, them from the data provided
                 self._values = [tt.deserialise(v) for v in data]
             else:
-                # handle int->float promotion
-                data = [process_numeric_type(v, tt) for v in data]
+                # handle int->float promotion etc.
+                data = [type_convert(v, tt) for v in data]
                 # otherwise just use the data as is
                 for v in data:
                     if not is_value_of_type(v, tt):
@@ -628,20 +691,11 @@ class TaggedList(TaggedAggregate):
 
     def _check_value(self, value):
         """check an item before setting"""
-        tp = self._type.tag.type
-        if isinstance(tp, TaggedAggregateType):
-            # if the type is a tagged aggregate, make sure it's the right type
-            if not isinstance(value, TaggedAggregate):
-                raise ValueError(f"Value {value} is not a TaggedAggregate")
-            if tp != value._type:
-                raise ValueError(f"Value {value} is not a TaggedAggregate of type {tp}")
-        elif not is_value_of_type(value, tp):
-            # otherwise check the type
-            raise ValueError(f"Value {value} is not of type {tp}")
+        self._type.tag.check_value(value)
 
     def __setitem__(self, idx, value):
         """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
-        value = process_numeric_type(value, self._type.tag.type)    # handle int->float promotion
+        value = type_convert(value, self._type.tag.type)    # handle int->float promotion
         self._check_value(value)
         try:
             idx = int(idx)  # make sure it's an int; it will probably arrive as a string.
@@ -666,16 +720,22 @@ class TaggedList(TaggedAggregate):
         """Create the default item for a list."""
         if isinstance(self._type.tag.type, TaggedAggregateType):
             return self._type.tag.type.create()
-        elif self._type.deflt_append is not None:
-            return self._type.deflt_append
-        else:
+
+        if self._type.deflt_append is None and not isinstance(self._type.tag.type, Maybe):
             raise ValueError("Default append not provided for non-TaggedAggregateType list")
+        return self._type.deflt_append
 
     def append_default(self):
         """Append a default value to a list. If you want to append a specific value, use append.
         Returns the appended value."""
         self._values.append(self.create_default())
         return self._values[-1]
+
+    def prepend_default(self):
+        """Prepend a default value to a list."""
+        item = self.create_default()
+        self._values.insert(0, item)
+        return item
 
     def restore_to_original(self):
         """Restore the object to the original state"""
@@ -695,12 +755,19 @@ class TaggedList(TaggedAggregate):
     def __call__(self, *args, **kwargs):
         raise NotImplementedError("TaggedList does not support __call__")
 
-    def serialise(self):
+    def serialise(self, forceUnordered=False):
         """Serialise the structure rooted here into a JSON-serialisable list. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
-        return [v.serialise() if isinstance(v, TaggedAggregate) else v for v in self._values]
+        def convert_path_to_str(v):
+            if isinstance(v, Path):
+                return str(v)
+            else:
+                return v
+
+        return [v.serialise(forceUnordered=forceUnordered) if isinstance(v, TaggedAggregate) else \
+                    convert_path_to_str(v) for v in self._values]
 
 
 class TaggedVariantDictType(TaggedAggregateType):
@@ -709,23 +776,37 @@ class TaggedVariantDictType(TaggedAggregateType):
 
     discriminator_field: str  # the field that tells us what type we are
     type_dict: Dict[str, TaggedDictType]  # the types we can be
+    default_type_name: Optional[str]   # the default type to create for the initial "child" dict.
 
-    def __init__(self, discriminator_field, type_dict):
+    def __init__(self, discriminator_field, type_dict, default_type_name=None):
         super().__init__()
         self.discriminator_field = discriminator_field
         self.type_dict = type_dict
+        self.default_type_name = default_type_name
 
+        # make sure the discriminators are correct for each TaggedDictType, and indeed that the elements
+        # are TDTs.
         for k, v in type_dict.items():
             if not isinstance(v, TaggedDictType):
                 raise ValueError(f"Value {v} is not a TaggedDictType")
+            if discriminator_field not in v.tags:
+                raise KeyError(f"Discriminator field {discriminator_field} is not defined in a TaggedDictType inside a TaggedVariantDictType")
+            tag_value = v.tags[discriminator_field].deflt
+            v.tags[discriminator_field].deflt = tag_value
+
+
 
     def create(self, type_name=None):
-        """Create an instance of TaggedVariantDict. By default it will have no child dict, but if a name is provided
-        it will
+        """Create an instance of TaggedVariantDict.
+        If both type_name and the default_dict_name in the type object are null, it will create no "child" dict.
+        Otherwise the type_name takes preference over the default_dict_name. This name will be used thus:
         - look up the name in the type_dict to get the type
         - create a new dict of that type and set it to be the child dict
         - set the value of the discriminator field in that dict to be the type name"""
         d = TaggedVariantDict(self)
+
+        type_name = self.default_type_name if type_name is None else type_name
+
         if type_name is not None:
             if type_name not in self.type_dict:
                 poss = ",".join(self.type_dict.keys())
@@ -768,6 +849,12 @@ class TaggedVariantDict(TaggedAggregate):
             self._value = tt.type_dict[tp].deserialise(data)
             self._type_name = tp
 
+    def force_create_child(self, type_name, data=None):
+        if type_name not in self._type.type_dict:
+            raise ValueError(f"TaggedVariantDict does not have a type {type_name} in the type dictionary")
+        self._value = self._type.type_dict[type_name].create()
+        self._type_name = type_name
+
     def get(self) -> TaggedDict:
         """return the underlying TaggedDict"""
         return self._value
@@ -787,13 +874,14 @@ class TaggedVariantDict(TaggedAggregate):
         """return the name of the underlying TaggedDict"""
         return self._type_name
 
-    def serialise(self):
+    def serialise(self, forceUnordered=False):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
         if self._value is None:
             return None
-        out = self._value.serialise()
+        # we always have to force this to serialise as ordered so we can set the discriminator
+        out = self._value.serialise(forceUnordered=True)
         # make very sure that the discriminator is set
         out[self._type.discriminator_field] = self._type_name
         return out

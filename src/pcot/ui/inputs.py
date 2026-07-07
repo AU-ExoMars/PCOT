@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 from typing import List
 
 from PySide2 import QtWidgets, QtCore, QtGui
@@ -122,6 +123,11 @@ class InputWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         logger.debug("Closing input window")
         self.input.onWindowClosed()
+        super().closeEvent(event)
+        for w in self.widgets:
+            w.onClose()
+            w.deleteLater()     # delete all the bloody widgets
+        self.widgets = []
         event.accept()
 
     def methodChanged(self):
@@ -163,6 +169,9 @@ class MethodWidget(QtWidgets.QWidget):
         if self.method.isActive():
             self.method.invalidate()
 
+    def onClose(self):
+        pass
+
 
 class TreeMethodWidget(MethodWidget):
     """This class is for displaying input methods which rely on a tree view of files,
@@ -194,7 +203,13 @@ class TreeMethodWidget(MethodWidget):
         self.treeView.doubleClicked.connect(self.fileDoubleClickedAction)
         self.fileEdit.editingFinished.connect(self.lineToTree)
         self.treeView.clicked.connect(self.fileClickedAction)
-        self.goto(root)
+        try:
+            if self.method.fname and Path(self.method.fname).exists():
+                    self.goto(self.method.fname)
+            else:
+                self.goto(root)
+        except:     # if that path is weird...
+            self.goto(root)
 
         # the canvas gets its "caption display" setting from the graph, so
         # we need to get it from the document, which is stored in the manager,
@@ -204,6 +219,10 @@ class TreeMethodWidget(MethodWidget):
         self.canvas.setPersister(m)
 
         self.onInputChanged()
+
+    def onClose(self):
+        super().onClose()
+        self.canvas.onClose()
 
     def goto(self, filename):
         """Filename could be a file or directory - we should scroll to it, and select it if it's a file"""

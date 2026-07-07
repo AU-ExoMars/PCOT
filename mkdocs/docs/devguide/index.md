@@ -13,6 +13,7 @@ examples and reading the source code!
 * [Using PCOT as a library](library.md)
 * [Writing PCOT plugins](plugins.md)
 * [Node serialisation](nodeser.md)
+* [GUPPY: Guide to Uncertainty in PCOT Python](guppy.md)
 
 ## Miscellaneous
 

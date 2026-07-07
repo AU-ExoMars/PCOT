@@ -456,11 +456,12 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.caplabel.setEnabled(b)
         self.w.caption.setEnabled(b)
         if b:
-            # we're selecting a node, so set the text and dot size
+            # we're selecting a node, so set the text, dot size, etc.
             if self.node.img:
                 r = self.node.selected.r
                 self.w.dotSize.setValue(r)
             self.w.caption.setText(self.node.selected.label)
+            self.node.colour = self.node.selected.colour
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):

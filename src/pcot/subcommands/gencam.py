@@ -3,6 +3,8 @@ import datetime
 import glob
 import os
 
+from pcot.cameras import filtresponse
+from pcot.cameras.filtresponse import FilterResponse
 from pcot.imagecube import CannotLoadImageBadFormatException
 from pcot.subcommands import subcommand, argument
 from dataclasses import dataclass
@@ -35,7 +37,7 @@ def get_raw_loader(d):
     or from values in the dict"""
     from pcot.dataformats.raw import RawLoader
 
-    # all raw loader data is in 'rawloder' - this can be either 'preset' or
+    # all raw loader data is in 'rawloader' - this can be either 'preset' or
     # all the individual preset data elements.
     if 'rawloader' not in d:
         return None
@@ -84,6 +86,8 @@ def gencam(args):
     from pcot.cameras import camdata
     import yaml
 
+    print(f"PCOT gencam generating {args.output} from {args.params}")
+
     pcot.setup()
     with open(args.params) as f:
         # load the YAML file and process the filter information in the "filters" key
@@ -105,26 +109,10 @@ def gencam(args):
         p.params.short = d["short"]
         p.params.source_filename = args.params
 
-        # Sometimes the reflectance data refers to filters by other names. We deal with that here
-        # by providing a dictionary of aliases to filter names.
-        filter_aliases = {}
         if "filter_aliases" in d:
-            logger.info("Filter aliases found")
-            for alias, filtername in d["filter_aliases"].items():
-                filter_aliases[alias] = filtername
-
-        # there may be a section on reflectances - this will be a dictionary of calibration
-        # target names to filenames holding the reflectances for that target.
-        p.reflectances = {}
+            logger.error("Filter aliases are provided, but these are no longer supported (it's part of the old reflectance system")
         if "reflectance" in d:
-            logger.info("reflectance section found")
-            p.params.has_reflectances = True
-            for target, filename in d["reflectance"].items():
-                logger.info(f"Processing reflectance data for {target}")
-                # we pass in the filters so we can check they exist when referred to in the reflectance data.
-                # We store the resulting dict in the CameraParams object.
-                p.reflectances[target] = process_reflectance(filename, fs, filter_aliases)
-                logger.info(f"Reflectance data for {target} is {p.reflectances[target]}")
+            logger.error("Reflectance data is provided, but reflectances are now handled separately")
 
         # get information about any flats from the YAML. We can have the data in the YAML but disabled,
         # so flats aren't generated, but setting the "disabled" key. We can also do this by using the
@@ -195,11 +183,29 @@ def createFilters(filter_dict, position_dict=None):
             pos = d["position"]
         else:
             raise ValueError(f"Filter {k} does not have a position, and no position dictionary was provided")
+
+        # do we have any response data?
+        if "response" in d:
+            # responses are usually percentage, but could be 0-1 if you specify false
+            # here.
+            response_percentage = d.get("response_percentage", True)
+            # Sometimes filters have spurious high readings (e.g. G12 in the training model geology filters)
+            # due to problems with the sensor switchover on certain spectrometers. To deal with this,
+            # we can specify a clip value. You'll get a warning when you clip if you provide this. If you
+            # don't, you'll get an error.
+            response_clip_percentage = d.get("response_clip_percentage", None)
+            # load the filter response from a CSV file; that will determine what kind of filter response
+            # (potentially could be more complex than just wavelength,response).
+            response = FilterResponse.load_from_csv(d["response"], response_percentage, response_clip_percentage)
+        else:
+            response = None
+
         f = filters.Filter(
             d["cwl"],
             d["fwhm"],
             transmission=d.get("transmission", 1.0),
             name=k,
+            response=response,
             position=pos,
             description=d.get("description", "No description given"))
         fs[k] = f
@@ -339,30 +345,3 @@ def process_filters_for_flats(callback, data: FlatFileData):
         res = ImageCube(mean, uncertainty=sd, dq=dqs)
 
         callback(res, data.camera_name, filt)
-
-
-def process_reflectance(filename, filters: dict, filter_aliases: dict):
-    """Process the reflectance data for a particular calibration target, given the filename of the data."""
-
-    with open(filename) as f:
-        # this is a CSV file with four fields: patch, filter, reflectance, uncertainty.
-        # We'll read this in and create a dictionary of filter -> reflectance data.
-        import csv
-        reader = csv.DictReader(f)
-        data = {}
-        for row in reader:
-            patch = row["ROI"]
-            filt = row["filter"]
-            if filt not in filters:
-                # if the filter isn't in the filters dictionary, we may have an alias for it
-                if filt in filter_aliases:
-                    filt = filter_aliases[filt]
-                else:
-                    raise ValueError(f"In reflectance file {filename}: '{filt}' not found in filter list and no alias found")
-            refl = float(row["n"])
-            unc = float(row["u"])
-            if patch not in data:
-                data[patch] = {}
-            data[patch][filt] = (refl, unc)
-
-    return data

@@ -41,8 +41,8 @@ def load_plugins():
         return
     plugins_loaded = True
 
-    pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(';')]
-    logger.info(f"Plugin directories {','.join(pluginDirs)}")
+    pluginDirs = pcot.config.getDefaultDir('pluginpath')
+
     # Load any plugins by recursively walking the plugin directories and importing .py files.
 
     for d in pluginDirs:
@@ -76,6 +76,8 @@ def setup():
 
     # load camera set data
     config.loadCameras()
+    # and reflectances
+    config.loadReflectances()
 
     # If we run without a GUI, we still need an application. This will provide that.
     from pcot.app import checkApp
@@ -99,7 +101,24 @@ if tmp is None:
     raise ValueError('cannot find VERSION.txt')
 
 # this string gets turned into pcot.__fullversion__, while pcot.__version__
-# is just the number part (0.0.0 in the example).
+# is just the number part (0.0.0 in the example). We also strip any trailing "-alpha" etc. from the
+# end of the __version__.
 
-__fullversion__ = tmp.decode('utf-8').strip()
+# There's a second line too, which is the oldest document version we can safely load.from
+
+tmp = tmp.decode('utf-8')
+lines = tmp.splitlines()
+
+__fullversion__ = lines[0].strip()
 __version__ = __fullversion__.split(maxsplit=1)[0]
+if "-" in  __version__:
+    __version__ = __version__.split("-")[0]
+
+oldest_valid_version = lines[1].strip()
+
+def compatible_version_check(version):
+    """This checks to see if this version of PCOT can load data created by the version passed in"""
+    doc_maj,doc_min,doc_patch = version.split(".")
+    app_maj, app_min, app_patch = oldest_valid_version.split(".")
+
+    return doc_maj >= app_maj and doc_min >= app_min and doc_patch >= app_patch

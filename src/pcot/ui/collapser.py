@@ -18,10 +18,10 @@
 
         coll.end()
 """
+from typing import Dict
 
-from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Qt
-
 
 class ContentArea(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -32,29 +32,32 @@ class CollapserSection(QtWidgets.QWidget):
     """This is a section within the collapsing list - the code comes from here: https://stackoverflow.com/a/56275050
     with a few modifications. We use setContentLayout to add layouts.
 
-    Don't use this directly - use Collapser. """
+    Don't use this directly - use Collapser. Actually, that's a lie
+    right now - ConfigDialog uses it."""
 
     def __init__(self, title, parent=None, animationDuration=100, isOpen=False, isAlwaysOpen=False):
         super(CollapserSection, self).__init__(parent=parent)
 
         if isAlwaysOpen:
             isOpen = True
-        self.isAlwaysOpen = isAlwaysOpen
 
+        self.isAlwaysOpen = isAlwaysOpen
+        self.isNowOpen = isOpen
         self.contentArea = ContentArea()
+        self.contentLayout = None
 
         if not isAlwaysOpen:
             self.animationDuration = animationDuration
             self.toggleAnimation = QtCore.QParallelAnimationGroup()
             self.headerLine = QtWidgets.QFrame()
-            self.toggleButton = QtWidgets.QToolButton()
-            toggleButton = self.toggleButton
+            toggleButton = QtWidgets.QToolButton()
             toggleButton.setStyleSheet("QToolButton { border: none; }")
             toggleButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
             toggleButton.setArrowType(QtCore.Qt.RightArrow)
             toggleButton.setText(str(title))
             toggleButton.setCheckable(True)
             toggleButton.setChecked(isOpen)
+            self.toggleButton = toggleButton
 
             headerLine = self.headerLine
             headerLine.setFrameShape(QtWidgets.QFrame.HLine)
@@ -72,10 +75,9 @@ class CollapserSection(QtWidgets.QWidget):
             self.contentArea.setMaximumHeight(0)
             self.contentArea.setMinimumHeight(0)
             # let the entire widget grow and shrink with its content
-            toggleAnimation = self.toggleAnimation
-            toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"minimumHeight"))
-            toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"maximumHeight"))
-            toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self.contentArea, b"maximumHeight"))
+            self.toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"minimumHeight"))
+            self.toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"maximumHeight"))
+            self.toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self.contentArea, b"maximumHeight"))
 
         self.mainLayout = QtWidgets.QGridLayout()
         mainLayout = self.mainLayout
@@ -92,27 +94,39 @@ class CollapserSection(QtWidgets.QWidget):
 
         self.setLayout(self.mainLayout)
 
-        def start_animation(checked):
-            arrow_type = QtCore.Qt.DownArrow if checked else QtCore.Qt.RightArrow
-            direction = QtCore.QAbstractAnimation.Forward if checked else QtCore.QAbstractAnimation.Backward
-            toggleButton.setArrowType(arrow_type)
-            self.toggleAnimation.setDirection(direction)
-            self.toggleAnimation.start()
-
         if not isAlwaysOpen:
-            self.toggleButton.clicked.connect(start_animation)
+            self.toggleButton.clicked.connect(self.toggleSectionOpen)
             if isOpen:
-                start_animation(True)
+                self.toggleSectionOpen(True)
 
-    def setContentLayout(self, contentLayout):
+    def toggleSectionOpen(self, open):
+        arrow_type = QtCore.Qt.DownArrow if open else QtCore.Qt.RightArrow
+        direction = QtCore.QAbstractAnimation.Forward if open else QtCore.QAbstractAnimation.Backward
+        self.toggleButton.setArrowType(arrow_type)
+        self.toggleAnimation.setDirection(direction)
+        self.toggleAnimation.start()
+        self.isNowOpen = open
+
+    def forceOpen(self):
+        if not self.isNowOpen:
+            self.toggleSectionOpen(True)
+
+    def forceClose(self):
+        if self.isNowOpen:
+            self.toggleSectionOpen(False)
+
+    def setContentLayout(self, contentLayout, stretch=False):
+        """Used to set the layout of the collapser's content section. If stretch is true, the size policy
+        will expand contents horizontally. We don't do that for palettes, because the buttons should be small."""
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
-        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
+        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding if stretch else QtWidgets.QSizePolicy.Maximum,
                                        QtWidgets.QSizePolicy.MinimumExpanding)
-        #        self.contentArea.adjustSize()
-        #        self.contentArea.updateGeometry()
+        self.contentLayout = contentLayout
+        self.resetContentHeight()
 
-        contentHeight = contentLayout.sizeHint().height()
+    def resetContentHeight(self):
+        contentHeight = self.contentLayout.sizeHint().height()
 
         if not self.isAlwaysOpen:
             collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
@@ -126,16 +140,30 @@ class CollapserSection(QtWidgets.QWidget):
             contentAnimation.setStartValue(0)
             contentAnimation.setEndValue(contentHeight)
 
+            # a VERY hacky solution to the problem of the collapser section containing (directly or indirectly) lists which
+            # shrink and expand. Whenever we call this, and the section is open, quickly close it and reopen it.
+            if self.isNowOpen:
+                self.forceClose()
+                self.forceOpen()
+
+
+    def updateGeometry(self):
+        self.resetContentHeight()
+        super().updateGeometry()
+
 
 class Collapser(QtWidgets.QScrollArea):
+
+    sectionsByName: Dict[str, CollapserSection]
+
     def __init__(self, parent=None, animationDuration=200, lrmargins=2, topmargin=2, bottommargin=2):
         super().__init__(parent)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.animationDuration = animationDuration
-        self.secs = []
         self.margins = (lrmargins, topmargin, lrmargins, bottommargin)
         self.w = None
         self.layout = None
+        self.sectionsByName = {}
         self.clear()
 
     def clear(self):
@@ -153,11 +181,34 @@ class Collapser(QtWidgets.QScrollArea):
                                isOpen=isOpen,
                                isAlwaysOpen=isAlwaysOpen)
         self.layout.addWidget(sec)
-        self.secs.append(sec)
         sec.setContentLayout(layout)
+        self.sectionsByName[title] = sec
         return sec
+
+    def setSectionVisible(self, sec_name, visible):
+        self.sectionsByName[sec_name].setVisible(visible)
+        self.sectionsByName[sec_name].resetContentHeight()
+
+    def forceOpen(self, sec_name):
+        self.sectionsByName[sec_name].forceOpen()
+
+    def forceClose(self, sec_name):
+        self.sectionsByName[sec_name].forceClose()
 
     def end(self):
         self.layout.addStretch(10)
         self.adjustSize()
         self.updateGeometry()
+
+    def shouldCollapseWhenButtonClicked(self):
+        # what would happen if we clicked the expandCollapse button?
+        # if any sections are open, collapse all. Otherwise expand all.
+        return any(x.isNowOpen for x in self.sectionsByName.values())
+
+    def collapseExpandAll(self):
+        collapse = self.shouldCollapseWhenButtonClicked()
+        for sec in self.sectionsByName.values():
+            if collapse:
+                sec.forceClose()
+            else:
+                sec.forceOpen()

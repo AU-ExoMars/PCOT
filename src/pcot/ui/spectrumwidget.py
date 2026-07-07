@@ -62,16 +62,17 @@ class SpectrumWidget(QtWidgets.QWidget):
                 self.drawText(p, text)
                 return
 
-            # draw axes
-
+            # draw axes in blue
+            pen = QPen()
+            pen.setColor(QColor.fromRgb(100, 100, 255))
+            p.setPen(pen)
             p.drawLine(self.map(0, 0), self.map(1, 0))
             p.drawLine(self.map(0, 0), self.map(0, 1))
-
-            pen = QPen()
+            # axis endpoint boxes
             pen.setWidth(10)
-            p.setPen(pen)
             p.drawPoint(self.map(1, 0))
             p.drawPoint(self.map(0, 1))
+
             p.setPen(QPen())
 
             metrics = self.fontMetrics()
@@ -96,19 +97,25 @@ class SpectrumWidget(QtWidgets.QWidget):
                 t = f"{y:.2f}"
                 p.drawText(pt+QPointF(10, halftextheight), t)
 
+                # draw the point
                 r, g, b = wav2RGB(x, scale=255.0)
                 p.setBrush(QColor(r, g, b))
                 p.drawEllipse(pt, 3, 3)
                 p.setBrush(QBrush())
+
 
                 # draw line between this and previous segment
                 if lastPt is not None:
                     p.drawLine(pt, lastPt)
                 lastPt = pt
                 
-                # draw error bar
-                errorHalfHeight = unc/2
-                
-                pt1 = self.map(x01,(y+errorHalfHeight)/ymax)
-                pt2 = self.map(x01,(y-errorHalfHeight)/ymax)
-                p.drawLine(pt1,pt2)
+                # draw error bar if significant
+
+                if unc > abs(ymax/50):
+                    errorHalfHeight = unc/2
+
+                    pt1 = self.map(x01,(y+errorHalfHeight)/ymax)
+                    pt2 = self.map(x01,(y-errorHalfHeight)/ymax)
+                    p.drawLine(pt1,pt2)
+                    p.drawLine(pt1-QPointF(3,0), pt1+QPointF(3,0))
+                    p.drawLine(pt2-QPointF(3,0), pt2+QPointF(3,0))

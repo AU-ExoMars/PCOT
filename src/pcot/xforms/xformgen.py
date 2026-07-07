@@ -1,7 +1,8 @@
 import logging
 
 import numpy as np
-from PySide2.QtWidgets import QMessageBox
+from PySide2 import QtGui
+from PySide2.QtWidgets import QMessageBox, QHeaderView
 
 import cv2 as cv
 
@@ -59,7 +60,8 @@ class XFormGen(XFormType):
     * half: nominal is N on the left, U on the right. Uncertainty is 0.1. (Test value)
     * checkx: nominal is a checquered pattern with each square of size N, offset by U in the x-axis. uncertainty=nominal.
     * checky: nominal is a checquered pattern with each square of size N, offset by U in the y-axis. uncertainty=nominal.
-    * rand: both nom. and unc. are filled with non-negative pseudorandom uniform noise multiplied by N and U respectively
+    * rand: both nom. and unc. are filled with non-negative pseudorandom uniform noise multiplied by N and U respectively.
+        The RNG is seeded from the CWL.
     * gaussian: nom. is filled with gaussian noise centered around N with a std. dev. of U. U is zero. The RNG is seeded
         from the CWL.
     * gradient-x: nom. is filled with a gradient from 0-1, U is zero. Number of steps is N (zero means smooth).
@@ -142,10 +144,10 @@ class XFormGen(XFormType):
                 n = ((np.array((y + chan.u, x)) // chan.n).sum(axis=0) % 2).astype(np.float32)
                 u = n
             elif chan.mode == 'rand':
-                rngN = np.random.default_rng(seed=int(chan.n * 10000))
-                rngU = np.random.default_rng(seed=int(chan.u * 10000))
-                n = rngN.random((h, w), np.float32)
-                u = rngN.random((h, w), np.float32)
+                rngN = np.random.default_rng(seed=int(chan.cwl*10))
+                rngU = np.random.default_rng(seed=int(chan.cwl*11))
+                n = rngN.random((h, w), np.float32) * chan.n
+                u = rngU.random((h, w), np.float32) * chan.u
             elif chan.mode == 'gaussian':
                 rng = np.random.default_rng(seed=chan.cwl)
                 n = rng.normal(chan.n, chan.u, (h, w))
@@ -207,6 +209,7 @@ class TabGen(pcot.ui.tabs.Tab):
         self.w.tableView.setModel(self.model)
         self.model.changed.connect(self.chansChanged)
         self.w.tableView.setItemDelegateForRow(3, ComboBoxDelegate(self.w.tableView, self.model, MODES))
+        self.w.tableView.horizontalHeader().setMinimumSectionSize(80)   # otherwise the combobox is too narrow!
         self.nodeChanged()
 
     def _getselcol(self):
@@ -254,6 +257,7 @@ class TabGen(pcot.ui.tabs.Tab):
 
     def onNodeChanged(self):
         self.w.canvas.setNode(self.node)
+        self.w.tableView.resizeColumnsToContents()
 
         with SignalBlocker(self.w.spinWidth, self.w.spinHeight):
             self.w.spinWidth.setValue(self.node.params.imgwidth)

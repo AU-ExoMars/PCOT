@@ -14,14 +14,14 @@ This process - converting node data into data which can be saved to archives - i
 
 In order of preference, with the best at the top:
 
-* **TaggedAggregate serialisation** - the data is JSON-serialisable but we want to make it possible to edit it from a batch/parameter file (see [batch mode](/userguide/batch)). **Probably the best choice if you can.**
+* **TaggedAggregate serialisation** - the data is JSON-serialisable but we want to make it possible to edit it from a batch/parameter file (see [batch mode](../userguide/batch/index.md)). **Probably the best choice if you can.**
 * **complex serialisation via TaggedAggregate** - the data is not serialisable, but we want to edit it from a parameter file. **Probably the second-best** and suitable where simple TA-serialisation can't handle the more complex data involved.
 * **autoserialisation** - for when your data is already JSON-serialisable and you don't need to edit it from a parameter file. It is very simple to implement, but doesn't allow editing from a batch file and doesn't document itself automatically. Used only in legacy nodes.
 * **complex serialisation** - for when your data is not directly JSON-serialisable (for example, regions of interest) and you don't need to edit it from a parameter file because it makes no sense (such as painted ROIs)
 
 ## TaggedAggregate serialisation
 
-This is the method we use when we want to be able to edit the parameters of nodes in batch mode, using parameter files (see [batch mode](/userguide/batch)). It is probably the best method to use because of this, but it is rather more complicated.
+This is the method we use when we want to be able to edit the parameters of nodes in batch mode, using parameter files (see [batch mode](../userguide/batch/index.md)). It is probably the best method to use because of this, but it is rather more complicated.
 
 We make use of **tagged aggregate structures**, which can be found in
 `pcot.utils.taggedaggregate`. These are dictionaries and lists, but
@@ -208,7 +208,7 @@ defining the colour *r,g,b* at value *x*.
 
 The CTAS methods are responsible for converting tagged aggregate data and this
 Gradient object. They also handle a *preset* string which can override the
-data when set from a [parameter file](/userguide/batch).
+data when set from a [parameter file](../userguide/batch/index.md).
 
 [Regions of interest are a rather more complex example...](roi_ctas.md)
 @@@
@@ -237,7 +237,7 @@ For example, the constructor for `XFormSpectrum` could look like this (not any m
                               )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
-        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
+        self.addOutputConnector("data", Datum.TABLE, "a CSV output (use 'dump' or 'sink' to read it)")
 ```
 Note that the default values are optional - if you don't specify a default you can just
 use the attribute name rather than a `(name, default)` tuple, but you will get an error if

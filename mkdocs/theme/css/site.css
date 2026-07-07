@@ -5,3 +5,14 @@ li > p {
 .wide {
     max-width: 1440px;
 }    
+
+/* These are used on some inline images where we don't what a whopping margin! */
+.img-inline {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+table td,
+table th {
+    padding: 0.5em 1em;
+}

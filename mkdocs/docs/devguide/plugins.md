@@ -199,7 +199,8 @@ Node types are represented by singletons of subclasses of ```XFormType```
 (Nodes themselves are of type ```XForm```, which stands for *transform* for
 historical reasons). Developing new ```XFormType``` subclasses is largely
 beyond the scope of this document, but you can learn a lot from looking at the
-```pcot.xforms``` package and the modules therein. A commented example node can be found in `xforms/xformexample.py`.
+```pcot.xforms``` package and the modules therein. A commented example node
+can be found in `xforms/xformsimpleexample.py`.
 
 To create a new node type, declare a new subclass of ```XFormType``` and decorate
 it with the ```@xformtype``` decorator. This will make the type autoregister:
@@ -214,8 +215,10 @@ palette), and version. It will add the input and output connectors.
 * **init(self, node)** will initialise any private data in the node itself
 (which is an ```XForm```). Don't confuse this with ```__init__```!
 * **createTab(self, node, window)** will create a new node area (i.e. tab).
-Often, this can be a ```TabData``` which will look at the node's ```out```
+Often, this can be a ```TabGeneric``` which will look at the node's ```out```
 attribute, which should be a ```Datum.```
+This tab class will also provide an editor for your node's parameters
+if those parameters are [TaggedAggregate parameters](nodeser.md#using-taggedaggregates-to-serialise-nodes).
 * **perform(self, node)** will actually perform the node's action, reading inputs 
 and setting outputs.
 
@@ -232,7 +235,7 @@ import numpy as np
 
 from pcot.sources import SourceSet
 from pcot.xform import XFormType, xformtype, Datum
-from pcot.xforms.tabdata import TabData
+from pcot.xforms.tabgeneric import TabGeneric
 from pcot.imagecube import ImageCube
 
 import pcot.config
@@ -258,9 +261,11 @@ class XFormEdgeDetect(XFormType):
         self.addOutputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
-        # there is no custom tab, we just use a data canvas. This expects "node.out" to be set to
-        # either None or a Datum.
-        return TabData(n, w)
+        # This expects "node.out" to be set to either None or a Datum.
+        # It can also look at the node's output 0 if you wish.
+        # If your node has TaggedDict parameters will automatically
+        # provide an editor for them.
+        return TabGeneric(n, w)
 
     def init(self, n):
         # No initialisation required.
@@ -292,10 +297,11 @@ class XFormEdgeDetect(XFormType):
 ### Writing custom Tabs
 
 As noted above, a new `XFormType` subclass (i.e. a new node type)
-can often just use `TabData`, which will display the Datum stored on
+can often just use `TabGeneric`, which will display the Datum stored in
+the node's `out` attribute or in
 its first output (output 0). Sometimes, however, a custom tab needs to be
 written. This can be a complex task, but an example is given in
-`xformexample.py` in the `xforms` package. All the standard XFormTypes
+`xformcustomtabexample.py` in the `xforms` package. All the standard XFormTypes
 are in this package, so you can also look at them. 
 
 The basic idea is:
@@ -316,7 +322,7 @@ will change after an undo operation!)
 ### Using Canvas in custom tabs
 
 Creating a Canvas programmatically is straightforward, and there is an example of this
-in `xformexample.py`. 
+in `TabExample` in `xformcustomtabexample.py`. 
 If you are creating a tab in Designer, you need to add a canvas as a QWidget which you then "promote"
 to a custom control (the canvas). In the promote dialog, the class should be `Canvas` and the
 header file `pcot.ui.canvas` (i.e. the package name). 

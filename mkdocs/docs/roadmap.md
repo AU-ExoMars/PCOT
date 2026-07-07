@@ -1,13 +1,19 @@
 # Development roadmap
 
-This is a rough guide, and things may change! It's essentially
-a list of things that need to be done in approximate priority order.
+## In next release
 
-* Store camera data separately from calibration target reflectances
-* Enhance the reflectance node to handle this data and also different angles
+* HRC colour correction
+
+
+# Others
+
 * Cull nodes which can be *expr* functions
 * Reorganise the node palette
 * Obtain user stories and feedback
+
+* Change from Conda+Poetry to UV for virtual environment and dependency
+management. This will change the installation procedure.
+* Change to PySide6. This will take some time.
 
 * Filter aberration
     * Filter aberration parameters need to be obtained and added to config

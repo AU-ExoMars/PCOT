@@ -14,7 +14,7 @@ from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER,
 from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot.datum import Datum
-from pcot.datumtypes import Type
+from pcot.datumtypes import Type, AnyType
 from pcot.sources import nullSourceSet, SourceSet
 from pcot.utils.table import Table
 from pcot.value import Value
@@ -73,6 +73,8 @@ class Parameter:
     def isValid(self, datum: Datum):
         """Make sure that the datum has a type, and that this type is acceptable (is in this parameter's
         set of valid types"""
+        if Datum.ANY in self.types:   # If we can return any type, all is well
+            return True
         if datum is None:
             raise ParamException("None is not a valid parameter type")
         return datum.tp in self.types
@@ -451,23 +453,10 @@ class InstIndex(Instruction):
         for x in range(0, self.argcount):
             stack.pop()
         v = stack.pop()
-        if v.tp == Datum.IDENT:
-            raise ParseException("unknown function '{}' ".format(v.val))
-        elif v.tp == Datum.NUMBER:
-            if len(args) > 1:
-                raise ParseException("only 1D vectors supported")
-            idx = args[0]
-            if idx.tp != Datum.NUMBER or not idx.val.isscalar():
-                raise ParseException("indices must be scalars")
-            i = idx.get(Datum.NUMBER)
 
-            res = v.val[i.n]
-            sources = SourceSet([v.sources, idx.sources])
-            stack.append(Datum(Datum.NUMBER, res, sources))
-        else:
-            # if we do (say) "a()", we'll get "cannot call a (whatever input A is connected to)..."
-            raise ParseException("cannot get a value from a {} as if it were a vector".format(v.tp))
-
+        # the type should know how to do this.
+        r = v.tp.getByIndices(v, args)
+        stack.append(r)
 
 def execute(seq: List[Instruction], stack: Stack) -> float:
     """Execute a list of instructions on a given stack"""
@@ -616,7 +605,8 @@ class Parser:
                 ps += "..."
             t.add("params", ps)
             t.add("opt. params (default in brackets)", ",".join([f"{p.name} ({p.deflt})" for p in f.optParams]))
-            t.add("description", f.desc)
+            # remove newlines from the description, even though it breaks the markdown
+            t.add("description", " ".join(f.desc.split('\n')))
         return t.markdown()
 
     def out(self, inst: Instruction):

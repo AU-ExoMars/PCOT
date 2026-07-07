@@ -13,9 +13,11 @@ import markdown
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor
-from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu
+from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu, QApplication
 
-import pcot
+#
+# Warning: these imports are VERY brittle. Changing the order often results in circular imports.
+#
 from pcot.ui import graphscene, graphview, uiloader
 import pcot.macros as macros
 import pcot.palette as palette
@@ -25,7 +27,9 @@ import pcot.ui.tabs as tabs
 import pcot.xform as xform
 import pcot.assets
 from pcot.ui.help import HelpWindow
+from pcot.ui.importdialog import ImportDialog
 from pcot.utils import SignalBlocker
+from pcot.utils.table import Table
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +112,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.action_New.triggered.connect(self.newAction)
         self.actionNew_Macro.triggered.connect(self.newMacroAction)
         self.actionSave.triggered.connect(self.saveAction)
+        self.actionShowCamsAndRefls.triggered.connect(self.showCamsAndReflsAction)
         self.actionSave_As.triggered.connect(lambda: self.saveAsAction(True))
         self.actionSave_As_without_inputs.triggered.connect(lambda: self.saveAsAction(False))
         self.actionOpen.triggered.connect(self.openAction)
@@ -117,6 +122,10 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionUndo.triggered.connect(self.undoAction)
         self.actionRedo.triggered.connect(self.redoAction)
         self.actionAbout.triggered.connect(self.aboutAction)
+        self.actionShow_Metadata.triggered.connect(self.showMetadataAction)
+        self.actionImport.triggered.connect(self.importAction)
+        self.actionSettings.triggered.connect(self.settingsAction)
+        self.actionQuit.triggered.connect(self.quitAction)
 
         self.runAllButton.clicked.connect(self.runAllAction)
         self.autoRun.toggled.connect(self.autorunChanged)
@@ -131,6 +140,14 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.menus = {}  # we need to use a dict because findChildren doesn't seem to work right.
 
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout,initial=True)
+
+    def setTitle(self):
+        if self.isMacro():
+            self.setWindowTitle(ui.app().applicationName() +
+                                ' ' + ui.app().applicationVersion() +
+                                " [MACRO {}]".format(self.graph.proto.name))
+        else:
+            self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
 
     def _init(self,
               doc,  # Document
@@ -153,12 +170,13 @@ class MainUI(ui.tabs.DockableTabWindow):
         with SignalBlocker(self.annotalphaSlider):
             self.annotalphaSlider.setValue(self.doc.settings.alpha)
 
-        self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
 
         # set up the scrolling palette and make the buttons therein. The paletteArea
         # is a Collapser created in Designer.
-        self.palette = palette.Palette(doc, self.paletteArea, self.view)
+        self.palette = palette.Palette(doc, self.paletteArea, self.paletteCollapseButton, self.view)
+        self.paletteSearch.textChanged.connect(self.palette.paletteSearchChanged)
+        self.paletteCollapseButton.clicked.connect(self.palette.paletteCollapseExpandAll)
 
         # and remove some things which don't apply to macro windows
         if macro is not None:
@@ -172,20 +190,30 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.capCombo.setVisible(False)
             self.caplabel.setVisible(False)
             # add some extra widgets
+
+            macro_box = QtWidgets.QGroupBox(parent=self)
+            macro_box.setTitle("Macro")
+            macro_layout = QtWidgets.QGridLayout(macro_box)
+
+
+
             b = QtWidgets.QPushButton("Add input")
             b.pressed.connect(self.addMacroInput)
-            self.extraCtrls.layout().addWidget(b, 0, 0)
+            macro_layout.addWidget(b, 0, 0)
             b = QtWidgets.QPushButton("Add output")
             b.pressed.connect(self.addMacroOutput)
-            self.extraCtrls.layout().addWidget(b, 0, 1)
+            macro_layout.addWidget(b, 0, 1)
+            b = QtWidgets.QPushButton("Add parameter")
+            b.pressed.connect(self.addMacroParam)
+            macro_layout.addWidget(b, 1, 0)
+            macro_layout.addWidget(b, 1, 0)
             b = QtWidgets.QPushButton("Rename macro")
             b.pressed.connect(self.renameMacro)
-            self.extraCtrls.layout().addWidget(b, 0, 2)
+            macro_layout.addWidget(b, 1, 1)
+
+            self.extraCtrls.layout().addWidget(macro_box, 0, 0, 1, 2)
 
             self.macroPrototype = macro
-            self.setWindowTitle(ui.app().applicationName() +
-                                ' ' + ui.app().applicationVersion() +
-                                " [MACRO {}]".format(self.graph.proto.name))
         else:
             # We are definitely a main window
             self.macroPrototype = None  # we are not a macro
@@ -207,6 +235,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         if initial:
             pcot.config.executeWindowHooks(self)
 
+        self.setTitle()
+
         self.show()
         ui.msg("OK")
         if graphscene.hasGrandalf:
@@ -220,26 +250,50 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.constructScene(doAutoLayout)
         self.view.setScene(self.graph.scene)
         self.doc.clearUndo()
-        self.checkCameraDataPresent()
+        self.checkCameraAndReflectanceDataPresent()
 
-    def checkCameraDataPresent(self):
-        from pcot.cameras import getCameraNames
-        while len(getCameraNames()) == 0:
-            res = QMessageBox.question(self, "No camera data", "No camera data found. Would you like to set a directory?",
-                                      QMessageBox.Yes | QMessageBox.No)
+    def _ensureDataPresent(self, getNamesFn, title, message, configKey, loadFn):
+        """Generic helper to ensure a dataset exists, prompting the user if not."""
+        while len(getNamesFn()) == 0:
+            res = QMessageBox.question(self, title, message, QMessageBox.Yes | QMessageBox.No)
             if res == QMessageBox.No:
                 break
-            # pop up a file dialog asking for a camera directory
-            dir = pcot.config.getDefaultDir('cameras') or "~"
-            res = QtWidgets.QFileDialog.getExistingDirectory(self, "Select camera data directory",dir)
-            logger.info(f"Selected {res}")
-            if res != '':
-                logger.info(f"Setting camera data directory to {res}")
-                pcot.config.setDefaultDir('cameras', res)
-                pcot.config.save()
-                pcot.config.loadCameras()
-        ui.log(f"Cameras loaded: {','.join(getCameraNames())}")
 
+            # Ask user for directory
+            defaultDir = pcot.config.getDefaultDir(configKey) or os.path.expanduser("~")
+            chosen = QtWidgets.QFileDialog.getExistingDirectory(
+                self, f"Select {configKey} directory", defaultDir
+            )
+            logger.info(f"Selected {chosen}")
+
+            if chosen:
+                logger.info(f"Setting {configKey} directory to {chosen}")
+                pcot.config.setDefaultDir(configKey, chosen)
+                pcot.config.save()
+                loadFn()
+
+        return getNamesFn()
+
+    def checkCameraAndReflectanceDataPresent(self):
+        from pcot.cameras import getCameraNames, getReflectanceNames
+
+        cams = self._ensureDataPresent(
+            getNamesFn=getCameraNames,
+            title="No camera data",
+            message="No camera data found. Would you like to set a directory?",
+            configKey="cameras",
+            loadFn=pcot.config.loadCameras
+        )
+        ui.log(f"Cameras loaded: {','.join(cams)}")
+
+        refl = self._ensureDataPresent(
+            getNamesFn=getReflectanceNames,
+            title="No reflectance data",
+            message="No reflectance target data found. Would you like to set a directory?",
+            configKey="reflectances",
+            loadFn=pcot.config.loadReflectances
+        )
+        ui.log(f"Reflectance targets loaded: {','.join(refl)}")
 
     @classmethod
     def getWindowsForDocument(cls, d):
@@ -258,8 +312,9 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         recents = pcot.config.getRecents()
         if len(recents) > 0:
-            for x in recents:
-                act = QAction(x, parent=self)
+            for i,x in enumerate(recents):
+
+                act = QAction(f"&{i+1}: {x}", parent=self)
                 act.setData(x)
                 self.menuFile.addAction(act)
                 act.triggered.connect(self.loadRecent)
@@ -275,11 +330,10 @@ class MainUI(ui.tabs.DockableTabWindow):
     def scene(self):
         return self.graph.scene
 
-    ## run through all the palettes on all main windows,
-    # repopulating them. Done typically when macros are added and removed.
     @staticmethod
-    def rebuildPalettes():
-        for w in MainUI.windows:
+    def rebuildPalettes(doc=None):
+        """Rebuild all palettes, or just palettes for a particular document's windows"""
+        for w in MainUI.windows if doc is None else MainUI.getWindowsForDocument(doc):
             logger.info(f"Rebuilding window {w}")
             w.palette.populate()
 
@@ -293,12 +347,21 @@ class MainUI(ui.tabs.DockableTabWindow):
                     w.graph.scene.rebuild()
             if tab:
                 w.retitleTabs()
+            w.setTitle()    # macro renamed?
+
 
     ## close event handler - close all windows on confirmation if this is a main window, otherwise it's a macro - don't
-    # bother confirming, just close this window.
+    # bother confirming, just close this window. Does slightly different things if invoked from File/Quit (always assumes
+    # quitting the entire program) as opposed to closing the window (which will just close a macro window).
+
+    def quitAction(self):
+        if QMessageBox.question(self, "Quit", "Are you sure?",
+                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            QApplication.quit()
 
     def closeEvent(self, evt):
         if self.isMacro():
+            # we're just closing a macro window
             MainUI.windows.remove(self)
             evt.accept()
         elif QMessageBox.question(self, "Close graph", "Are you sure?",
@@ -330,6 +393,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             ui.msg(f"Saving to {fname}")
             self.doc.save(fname, saveInputs=saveInputs)
             ui.msg(f"File saved to {fname}")
+            ui.log(f"File saved to {fname}")
             self.rebuildRecents()
         except Exception as e:
             traceback.print_exc()
@@ -408,6 +472,12 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.closeAllTabs()
             self.load(fn)
 
+    def showCamsAndReflsAction(self):
+        from pcot.cameras import show
+        w = show.Dialog(self)
+        w.show()
+
+
     ## "copy" menu/keypress
     def copyAction(self):
         self.graph.scene.copy()
@@ -429,6 +499,11 @@ class MainUI(ui.tabs.DockableTabWindow):
     def redoAction(self):
         self.doc.redo()
 
+    def settingsAction(self):
+        # handle the settings menu
+        from pcot.ui.taggedaggregates import configui
+        configui.runConfigUI()
+
     ## "run all" action, typically used when you have auto-run turned off (editing a macro,
     # perhaps)
     def runAllAction(self):
@@ -438,6 +513,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def newAction(self):
         import pcot.document
         d = pcot.document.Document()
+        d.importFromConfigArchives()    # import faves and macros from files in the config settings
         MainUI(d, doAutoLayout=True)  # create a new empty window
 
     ## "new macro" menu/keypress, will create a new macro prototype in this document
@@ -458,6 +534,23 @@ class MainUI(ui.tabs.DockableTabWindow):
         # print(dialog.textEdit.toHtml())
         dialog.show()
 
+    def importAction(self):
+        """Import macros and/or favourites from another document"""
+        from pcot import document
+        res = QtWidgets.QFileDialog.getOpenFileName(self,
+                                                    'Import from file',
+                                                    os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
+                                                    "PCOT files (*.pcot)",
+                                                    options=pcot.config.getFileDialogOptions())
+        if res[0] != '':
+            # load the foreign document to import from and get the names of the macros and faves
+            doc = document.Document()
+            doc.load(res[0], add_to_recents=False)
+            # open the dialog
+            dlg = ImportDialog(doc)
+            dlg.exec_()
+            self.doc.importFrom(doc, dlg.macstoimport, dlg.favstoimport)
+
     def findOrAddMenu(self, name):
         """Find a menu or add a new one"""
 
@@ -474,6 +567,29 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.menus[name] = m
         self.menubar.addMenu(m)
         return m
+
+    def showMetadataAction(self):
+        ui.log("Metadata", timestamp=False)
+        t = Table()
+        for k,v in self.doc.metadata.items():
+            if k!='history':
+                t.newRow()
+                t.add('key',k)
+                t.add('value',v)
+        ui.log(t.html(), timestamp=False)
+
+        if 'history' in self.doc.metadata and len(self.doc.metadata['history']) > 0:
+            ui.log("History", timestamp=False)
+            t = Table()
+            h = self.doc.metadata['history']
+            for item in h:
+                t.newRow()
+                t.add('date', item['date'])
+                t.add('author', item['author'])
+                t.add('pcot version', item['pcotversion'])
+
+            ui.log(t.html(), timestamp=False)
+
 
     ## this gets called from way down in the scene to open tabs for nodes
     def openTab(self, node):
@@ -551,13 +667,15 @@ class MainUI(ui.tabs.DockableTabWindow):
         win = HelpWindow(self, tp=tp, node=node)
 
     ## add a macro connector, only should be used on macro prototypes   
-    def addMacroConnector(self, tp):
+    def addMacroConnector(self, tp, displayName=None):
         self.doc.mark()
         # create the node inside the prototype
         n = self.graph.create(tp)
         assert (self.isMacro())
         assert (self.macroPrototype is not None)
         n.proto = self.macroPrototype
+        if displayName:
+            n.displayName = displayName
         # reset the connectors
         n.proto.setConnectors()
         # rebuild the visual components inside the prototype
@@ -566,6 +684,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         # the number of connectors will have changed.
         for inst in n.proto.getInstances():
             inst.graph.rebuildGraphics()
+        # tell the prototype that it has a new parameter
+        self.macroPrototype.paramChanged()
+        return n
 
     ## add a macro in connector, only should be used on macro prototypes   
     def addMacroInput(self):
@@ -574,6 +695,17 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## add a macro out connector, only should be used on macro prototypes   
     def addMacroOutput(self):
         self.addMacroConnector('out')
+
+    ## add a macro parameter connector
+    def addMacroParam(self):
+        assert (self.isMacro())
+        assert (self.macroPrototype is not None)
+        # we're going to walk all the nodes to find the first "paramN" we can use.
+        lst = [x.displayName for x in self.macroPrototype.graph.nodes if x.type.name=='param']
+        pidx = 1
+        while f"param{pidx}" in lst:
+            pidx += 1
+        self.addMacroConnector('param',displayName=f"param{pidx}")
 
     ## opens a dialog to rename a macro, called on "rename macro" UI
     def renameMacro(self):

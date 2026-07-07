@@ -18,3 +18,17 @@ def pooled_sd(n, u, axis=None):
     mean_of_variances = np.mean(u ** 2, axis=None)
     # sum the two, and convert to SD
     return np.sqrt(variance_of_means + mean_of_variances)
+
+
+def minmax(f, n, u, d):
+    """Find the minimum and maximum of a set of values, with uncertainty. This is a helper function for min and max;
+    you pass np.argmin or np.argmax depending on what you want. The arrays passed in are the individual arrays which
+    make up a value or image, and they can be of any dimensionality."""
+    if np.isscalar(n):
+        return n, u, d
+    else:
+        # find the index of the minimum value
+        idx = np.unravel_index(f(n), n.shape)
+        return n[idx], u[idx], d[idx]
+
+

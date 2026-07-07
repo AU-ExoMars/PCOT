@@ -90,7 +90,7 @@ class ROIEditor:
         The w,h parameters are the size of the image, which act as limits on some fields (see __init__ docs)"""
         fields = self.roiFields
         if fields is not None:
-            self.dlg = ROIEditDialog(None, self.roi, w, h, fields)
+            self.dlg = ROIEditDialog(None, self.roi(), w, h, fields)
             self.dlg.open()
 
 

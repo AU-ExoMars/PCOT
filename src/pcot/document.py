@@ -99,10 +99,12 @@ class Document:
         self.graph = XFormGraph(self, False)  # false - is not a macro
         self.inputMgr = InputManager(self)
         self.macros = {}
+        self.favourites = {}
         self.settings = DocumentSettings()
         self.undoRedoStore = UndoRedoStore()
         self.nodeInstances = {}
         self.fileName = None
+        self.metadata = {'author': 'unsaved', 'history': []}
 
         if fileName is not None:
             self.load(fileName)
@@ -123,7 +125,8 @@ class Document:
                       'date': time.time()},
              'GRAPH': self.graph.serialise(),
              'INPUTS': self.inputMgr.serialise(internal, saveInputs=saveInputs),
-             'MACROS': macros
+             'MACROS': macros,
+             'FAVOURITES': {f.name: f.serialise() for f in self.favourites.values()}
              }
         return d
 
@@ -144,8 +147,11 @@ class Document:
         # deserialise macros before graph!
         if 'MACROS' in d:
             for k, v in d['MACROS'].items():
-                p = XFormMacro(self, k)  # will autoregister
-                p.graph.deserialise(v, True)
+                XFormMacro(self, k, data=v)  # will autoregister, so it ends up in self.macros and the palette!
+
+        if 'FAVOURITES' in d:
+            from pcot.xforms.favourite import Favourite
+            self.favourites = {x['name']: Favourite(json=x) for x in d['FAVOURITES'].values()}
 
         # True to delete existing nodes first
         # and we also might not want to delete any tabs (for undo)
@@ -175,18 +181,24 @@ class Document:
     def save(self, fname, saveInputs=True):
         # note that the archive mechanism deals with numpy array saving and also
         # saves to a temp file before moving when it's all OK at the end.
-        with archive.FileArchive(fname, 'w') as arc:
+        with archive.FileArchive(fname, 'w', type=archive.ArchiveType.DOCUMENT) as arc:
             arc.writeJson("JSON", self.serialise(saveInputs=saveInputs))
             pcot.config.addRecent(fname)
+            self.metadata = arc.metadata    # keep a ref to the metadata from the archive
 
-    def load(self, fname: Path):
+    def load(self, fname: Path, add_to_recents=True):
         """Load data into this document - is used in ctor, can also be used on existing document.
         Also adds to the recent files list.
         May throw exceptions, typically FileNotFoundError"""
         with archive.FileArchive(fname, progressCallback=lambda s: ui.msg(s)) as arc:
             dd = arc.readJson("JSON")
+            ver_ok = pcot.compatible_version_check(arc.metadata.pcotversion)
+            if not ver_ok:
+                raise ValueError(f"Cannot load document from {fname} - it is version {arc.metadata.pcotversion}, this PCOT can only load >{pcot.oldest_valid_version}")
             self.deserialise(dd)
-            pcot.config.addRecent(fname)
+            if add_to_recents:  # don't do this when we're loading macro/fave archives for import
+                pcot.config.addRecent(fname)
+            self.metadata = arc.metadata    # keep a ref to the metadata from the archive
             self.fileName = fname
 
     ## generates a new unique name for a macro.
@@ -230,11 +242,16 @@ class Document:
         """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
 
-    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camname=None):
+    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camera=None, bitdepth=None, rawloader=None):
         """set graph's input to multiple files"""
-        camname = camname or pcot.config.get('default_camera')
-        return self.setInputData(inputidx, inputs.Input.MULTIFILE,
-                                 lambda method: method.setFileNames(directory, fnames, filterpat, camname))
+        camera = camera or pcot.config.data.default_camera
+
+        def fn(method):
+            method.setFileNames(directory, fnames, filterpat, camera, bitdepth)
+            method.setRawLoader(rawloader)
+
+
+        return self.setInputData(inputidx, inputs.Input.MULTIFILE, fn)
 
     def setInputPDS4(self, inputidx, products):
         """Set a PDS4 input to a set of proctools DataProducts. Must be able to combine them into a single datum
@@ -334,3 +351,47 @@ class Document:
         if self.graph.scene is None:
             return []  # there's no scene, so no selection
         return self.graph.scene.selection
+
+    def importFrom(self, doc, macs=None, favs=None):
+        """Import macros and favourites from another document. If no lists are provided, all are imported."""
+        if macs is None:
+            macs = doc.macros.keys()
+        if favs is None:
+            favs = doc.favourites.keys()
+
+        # in both cases, we serialise/deserialise to do the import, to make sure nothing else of the source
+        # document gets copied over by mistake.
+        for name in macs:
+            if name in doc.macros:
+                if name in self.macros:
+                    ui.warn(f"Macro {name} already exists, skipping.")
+                    continue
+                s = doc.macros[name].graph.serialise()
+                p = XFormMacro(self, name)
+                p.graph.deserialise(s, True)
+
+        for name in favs:
+            from pcot.xforms.favourite import Favourite
+            if name in doc.favourites:
+                if name in self.favourites:
+                    ui.warn(f"Favourite {name} already exists, skipping.")
+                    continue
+                s = doc.favourites[name].serialise()
+                f = Favourite(json=s)
+                self.favourites[name] = f
+
+        ui.mainwindow.MainUI.rebuildPalettes(doc=self)
+
+    def importFromConfigArchives(self):
+        """Import macros and favourites from all PCOT files listed in the config.
+        NOT called from the ctor lest recursion; called from the New action in the UI and when
+        creating the initial document on startup"""
+        for x in pcot.config.getDefaultDir("macrosandfaves"):
+            try:
+                doc = Document()
+                doc.load(x, add_to_recents=False)
+                self.importFrom(doc)
+            except Exception as e:
+                ui.error(f"Error importing from PCOT macros/faves file: {x}: {e}")
+
+

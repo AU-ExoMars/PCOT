@@ -36,7 +36,7 @@ def quickGrad(c1: QColor, c2: QColor, c3: QColor, finalC: QColor) -> QBrush:
 register(Datum.ANY, Qt.red)
 register(Datum.IMG, Qt.blue)
 register(Datum.ROI, Qt.cyan)
-register(Datum.DATA, Qt.darkMagenta)
+register(Datum.TABLE, Qt.darkMagenta)
 register(Datum.TESTRESULT, Qt.darkYellow)
 register(Datum.NUMBER, Qt.darkGreen)
 register(Datum.VARIANT, QBrush(Qt.black, Qt.DiagCrossPattern))
@@ -45,10 +45,10 @@ register(Datum.NONE, QBrush(Qt.red, Qt.BDiagPattern))
 _unknown = QBrush(Qt.magenta)
 
 
-def getBrush(typename):
-    """get a brush by name or magenta if no brush is found"""
-    if typename in brushDict:
-        return brushDict[typename]
+def getBrush(typeObject):
+    """get a brush by datumtypes.Type subclass instance or magenta if no brush is found"""
+    if typeObject in brushDict:
+        return brushDict[typeObject]
     else:
-        logger.error(f"Unknown type {typename}")
+        logger.error(f"Unknown type {typeObject}")
         return _unknown

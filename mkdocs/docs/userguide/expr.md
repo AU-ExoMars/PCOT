@@ -18,11 +18,25 @@ are registered using the *manual register* node. They are then merged together u
 `merge` function. The box shows this function, and also `IMG[12]` indicating that the
 result is a 12-band image.
 
+## Handling unconnected inputs
+
+Any input which is not connected has the "none" value. You can test for this by using the `isnone` function.
+For example, the expression
+```txt
+ifelse(isnone(a),0.5,a)
+```
+will have the value 0.5 if *a* is not connected, otherwise it will have the value of *a*. There is a shorthand
+for this:
+```txt
+default(a,0.5)
+```
+which *a* if it has a value, but 0.5 otherwise (i.e. 0.5 is the default value for *a*).
+
 ## Functions
 
-Merge is one of a large number of functions that *expr* supports, and more can be added
-using the [plug-in mechanism](/devguide/plugins/). Full details of built-in functions 
-can be found [in the autodocs](/autodocs/#expr-functions)
+`default` and `merge` are two of the large number of functions that *expr* supports, and more can be added
+using the [plug-in mechanism](../devguide/plugins.md). Full details of built-in functions 
+can be found [in the autodocs](../autodocs/index.md#expr-functions)
 
 ## Properties
 
@@ -30,11 +44,11 @@ Certain types of value have "properties" which can be extracted with the dot ope
 For example, `a.w` will extract the width of the image in variable $a$, and 
 `(a+b).n` will return the number of pixels in the image which results from adding images
 $a$ and $b$. There aren't many properties, but those that exist are listed
-[in the autodocs](/autodocs/#expr-properties).
+[in the autodocs](../autodocs/index.md#expr-properties).
 
 ## Autodocs
 @@@info
-The text below is drawn from the [automatically generated documentation](/autodocs/) for
+The text below is drawn from the [automatically generated documentation](../autodocs/index.md) for
 the node, and is the authoritative documentation.
 @@@
 

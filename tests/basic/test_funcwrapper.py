@@ -1,16 +1,9 @@
 """
 Test the functions which are wrapped with funcWrapper. Some testing is also done in graphs to test the ordering
 """
-import dataclasses
-import math
-from typing import Tuple
-
-import numpy as np
 import pytest
 
 import pcot
-from fixtures import genrgb
-from pcot import dq
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.sources import nullSource

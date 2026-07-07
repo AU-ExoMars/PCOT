@@ -88,7 +88,9 @@ the same inputs, or the load the same inputs into a different graph. There are
 currently up to four inputs, but this can easily be changed. 
 * The **graph** - a set of nodes and connections between them which define
 operations to be performed on inputs, as shown above.
-* The **settings** - these are global to the entire application.
+* The **global controls** which are shown at the bottom right of the main
+window, such as "annotation alpha" and "auto-run on change." These apply to
+the graph as a whole and all nodes within it.
 * **Macros** - these are sets of nodes which can be used multiple times and
 appear as single nodes in the graph, although each one has its own "private"
 graph. Currently very experimental (and largely undocumented).
@@ -106,7 +108,7 @@ even if they don't have the sources.
 ## Quantities
 All numerical quantities in PCOT - whether scalar values or pixels in images -
 consist of three values: nominal value, uncertainty and data quality (DQ) bits.
-Uncertainty and DQ bitss can be viewed as overlays in the canvas (PCOT's image viewer
+Uncertainty and DQ bits can be viewed as overlays in the canvas (PCOT's image viewer
 component).
 
 ### Uncertainty 
@@ -143,7 +145,7 @@ There may also be user-defined or "test" bits for use in development.
 
 
 
-Move on to [a First Tutorial](../tutorial)
+Move on to [a First Tutorial](tutorial.md)
 
 [^1]: 
 Allender, Elyse J., Roger B. Stabbins, Matthew D. Gunn, Claire R. Cousins,

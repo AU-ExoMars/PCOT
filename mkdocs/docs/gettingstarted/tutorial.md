@@ -13,9 +13,9 @@ an instruction to follow.
 
 
 @@@ danger
-Be aware that this is an early version and there are 
-no doubt a lot of serious problems! Also, the software is changing 
-very quickly, so it may not look exactly as it does in these pages.
+Be aware that the software is changing 
+very quickly, so it may not look exactly as it does in these pages. Different screenshots have been
+taken using different versions of PCOT, but the differences will be minor.
 @@@
 
 ## Preparation
@@ -35,21 +35,31 @@ of data. It is a subset of a larger image used in testing, and is shown below as
 
 Now you have this image you can ==start PCOT==.
 
-## Setting up the camera directory
+## Setting up the cameras and reflectances directories
 
 Your data may come from a number of different cameras, and different
-cameras have different parameters and filter sets. PCOT needs to be able
-to find the files which describe these cameras. It does this when it starts
+cameras have different parameters and filter sets. You may also use different
+calibration targets (e.g. the PCT or a Macbeth/Babel Colorchecker, or just Spectralon patches) which have
+different reflectance values. PCOT needs to be able
+to find the files which describe these cameras and targets. It does this when it starts
 up.
 
-When it can't find these files, PCOT will pop up a dialog box asking
-if you want to set a camera directory. You should select either the 
-camera directory provided by your team, or the default camera directory -
-this will be the `cameras` directory inside the main PCOT directory.
+When it can't find these files, PCOT will pop up dialog boxes asking
+if you want to set these directories. You should either select the directories
+provided by your team, or use the default "cameras" and "reflectances" directories
+inside the PCOT installation.
 
-More cameras can be downloaded from the 
+More cameras and reflectances can be downloaded from the 
 [PCOT Cookbook site](http://pcot.aber.ac.uk/), which also contains
-useful "recipes" for doing common operations.
+useful "recipes" for doing common operations. 
+
+You can change the locations of these directories - and many other things -
+from the [settings dialog](../userguide/settings.md) which can be opened
+from the Edit menu.
+
+@@@ warning
+Make sure you keep your camera files in a separate directory from the reflectances.
+@@@
 
 
 ## Introduction to the user interface
@@ -63,7 +73,7 @@ each part.
 The window is divided into several areas:
 
 * At the top, the **input buttons** each open one of PCOT's input windows.
-These describe how information is read into PCOT.
+These describe how information is read into each of PCOT's four input channels.
 * Below this and to the left is the **node area**, which will be empty
 on startup. Double-clicking on a node in the graph (see below) will
 open a detailed view for that node.
@@ -73,14 +83,16 @@ you can undock by double-clicking on the tab at the top of the view.
 the document and their connections. A new document always has an *input 0* node,
 which brings input 0 into the graph.
 * To the right of the graph is the **palette**, which consists of a number
-of sections which can be expanded or hidden. Each section a set of buttons, one for each node type. Drag a button onto the graph to create a new node of that type.
+of sections which can be expanded or hidden. Each section has a set of buttons, one for each node type.
+Drag a button onto the graph to create a new node of that type. You can also search for nodes by name
+using the search box at the top.
 * At the bottom is the **log area**, the **status bar**, and a set of
 [global controls](../userguide/globalcontrols.md).
 
 ## Working with graph nodes
 
 Each node is shown as a box with input connections on the top and output connections on
-the bottom. To illustrate this, consider the following graph you've seen before:
+the bottom, as shown in the following graph:
 
 ![!R671_438 inset into source image RGB representation|671438grad](671438grad.png)
 
@@ -97,7 +109,8 @@ on inputs.
 calculated (see below).
 * Nodes can have a "display text" in blue. These show extra data, such as the output of a calculation in an *expr* node
 or the annotation given to a region of interest.
-* Currently nodes without a display text also show the number of times they have been calculated as a debugging aid.
+* Currently nodes without a display text also show the number of times they have been calculated.
+This appears in green, and is a debugging aid.
 
 ### Creating new nodes
 
@@ -147,8 +160,8 @@ These two nodes are special - the boxes in the graph have text fields
 which can be edited.
 
 *  For *constant* nodes, the value in the box 
-will be the numeric output of the node. This node has no view, and double-clicking
-has no effect.
+will be the numeric output of the node. This node has no view: double-clicking will
+have no effect.
 * For *comment* nodes, the value in the box is a text comment that can help
 other users navigate the graph. Once edited, the box can be resized by
 clicking and dragging its bottom-right corner. The text will flow to fit
@@ -163,7 +176,7 @@ text directly in its box.
 ## Loading an image
 
 The purpose of the *input 0* node is to bring the an input into the graph for manipulation.
-As noted [elsewhere](../concepts/), the graph is separate from the inputs. This makes it easier
+As noted [elsewhere](concepts.md), the graph is separate from the inputs. This makes it easier
 to run different graphs on the same inputs, or the same graph on different inputs.
 ==Clicking on the "Input 0" button== at the top of the window will open a window to let us change the
 input, which looks like this:
@@ -192,7 +205,7 @@ You should see something like this:
 
 ### The Canvas
 
-The right-hand side is a common component in PCOT known as a
+The right-hand side of the input window is a common component in PCOT known as a
 **canvas** which will show the image selected. The canvas
 lets you modify how the RGB channels are mapped using the three combo boxes.
 Each box gives the band number, the input number and the wavelength. For
@@ -218,15 +231,13 @@ under development.
 The canvas is quite complicated because it does a lot of things, such as
 displaying spectra for each pixel,
 normalisation settings, and displaying data quality bits. More information
-can be found [here](/userguide/canvas), but for now:
+can be found [here](../userguide/canvas.md), but for now:
 
 * ==Click the **spectrum** button== to open a spectrum view, and move
 the cursor over the image to show the spectrum at different pixels. You may
 need to resize the window, or drag the "double bar" which separates the
-image from the spectrum.
-
-
-
+image from the spectrum. You can also change the size of the region over which the
+spectrum is sampled using the "spectrum region" control.
 
 
 ## Manipulating an image: obtaining a spectral parameter map
@@ -278,35 +289,47 @@ displaying
 This indicates that all three RGB channels shown in the canvas are getting
 their data from the 438 and 671 bands of input 0.
 
-### Disconnecting nodes and node error states
-==Disconnect the input node== by dragging the arrowhead from the *a* box and releasing it in empty space. This will cause an error:
-![!A node in an error state|errornode](errornode.png)
+### Disconnecting nodes
+
+==Disconnect the input node== by dragging the arrowhead from the *a* box and releasing it in empty space. The node now has no input at
+*a* and so the output will be the "none" value, as shown below.
+
+![!Disconnected *expr* node](discoexpr.png)
+
+Now ==reconnect the node==.
+
+### Error states in nodes
+
+Now ==edit the expression in the *expr* node to read "a$671/a$430"==
+You'll now see something like the image below:
+
+![!Error in *expr* node](errornode.png)
+
 
 The EXPR is the kind of error - EXPR is an error in expression
 parsing/execution. More details can be seen in the log window, which in this
 case reads 
-
 ```txt
-Error in expression: variable's input is not connected
+Error in expression: unable to get this wavelength from an image...
 ```
-This is because there is no longer an image feeding into the *expr* node's input for variable *a*.
-Now ==reconnect the input node to the *expr* node== to fix the error.
+This is because the image has no 430nm band.
+
+==Now change the expression back to `a$671/a$438`== so the node works again.
 
 
 ### Adding a region of interest
 
 It's a little hard to see what's going on, so we will add a region of interest.
 This will make the *expr* node treat the operation differently - only the area inside
-the rectangle will be ```norm(a$671/a$438)```.
-Everywhere
+the rectangle will be ```a$671/a$438```. Everywhere
 else in the image, the output will come from the left-hand side of the expression (the 671nm channel).
-The rules for ROIs are explained more fully [on this page](../../userguide/principles).
+The rules for ROIs are explained more fully [on this page](../userguide/principles.md).
 
 ==Open the *regions* section of the palette and add a *rect* node between the *input* and *expr* nodes==
 (the latter of which will be
 labelled with its expression). Nothing will change, because the rectangle has not been set.
 ==Edit the *rect* node and draw a rectangle by clicking and dragging on the canvas.==
-==Set the scale to 5 pixels and type "671_438" in the Annotation box==, something like this:
+==Set the scale to 5 pixels and type "671/438" in the Annotation box==, something like this:
 
 ![!R671_438 with a rectangle|R671_438b](R671_438b.png)
 
@@ -323,8 +346,8 @@ It can be hard to adjust the rectangle when you can't see what's happening in th
 on the tab, so you can edit
 the rectangle while the *expr* output is visible. ==Dock it again by closing the undocked window==.
 
-To make things more visible still, ==open the *data* section and add a *colourmap* node after the *expr* node and view it==, clicking
-making sure **Show ROIs** is enabled on its canvas (ROIs are typically retained on derived
+To make things more visible still, ==open the *data* section and add a *colourmap* node after the *expr* node and view it==,
+making sure **ROIs** is enabled on its canvas (ROIs are typically retained on derived
 images):
 
 ![!R671_438 with a rectangle and colourmap|R671_438d](R671_438d.png)
