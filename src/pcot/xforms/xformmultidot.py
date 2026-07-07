@@ -3,9 +3,9 @@ import random
 from functools import partial
 
 import matplotlib
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QPainter, QColor, QKeyEvent, QDoubleValidator
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainter, QColor, QKeyEvent, QDoubleValidator
+from PySide6.QtWidgets import QMessageBox
 
 import pcot.ui.tabs
 import pcot.utils.colour

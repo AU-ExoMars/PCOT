@@ -1,11 +1,11 @@
 import dataclasses
 from typing import List, Any
 
-import PySide2
-from PySide2 import QtCore
-from PySide2.QtCore import QAbstractTableModel, Signal, QModelIndex, Qt
-from PySide2.QtGui import QKeyEvent, QBrush, QColor
-from PySide2.QtWidgets import QTableView, QStyledItemDelegate, QComboBox, QDialog, QGridLayout, QPushButton
+import PySide6
+from PySide6 import QtCore
+from PySide6.QtCore import QAbstractTableModel, Signal, QModelIndex, Qt
+from PySide6.QtGui import QKeyEvent, QBrush, QColor
+from PySide6.QtWidgets import QTableView, QStyledItemDelegate, QComboBox, QDialog, QGridLayout, QPushButton
 
 from pcot.parameters.taggedaggregates import TaggedListType, TaggedList, TaggedDictType
 from pcot.ui.dqwidget import DQWidget

@@ -1,6 +1,6 @@
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import QPointF
-from PySide2.QtGui import QPaintEvent, QPainter, QPen, QColor, QBrush
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtCore import QPointF
+from PySide6.QtGui import QPaintEvent, QPainter, QPen, QColor, QBrush
 
 from pcot.cameras.filters import wav2RGB
 
@@ -84,7 +84,7 @@ class SpectrumWidget(QtWidgets.QWidget):
 
                 # draw x value on axis with a tick
                 t = f"{x}"
-                tw = metrics.width(t)
+                tw = metrics.horizontalAdvance(t)
                 p.drawText(self.map(x01, -0.05, xoff=-tw / 2), t)
                 p.drawLine(self.map(x01, -0.01), self.map(x01, 0.01))
 

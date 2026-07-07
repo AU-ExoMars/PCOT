@@ -1,7 +1,7 @@
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Signal, QSize, QRect
-from PySide2.QtGui import QPaintEvent, QPainter, QColor
-from PySide2.QtCore import Qt
+from PySide6 import QtWidgets, QtGui
+from PySide6.QtCore import Signal, QSize, QRect
+from PySide6.QtGui import QPaintEvent, QPainter, QColor
+from PySide6.QtCore import Qt
 
 
 class TextToggleButton(QtWidgets.QWidget):

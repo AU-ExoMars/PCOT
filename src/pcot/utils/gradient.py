@@ -2,8 +2,8 @@ import copy
 from typing import Tuple, List, Optional
 
 import numpy as np
-from PySide2.QtCore import QPointF
-from PySide2.QtGui import QImage, QLinearGradient, QGradient
+from PySide6.QtCore import QPointF
+from PySide6.QtGui import QImage, QLinearGradient, QGradient
 
 from pcot.utils.colour import rgb2qcol
 

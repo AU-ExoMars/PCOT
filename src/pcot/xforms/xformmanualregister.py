@@ -1,8 +1,8 @@
 import cv2 as cv
 import numpy as np
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QKeyEvent
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QMessageBox
 from skimage import transform
 from skimage.transform import warp, AffineTransform
 

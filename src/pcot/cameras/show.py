@@ -2,7 +2,7 @@
 Code for showing filters, reflectances and their products.
 """
 import numpy as np
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 from poetry.console.commands import self
 
 from pcot.cameras.filters import Filter

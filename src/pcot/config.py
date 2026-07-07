@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, List
 
 import yaml
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedDict, TaggedListType
 from pcot.utils.demosaicing import VALID_BAYER_PATTERNS

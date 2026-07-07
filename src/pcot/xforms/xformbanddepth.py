@@ -1,7 +1,7 @@
 from typing import Optional
 
 import numpy as np
-from PySide2.QtCore import QSignalBlocker
+from PySide6.QtCore import QSignalBlocker
 
 from pcot import dq
 from pcot.datum import Datum

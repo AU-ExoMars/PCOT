@@ -5,10 +5,10 @@ import re
 from pathlib import Path
 from typing import Optional, List
 
-from PySide2 import QtWidgets
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QPen
-from PySide2.QtWidgets import QMessageBox, QTableWidgetItem
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPen
+from PySide6.QtWidgets import QMessageBox, QTableWidgetItem
 from proctools.products import ProductDepot, DataProduct
 
 import pcot

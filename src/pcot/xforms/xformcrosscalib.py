@@ -1,9 +1,9 @@
 import logging
 
 import numpy as np
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QKeyEvent, QPainter, QPen, QColor
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent, QPainter, QPen, QColor
+from PySide6.QtWidgets import QMessageBox
 
 from pcot import ui
 from pcot.datum import Datum

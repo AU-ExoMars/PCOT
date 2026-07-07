@@ -1,8 +1,8 @@
 from typing import List, Any, Set, Callable
 
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QColor, QFont, QBrush, QPen
+from PySide6 import QtWidgets, QtGui
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QFont, QBrush, QPen
 
 import numpy as np
 import pcot.ui as ui
@@ -325,7 +325,7 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
         self.setResizeAnchor(QtWidgets.QGraphicsView.NoAnchor)
         # Get Scene Pos
-        target_viewport_pos = self.mapToScene(evt.pos())
+        target_viewport_pos = self.mapToScene(evt.position().toPoint())
         x = target_viewport_pos.x()
         # ZOOM
         if evt.angleDelta().y() < 0:

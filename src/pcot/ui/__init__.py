@@ -3,9 +3,9 @@ import traceback
 from datetime import datetime
 
 import pcot.ui.mainwindow as mainwindow
-from PySide2 import QtWidgets
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QMessageBox
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox
 from pcot.ui.help import markdownWrapper
 
 logger = logging.getLogger(__name__)
@@ -134,7 +134,7 @@ def decorateSplitter(splitter: QtWidgets.QSplitter, index: int):
     handle = splitter.handle(index)
     layout = QtWidgets.QHBoxLayout(handle)
     layout.setSpacing(0)
-    layout.setMargin(0)
+    layout.setContentsMargins(0, 0, 0, 0)
     if splitter.orientation() == Qt.Horizontal:
         for i in range(grips):
             line = QtWidgets.QFrame(handle)

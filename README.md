@@ -31,7 +31,7 @@ to help reproducibility.
 ## Installation
 
 PCOT is a Python program (and library) with a number of dependencies,
-notably numpy and PySide2 (the official Python interface to Qt).
+notably numpy and PySide6 (the official Python interface to Qt).
 We find the best way to manage these is to use
 [Anaconda](https://anaconda.com/)
 and
@@ -82,50 +82,24 @@ PCOT as above:
 
 * Open a bash shell
 * **cd** to the PCOT directory (which contains this file).
-* Run the command **conda create -n pcot python=3.10 poetry**.
-This will create an environment called **pcot** which uses Python 3.10 and
+* Run the command **conda create -n pcot python=3.11 poetry**.
+This will create an environment called **pcot** which uses Python 3.11 and
 the Poetry dependency and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
 * Now run **poetry install**. This will set up all the packages PCOT is
 dependent on and install PCOT.
 * You should now be able to run **pcot** to start the application.
 
-### Problems on modern Macs
-You may get an installation error where poetry can't install a component called **shiboken2**. This is because
-PCOT currently uses PySide2 to handle the user interface, which isn't entirely compatible with modern
-MacOS and Apple's new CPUs. We are working on moving to the more modern PySide6, but while we do that
-there is a workaround involving Rosetta - Apple's system for running code intended for Intel-based Macs on the newer
-ARM-based Macs. To do this, delete the old conda environment with
-
-```
-conda env remove -n pcot
-```
-
-and then recreate it and install PCOT with these steps:
-
-```
-conda create -n pcot -y
-conda activate pcot
-conda config --env --set subdir osx-64
-conda install python=3.10 poetry
-poetry install
-```
-
-That third line is the key one – it’s saying “make the environment you just created an osx-64 environment” 
-(i.e. an Intel one, with Rosetta translation).
-
-If it goes smoothly, you should be able to run PCOT with the “pcot” command.
-It may take a long time to start up, because this is where I think the Rosetta translation happens
-(turning Intel code into ARM code). But I think it only does that the first time.
-
+PCOT now uses PySide6, which ships native wheels for Apple Silicon, so the Rosetta/osx-64
+workaround formerly needed here for PySide2/shiboken2 on modern Macs is no longer required.
 
 ### Installing on Windows
 Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:
 
 * Open the Anaconda PowerShell Prompt application from the Start Menu.
 * **cd** to the PCOT directory (which contains this file).
-* Run the command **conda create -n pcot python=3.10 poetry**.
-This will create an environment called **pcot** which uses Python 3.10 and the Poetry dependency
+* Run the command **conda create -n pcot python=3.11 poetry**.
+This will create an environment called **pcot** which uses Python 3.11 and the Poetry dependency
 and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
 * Now run **poetry install**. This will set up all the packages PCOT is dependent on and install
@@ -148,8 +122,8 @@ are using a shall of some sort:
 * **conda deactivate pcot** will make sure you are not actively using the 
 environment
 * **conda env remove -n pcot** will delete the old environment
-* **conda create -n pcot python=3.10 poetry** will create a new environment -
-replace "3.10" with the correct new version (currently 3.9 will work too)
+* **conda create -n pcot python=3.11 poetry** will create a new environment -
+replace "3.11" with the correct new version
 * **poetry install** will reinstall all the packages.
 * You will probably need to refer to the instructions below on **Running PCOT inside Pycharm**
 to update the interpreter to the new version.
@@ -204,7 +178,7 @@ are testing a custom node.
     * Select **Edit Configurations...** (or it might be **Add Configuration...**) from the configurations drop down in the menu bar
     * Add a new configuration (the + symbol) and select **Python**
     * Set **Script Path** to **PCOT/src/pcot/\_\_main\_\_.py**
-    * Make sure the interpreter is something like **Project Default (Python 3.10 (pcot))**, i.e. the Python interpreter of the pcot environment.
+    * Make sure the interpreter is something like **Project Default (Python 3.11 (pcot))**, i.e. the Python interpreter of the pcot environment.
 * You should now be able to run and debug PCOT.
 
 ## Environment variables
@@ -248,3 +222,14 @@ If that's the case, install the missing package:
 sudo apt install libxcb-xinerama0
 ```
 That should help. Otherwise, send a message to us with the output from the ```QT_DEBUG_PLUGINS``` run and we will investigate.
+
+### Can't start Qt on Linux (PySide6 / Qt6)
+
+Since moving to PySide6, you may see the same "Could not load the Qt platform plugin xcb" error
+described above but caused by a different missing library. From Qt 6.5 onwards, the ```xcb```
+platform plugin depends on ```libxcb-cursor0``` at runtime, and it isn't installed by default on
+many Linux distributions (including a fresh Ubuntu install). If ```QT_DEBUG_PLUGINS=1``` shows
+a complaint about ```libxcb-cursor.so.0```, install it with:
+```
+sudo apt install libxcb-cursor0
+```

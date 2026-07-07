@@ -1,10 +1,10 @@
 import logging
 
 import numpy as np
-from PySide2 import QtCore
-from PySide2.QtCore import Qt, QItemSelection, QItemSelectionModel
+from PySide6 import QtCore
+from PySide6.QtCore import Qt, QItemSelection, QItemSelectionModel
 import cv2 as cv
-from PySide2.QtGui import QKeyEvent
+from PySide6.QtGui import QKeyEvent
 
 from pcot import dq
 from pcot.datum import Datum

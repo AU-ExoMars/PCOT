@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType, TaggedDict, TaggedVariantDictType
 from pcot.ui.taggedaggregates import AggregateEditorDialog
@@ -78,7 +78,7 @@ def runConfigUI():
     """This is the function that runs the configuration UI on the main config TaggedDict"""
     import pcot
     dialog = AggregateEditorDialog(pcot.config.data)
-    dialog.exec_()  # it's modal
+    dialog.exec()  # it's modal
     if dialog.data():
         pcot.ui.log("Setting changes accepted")
         pcot.config.data = dialog.data()
@@ -104,7 +104,7 @@ def runtest():
     while True:
         import yaml
         dialog = AggregateEditorDialog(config)
-        dialog.exec_()
+        dialog.exec()
         if dialog.data():
             print("Accepted")
             config = dialog.data()

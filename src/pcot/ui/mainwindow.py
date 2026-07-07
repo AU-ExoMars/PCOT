@@ -10,10 +10,10 @@ from string import Template
 from typing import List, Optional, OrderedDict, ClassVar, Dict
 
 import markdown
-from PySide2 import QtWidgets
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QTextCursor
-from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu, QApplication
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QTextCursor, QAction
+from PySide6.QtWidgets import QMessageBox, QDialog, QMenu, QApplication
 
 #
 # Warning: these imports are VERY brittle. Changing the order often results in circular imports.
@@ -548,7 +548,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             doc.load(res[0], add_to_recents=False)
             # open the dialog
             dlg = ImportDialog(doc)
-            dlg.exec_()
+            dlg.exec()
             self.doc.importFrom(doc, dlg.macstoimport, dlg.favstoimport)
 
     def findOrAddMenu(self, name):

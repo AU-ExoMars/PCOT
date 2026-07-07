@@ -1,9 +1,9 @@
 """This module deals with the widget which displays the graphical scene which
 represents a graph (graphscene).
 """
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QMenu
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMenu
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class GraphView(QtWidgets.QGraphicsView):
         self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
         self.setResizeAnchor(QtWidgets.QGraphicsView.NoAnchor)
         # Get Scene Pos
-        target_viewport_pos = self.mapToScene(evt.pos())
+        target_viewport_pos = self.mapToScene(evt.position().toPoint())
         # Translate Scene
         self.translate(target_viewport_pos.x(), target_viewport_pos.y())
         # ZOOM
@@ -123,7 +123,7 @@ class GraphView(QtWidgets.QGraphicsView):
         if not ev.isAccepted():        # if the event wasn't accepted, run our menu
             menu = QMenu()
             reset = menu.addAction("Reset view")
-            a = menu.exec_(ev.globalPos())
+            a = menu.exec(ev.globalPos())
             if a == reset:
                 self.fitAll()
 

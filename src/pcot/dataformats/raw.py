@@ -5,7 +5,7 @@ import numpy as np
 import os
 import logging
 
-from PySide2.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog
 
 from pcot.ui import uiloader
 

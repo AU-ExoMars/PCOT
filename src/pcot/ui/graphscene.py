@@ -5,10 +5,10 @@ import logging
 import math
 from typing import List, Optional
 
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Qt, QPointF
-from PySide2.QtGui import QColor, QFont, QTransform, QPen, QBrush
-from PySide2.QtWidgets import QApplication, QInputDialog
+from PySide6 import QtWidgets, QtGui
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QColor, QFont, QTransform, QPen, QBrush
+from PySide6.QtWidgets import QApplication, QInputDialog
 
 import pcot.datum as datum
 import pcot.ui as ui
@@ -281,7 +281,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         # but I'll leave the condition here.
         if not m.isEmpty():
             w = getEventWindow(event)
-            action = m.exec_(event.screenPos())
+            action = m.exec(event.screenPos())
             if action is None:
                 return
             elif action == togact:

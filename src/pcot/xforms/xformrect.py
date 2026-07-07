@@ -1,4 +1,4 @@
-from PySide2.QtGui import QIntValidator
+from PySide6.QtGui import QIntValidator
 
 import pcot.ui.tabs
 import pcot.utils.colour

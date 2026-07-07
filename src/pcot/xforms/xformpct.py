@@ -5,9 +5,9 @@ from pcot.calib.target import CircularPatch
 from pcot.datum import Datum
 import cv2 as cv
 
-from PySide2.QtCore import Qt, QPoint
-from PySide2.QtGui import QColor, QPainter, QPolygon, QFont
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QColor, QPainter, QPolygon, QFont
+from PySide6.QtWidgets import QMessageBox
 import pcot.calib.pct
 import pcot.calib.colorchecker_classic
 from pcot.parameters.taggedaggregates import TaggedDictType

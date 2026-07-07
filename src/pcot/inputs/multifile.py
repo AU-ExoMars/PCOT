@@ -6,9 +6,9 @@ import re
 from typing import Any, Dict
 from pathlib import Path
 
-import PySide2
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Qt
+import PySide6
+from PySide6 import QtWidgets, QtGui
+from PySide6.QtCore import Qt
 
 import pcot
 from pcot.imagecube import ChannelMapping, ImageCube
@@ -293,7 +293,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         # here, the "owner" of the preset dialog is actually this dialog - not the input itself - because
         # we need to update the dialog when the preset is applied.
         w = PresetDialog(self, "Multifile presets", presetModel, self)
-        w.exec_()
+        w.exec()
         self.onInputChanged()
 
     def loaderSettings(self):
@@ -398,7 +398,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             item = QtGui.QStandardItem(x)
             item.setCheckable(True)
             if x in self.method.files:
-                item.setCheckState(PySide2.QtCore.Qt.Checked)
+                item.setCheckState(PySide6.QtCore.Qt.Checked)
             self.model.appendRow(item)
 
         self.filelist.setModel(self.model)

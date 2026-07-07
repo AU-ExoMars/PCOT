@@ -4,9 +4,9 @@ from typing import Tuple
 import logging
 
 import numpy as np
-from PySide2.QtCore import Qt, QPoint, QRectF
-from PySide2.QtGui import QPainter, QLinearGradient, QPen, QFontMetrics
-from PySide2.QtWidgets import QInputDialog
+from PySide6.QtCore import Qt, QPoint, QRectF
+from PySide6.QtGui import QPainter, QLinearGradient, QPen, QFontMetrics
+from PySide6.QtWidgets import QInputDialog
 
 from pcot.datum import Datum
 import pcot.ui.tabs
@@ -264,8 +264,8 @@ class GradientLegend(Annotation):
         metrics = QFontMetrics(annotFont)
 
         mintext, maxtext = self.rangestrs
-        minw = metrics.width(mintext)
-        maxw = metrics.width(maxtext)
+        minw = metrics.horizontalAdvance(mintext)
+        maxw = metrics.horizontalAdvance(maxtext)
         if vertical:
             xt = x - (self.thickness + 2) + barThickness / 2
 

@@ -1,9 +1,9 @@
 from math import ceil
 
 import numpy as np
-from PySide2.QtCore import QSizeF, QMarginsF, Qt, QSize, QRect, QRectF
-from PySide2.QtGui import QImage, QPainter, QPdfWriter, QColor
-from PySide2.QtSvg import QSvgGenerator
+from PySide6.QtCore import QSizeF, QMarginsF, Qt, QSize, QRect, QRectF
+from PySide6.QtGui import QImage, QPainter, QPdfWriter, QColor
+from PySide6.QtSvg import QSvgGenerator
 
 EXPORT_UNIT_WIDTH = 10000.0  # size of an image and its borders in internal units.
 

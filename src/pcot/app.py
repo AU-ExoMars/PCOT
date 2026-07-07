@@ -4,8 +4,8 @@ This is the file which creates and runs the PCOT user interface
 import os
 from pathlib import Path
 
-from PySide2 import QtWidgets
-from PySide2.QtCore import QCommandLineParser, QCommandLineOption
+from PySide6 import QtWidgets
+from PySide6.QtCore import QCommandLineParser, QCommandLineOption
 import logging
 import os
 import getpass
@@ -58,6 +58,12 @@ def run(args):
     # note that we don't use Qt to process the args. This is just so Qt could
     # potentially use its internal arguments.
     app = QtWidgets.QApplication(sys.argv)
+    if sys.platform.lower().startswith('win'):
+        # Qt 6.7+ defaults to the "Windows11" style on Windows 11, which uses wider
+        # side-by-side spin box buttons instead of the old compact stacked arrows.
+        # Request the classic look back, which is more space-efficient. macOS and Linux
+        # use their own native/Fusion styles and are unaffected by this, so leave them be.
+        app.setStyle("windowsvista")
     app.setApplicationVersion(pcot.__fullversion__)  # this comes from the VERSION.txt file
     app.setApplicationName("PCOT")
     app.setOrganizationName('Aberystwyth University')
@@ -89,6 +95,6 @@ def run(args):
     window.saveFileName = doc.fileName
 
     # run the application until exit
-    app.exec_()
+    app.exec()
     logger.info("Leaving app")
     pcot.config.save()

@@ -1,4 +1,4 @@
-__all__ = ['loadUi', 'loadUiType']
+__all__ = ['loadUi']
 
 # This code originally comes from QtPy - https://pypi.org/project/QtPy/
 # which is under the MIT License:
@@ -87,33 +87,10 @@ __all__ = ['loadUi', 'loadUiType']
 # DEALINGS IN THE SOFTWARE.
 from io import StringIO
 
-from PySide2.QtCore import QMetaObject, QByteArray, QBuffer
-from PySide2.QtUiTools import QUiLoader
+from PySide6.QtCore import QMetaObject, QByteArray, QBuffer
+from PySide6.QtUiTools import QUiLoader
 
 import pcot.assets
-
-try:
-    from pyside2uic import compileUi
-    # Patch UIParser as xml.etree.Elementree.Element.getiterator
-    # was deprecated since Python 3.2 and removed in Python 3.9
-    # https://docs.python.org/3.9/whatsnew/3.9.html#removed
-    from pyside2uic.uiparser import UIParser
-    from xml.etree.ElementTree import Element
-
-
-    class ElemPatched(Element):
-        def getiterator(self, *args, **kwargs):
-            return self.iter(*args, **kwargs)
-
-
-    def readResources(self, elem):
-        return self._readResources(ElemPatched(elem))
-
-
-    UIParser._readResources = UIParser.readResources
-    UIParser.readResources = readResources
-except ImportError:
-    pass
 
 
 class UiLoader(QUiLoader):
@@ -266,43 +243,3 @@ def loadUi(uifile, baseinstance=None, workingDirectory=None):
     widget = loader.load(buf)
     QMetaObject.connectSlotsByName(widget)
     return widget
-
-
-def loadUiType(uifile, from_imports=False):
-    """Load a .ui file and return the generated form class and
-    the Qt base class.
-
-    The "loadUiType" command convert the ui file to py code
-    in-memory first and then execute it in a special frame to
-    retrieve the form_class.
-
-    Credit: https://stackoverflow.com/a/14195313/15954282
-    """
-
-    import sys
-    from io import StringIO
-    from xml.etree.ElementTree import ElementTree
-
-    from . import QtWidgets
-
-    # Parse the UI file
-    etree = ElementTree()
-    ui = etree.parse(uifile)
-
-    widget_class = ui.find('widget').get('class')
-    form_class = ui.find('class').text
-
-    with open(uifile, encoding="utf-8") as fd:
-        code_stream = StringIO()
-        frame = {}
-
-        compileUi(fd, code_stream, indent=0, from_imports=from_imports)
-        pyc = compile(code_stream.getvalue(), '<string>', 'exec')
-        exec(pyc, frame)
-
-        # Fetch the base_class and form class based on their type in the
-        # xml from designer
-        form_class = frame['Ui_%s' % form_class]
-        base_class = getattr(QtWidgets, widget_class)
-
-    return form_class, base_class

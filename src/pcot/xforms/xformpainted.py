@@ -1,5 +1,5 @@
-from PySide2.QtGui import QPainter
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import QMessageBox
 
 import pcot.ui.tabs
 import pcot.utils.colour

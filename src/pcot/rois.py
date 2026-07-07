@@ -4,8 +4,8 @@ from typing import Tuple, Optional
 
 import cv2 as cv
 import numpy as np
-from PySide2.QtCore import Qt, QPointF
-from PySide2.QtGui import QPainter, QImage, QPen
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QPainter, QImage, QPen
 from numpy import ndarray
 from scipy import ndimage
 

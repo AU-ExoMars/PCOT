@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Tuple, Optional
 import logging
 
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Qt, QObject
-from PySide2.QtWidgets import QListWidgetItem, QSizePolicy, QListWidget
+from PySide6 import QtWidgets, QtGui
+from PySide6.QtCore import Qt, QObject
+from PySide6.QtWidgets import QListWidgetItem, QSizePolicy, QListWidget
 
 from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType, TaggedDictType, \
     TaggedVariantDictType, TaggedVariantDict

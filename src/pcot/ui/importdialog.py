@@ -1,9 +1,9 @@
 """
 Dialog for importing favourites and macros
 """
-from PySide2 import QtGui
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QDialog, QDialogButtonBox
+from PySide6 import QtGui
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QDialogButtonBox
 
 from pcot.ui import uiloader
 

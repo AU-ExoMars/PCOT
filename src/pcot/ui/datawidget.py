@@ -2,7 +2,7 @@
 Data widget that shows either a text view or a canvas view of the data.
 """
 
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
 from pcot.ui.canvas import Canvas
 from pcot.utils import SignalBlocker

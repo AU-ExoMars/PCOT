@@ -3,8 +3,8 @@ import math
 
 import matplotlib
 import numpy as np
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtWidgets import QDialog
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtWidgets import QDialog
 
 import pcot
 import pcot.ui as ui

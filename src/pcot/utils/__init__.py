@@ -53,8 +53,9 @@ class singleton:
 
 
 class SignalBlocker:
-    """Handy class for blocking signals on several widgets at once. It looks like QSignalBlocker
-    in PySide2 doesn't have __enter__ and __exit__, so this lets us use it in a with statement."""
+    """Handy class for blocking signals on several widgets at once. PySide6's QSignalBlocker is
+    a context manager now, but only for a single QObject, so this remains useful for the
+    several-widgets-at-once case."""
 
     def __init__(self, *args):
         self.objects = args

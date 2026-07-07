@@ -5,9 +5,9 @@ Markdown, and then use the Markdown library to convert to HTML.
 import logging
 import re
 
-from PySide2 import QtWidgets
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QFont
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 import pcot
 from pcot.utils.table import Table

@@ -1,8 +1,8 @@
 import logging
 
 import numpy as np
-from PySide2 import QtGui
-from PySide2.QtWidgets import QMessageBox, QHeaderView
+from PySide6 import QtGui
+from PySide6.QtWidgets import QMessageBox, QHeaderView
 
 import cv2 as cv
 

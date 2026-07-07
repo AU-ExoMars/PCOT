@@ -1,5 +1,5 @@
 import numpy as np
-from PySide2.QtWidgets import QComboBox
+from PySide6.QtWidgets import QComboBox
 
 import pcot
 from pcot import dq

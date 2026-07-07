@@ -3,10 +3,10 @@ nodes on the right hand side."""
 
 import logging
 
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QMessageBox, QSizePolicy, QAction, QLabel
-from poetry.console.commands import self
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox, QSizePolicy, QLabel
+from PySide6.QtGui import QAction
 
 import pcot.assets
 import pcot.macros as macros
@@ -27,10 +27,14 @@ groups = ["source", "maths", "processing", "calibration", "data", "regions", "RO
 class PaletteButtonBase(QtWidgets.QPushButton):
     """Base class for palette buttons, including both XFormType (inc. macros) and favourites."""
 
-    helpAct = QAction("Help")
+    # QAction can't be constructed before a QApplication exists (PySide6 will crash), so these
+    # are created lazily on first instantiation rather than at class-definition (import) time.
+    helpAct = None
 
     def __init__(self, name, view, parent):
         super().__init__(name, parent=parent)
+        if PaletteButtonBase.helpAct is None:
+            PaletteButtonBase.helpAct = QAction("Help")
         self.name = name
         self.view = view
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -65,7 +69,7 @@ class PaletteButtonBase(QtWidgets.QPushButton):
         drag.setMimeData(mimeData)
         # set the hotspot according to the mouse press position
         drag.setHotSpot(self.mousePos - self.rect().topLeft())
-        drag.exec_(Qt.MoveAction)
+        drag.exec(Qt.MoveAction)
 
     def click(self):
         # create node and rebuild the scene
@@ -77,12 +81,15 @@ class PaletteButtonBase(QtWidgets.QPushButton):
 class PaletteButton(PaletteButtonBase):
     """The palette items, which are buttons which can be either clicked or dragged (with RMB)"""
 
-    openProtoAct = QAction("Open prototype")
-    deleteMacroAct = QAction("Delete macro")
+    openProtoAct = None
+    deleteMacroAct = None
 
     def __init__(self, name, xformtype, view, parent=None):
         """constructor, taking button name, xformtype, and view into which they should be inserted."""
         super().__init__(name, view, parent=parent)
+        if PaletteButton.openProtoAct is None:
+            PaletteButton.openProtoAct = QAction("Open prototype")
+            PaletteButton.deleteMacroAct = QAction("Delete macro")
         self.xformtype = xformtype
 
     def contextMenu(self, e):
@@ -95,7 +102,7 @@ class PaletteButton(PaletteButtonBase):
         else:
             menu.addAction(self.helpAct)
 
-        act = menu.exec_(self.mapToGlobal(e))
+        act = menu.exec(self.mapToGlobal(e))
         if act == self.helpAct:
             self.view.window.openHelp(self.xformtype)
         elif act == self.openProtoAct:
@@ -124,11 +131,13 @@ class PaletteButton(PaletteButtonBase):
 
 class PaletteButtonFavourite(PaletteButtonBase):
 
-    removeAct = QAction("Remove from favourites")
+    removeAct = None
 
     def __init__(self, name, fav: Favourite, palette, view, parent=None):
         """constructor, taking button name, xformtype, and view into which they should be inserted."""
         super().__init__(name, view, parent=parent)
+        if PaletteButtonFavourite.removeAct is None:
+            PaletteButtonFavourite.removeAct = QAction("Remove from favourites")
         self.setStyleSheet("background-color:rgb(220,220,140)")
         self.fav = fav
         self.name = name
@@ -137,7 +146,7 @@ class PaletteButtonFavourite(PaletteButtonBase):
     def contextMenu(self, e):
         menu = QtWidgets.QMenu()
         menu.addAction(self.removeAct)
-        act = menu.exec_(self.mapToGlobal(e))
+        act = menu.exec(self.mapToGlobal(e))
         if act == self.removeAct:
             self.palette.removeFavourite(self.name)
         elif act == self.helpAct:

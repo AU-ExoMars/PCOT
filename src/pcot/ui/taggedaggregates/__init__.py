@@ -5,8 +5,8 @@ User interface for editing tagged aggregates
 import itertools
 from typing import List
 
-from PySide2.QtCore import QEvent, Qt, QSize
-from PySide2.QtWidgets import QGridLayout, QVBoxLayout, \
+from PySide6.QtCore import QEvent, Qt, QSize
+from PySide6.QtWidgets import QGridLayout, QVBoxLayout, \
     QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy, QSpacerItem, QScrollBar, QAbstractScrollArea, QLayout, \
     QDialog, QDialogButtonBox, QMessageBox
 

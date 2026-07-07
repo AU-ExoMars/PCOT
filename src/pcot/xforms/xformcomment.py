@@ -1,7 +1,7 @@
 from typing import Tuple
 
-from PySide2 import QtGui, QtWidgets, QtCore
-from PySide2.QtGui import QColor, QFont, QPen
+from PySide6 import QtGui, QtWidgets, QtCore
+from PySide6.QtGui import QColor, QFont, QPen
 
 from pcot import ui
 from pcot.parameters.taggedaggregates import TaggedDictType, taggedColourType

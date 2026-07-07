@@ -20,8 +20,8 @@
 """
 from typing import Dict
 
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import Qt
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtCore import Qt
 
 class ContentArea(QtWidgets.QWidget):
     def __init__(self, parent=None):

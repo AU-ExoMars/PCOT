@@ -1,8 +1,8 @@
 """A colour gradient widget, adapted from https://www.learnpyqt.com/widgets/gradient/"""
 
-from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtCore import Qt
-from PySide2.QtCore import Signal
+from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtCore import Signal
 
 from pcot.utils.colour import qcol2rgb, rgb2qcol
 
@@ -129,7 +129,7 @@ class Gradient(QtWidgets.QWidget):
         if current_color:
             dlg.setCurrentColor(rgb2qcol(current_color))
 
-        if dlg.exec_():
+        if dlg.exec():
             col = qcol2rgb(dlg.currentColor())
             self.setColorAtPosition(n, col)
 

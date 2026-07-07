@@ -19,10 +19,10 @@ import json
 import os
 from typing import Any, Dict, List
 
-from PySide2 import QtWidgets
-from PySide2.QtCore import QAbstractListModel, QModelIndex, QItemSelection, QItemSelectionModel
-from PySide2.QtGui import Qt
-from PySide2.QtWidgets import QDialog, QMessageBox
+from PySide6 import QtWidgets
+from PySide6.QtCore import QAbstractListModel, QModelIndex, QItemSelection, QItemSelectionModel
+from PySide6.QtGui import Qt
+from PySide6.QtWidgets import QDialog, QMessageBox
 
 from pcot.ui import uiloader, namedialog
 from pcot.ui.help import md2html, showHelpDialog

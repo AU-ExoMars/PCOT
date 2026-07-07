@@ -2,16 +2,16 @@
 should inherit DockableTabWindow.
 """
 
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import Qt
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtCore import Qt
 import collections
 import logging
 
-from PySide2.QtWidgets import QMenu, QAction
+from PySide6.QtWidgets import QMenu
 
 ## the main UI window class. Your application window should inherit from
 # this to use dockable tabs, and have a tabWidget tab container.
-from PySide2.QtGui import QFont
+from PySide6.QtGui import QFont, QAction
 
 from pcot import ui
 from pcot.ui import uiloader
@@ -56,7 +56,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         closeAct = QAction("Close all other tabs")
         menu.addAction(closeAct)
 
-        act = menu.exec_(self.mapToGlobal(p))
+        act = menu.exec(self.mapToGlobal(p))
         if act == closeAct:
             self.closeAllTabsExcept(idx)
 

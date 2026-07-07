@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from PySide2.QtCore import Qt, QDir, Signal
-from PySide2.QtWidgets import QHBoxLayout, QLineEdit, QFileSystemModel, QCompleter, QToolButton, QFileDialog, QWidget
+from PySide6.QtCore import Qt, QDir, Signal
+from PySide6.QtWidgets import QHBoxLayout, QLineEdit, QFileSystemModel, QCompleter, QToolButton, QFileDialog, QWidget
 
 
 class FilePathEdit(QWidget):

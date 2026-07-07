@@ -5,7 +5,7 @@ import importlib
 import io
 import pkgutil
 
-from PySide2.QtGui import QIcon
+from PySide6.QtGui import QIcon
 
 
 def getAssetAsString(fn, package="pcot.assets"):

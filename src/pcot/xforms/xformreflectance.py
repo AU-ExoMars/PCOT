@@ -4,7 +4,7 @@ import dataclasses
 from typing import List, Dict, Tuple
 
 import numpy as np
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 
 import pcot.ui.tabs
 from pcot import cameras, ui
@@ -361,7 +361,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
                 table.add("Intercept", c[i])
 
             dialog = TableDialog("Gradients and intercepts", table)
-            dialog.exec_()
+            dialog.exec()
 
     def targetChanged(self, i):
         self.mark()

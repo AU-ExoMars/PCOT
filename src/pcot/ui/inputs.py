@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 from typing import List
 
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QFileSystemModel
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFileSystemModel
 
 import pcot
 from pcot.ui import uiloader
@@ -48,7 +48,7 @@ class MethodSelectButton(QtWidgets.QPushButton):
         else:
             r, g, b = 200, 200, 200
         self.setStyleSheet(
-            f"border-style: outset; padding: 40px; border-width:1px; border-color:black; background-color:rgb({r},{g},{b})")
+            f"border-style: outset; padding: 4px; border-width:1px; border-color:black; background-color:rgb({r},{g},{b})")
 
 
 class InputWindow(QtWidgets.QMainWindow):

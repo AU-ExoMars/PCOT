@@ -6,10 +6,10 @@ import random
 from typing import List, Any, Tuple
 
 import numpy as np
-from PySide2 import QtCore
-from PySide2.QtCore import QModelIndex, Signal, Qt
-from PySide2.QtGui import QColor, QIntValidator, QDoubleValidator
-from PySide2.QtWidgets import QMessageBox
+from PySide6 import QtCore
+from PySide6.QtCore import QModelIndex, Signal, Qt
+from PySide6.QtGui import QColor, QIntValidator, QDoubleValidator
+from PySide6.QtWidgets import QMessageBox
 
 import pcot
 from pcot import ui, dq

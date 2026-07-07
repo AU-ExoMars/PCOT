@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 
 import cv2 as cv
 import numpy as np
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt, QTimer, QPoint
-from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
-from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt, QTimer, QPoint
+from PySide6.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
+from PySide6.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel
 
 import pcot
 import pcot.dq
@@ -561,7 +561,7 @@ class InnerCanvas(QtWidgets.QWidget):
     ## mouse press handler, can delegate to a hook
     def mousePressEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if e.button() == Qt.MidButton:
+        if e.button() == Qt.MiddleButton:
             self.panning = True
             self.panX, self.panY = x, y
         elif self.canv.mouseHook is not None:
@@ -594,7 +594,7 @@ class InnerCanvas(QtWidgets.QWidget):
     ## mouse release handler, can delegate to a hook
     def mouseReleaseEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if e.button() == Qt.MidButton:
+        if e.button() == Qt.MiddleButton:
             self.panning = False
         elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMouseReleaseEvent(x, y, e)
@@ -605,7 +605,7 @@ class InnerCanvas(QtWidgets.QWidget):
         # get the mousepos in the image and calculate the new zoom
         wheel = 1 if e.angleDelta().y() < 0 else -1
         # x,y here is the zoom point
-        x, y = self.getImgCoords(e.pos())
+        x, y = self.getImgCoords(e.position().toPoint())
         newzoom = self.zoomscale * math.exp(wheel * 0.2)
 
         # can't zoom when there's no image
@@ -642,7 +642,7 @@ class InnerCanvas(QtWidgets.QWidget):
             self.y = 0
         # update scrollbars and image
         self.canv.setScrollBarsFromCanvas()
-        self.cursorX, self.cursorY = self.getImgCoords(e.pos())
+        self.cursorX, self.cursorY = self.getImgCoords(e.position().toPoint())
         self.update()
 
     def __del__(self):
@@ -1090,7 +1090,7 @@ class Canvas(QtWidgets.QWidget):
         if not ev.isAccepted():  # if the event wasn't accepted, run our menu
             menu = QMenu()
             save = menu.addAction("Save as image, PDF, SVG or PARC")
-            a = menu.exec_(ev.globalPos())
+            a = menu.exec(ev.globalPos())
             if a == save:
                 self.saveAction()
 

@@ -3,9 +3,9 @@ than using multiple ROI and expr nodes with an importroi node."""
 from copy import copy
 from functools import partial
 
-from PySide2.QtCore import QModelIndex, Signal, QAbstractTableModel, Qt
-from PySide2.QtGui import QPainter
-from PySide2.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtCore import QModelIndex, Signal, QAbstractTableModel, Qt
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from pcot.rois import ROICircle, ROIPainted, ROIPoly, ROIRect, ROI
 import pcot.ui

@@ -13,9 +13,9 @@ from os import path
 import cv2 as cv
 import numpy as np
 # QT imports for interfacing with the front-end
-from PySide2.QtCore import Qt, QSize
-from PySide2.QtGui import QImage, QPixmap
-from PySide2.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
 
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
@@ -1101,7 +1101,7 @@ Maximum Radius: The minimum radius in pixels of patch detections.
 <br><br>
 More information can be found under the HoughCircles() method documentation <a href='https://docs.opencv.org/4.x/dd/d1a/group__imgproc__feature.html#ga47849c3be0d0406ad3ca45db65a25d2d'>here</a>.
         """)
-        descriptionsWindow.exec_()
+        descriptionsWindow.exec()
 
     def onNodeChanged(self):
         """

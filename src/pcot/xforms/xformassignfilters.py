@@ -1,8 +1,8 @@
 import logging
 from typing import List, Any
 
-from PySide2 import QtCore
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Signal, QItemSelectionModel, QItemSelection
+from PySide6 import QtCore
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Signal, QItemSelectionModel, QItemSelection
 
 from pcot import ui
 from pcot.cameras import getCamera, getCameraNames

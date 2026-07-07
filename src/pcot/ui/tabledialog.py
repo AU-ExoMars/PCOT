@@ -1,5 +1,5 @@
 import logging
-from PySide2 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 
 from pcot.utils.table import Table
 

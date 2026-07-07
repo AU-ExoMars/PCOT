@@ -1,9 +1,9 @@
 """Handles editing actions for regions of interest, as canvas hooks."""
 import math
 
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QKeyEvent, QColor, QPainter
-from PySide2.QtWidgets import QDialog, QGridLayout, QLabel, QDialogButtonBox, QSpinBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent, QColor, QPainter
+from PySide6.QtWidgets import QDialog, QGridLayout, QLabel, QDialogButtonBox, QSpinBox
 
 from pcot.utils.flood import FloodFillParams
 
