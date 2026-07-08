@@ -74,6 +74,15 @@ migration is merged and verified.
   promoted in `assets/tabtest.ui`, and nothing in `src/`, `tests/`, or `pcotplugins/`
   references `tabtest.ui` or `NumberWidget` — no xform wires it up, and `TabGeneric` doesn't
   load `.ui` files by name convention. Not a live risk; left alone.
+- [x] `QFileDialog.getExistingDirectory()` crashed with a `TypeError` (`PosixPath` where `str`
+  expected) in `mainwindow.py:_ensureDataPresent` — found running on the Ubuntu VM, but not
+  Linux-specific: `pcot.config.getDefaultDir()` returns a `pathlib.Path` (schema in
+  `config.py`), and PySide6 enforces the `str` type strictly where PySide2's SIP bindings
+  didn't. Never hit on the Windows dev box because that config already had `cameras`/
+  `reflectances` directories set, so the empty-check loop never reached the dialog call.
+  Every other file-dialog call site already wraps the value in `os.path.expanduser(...)`,
+  which stringifies via `os.fspath` as a side effect — this one skipped that. Fixed by
+  wrapping in `str(...)` at the one offending call site.
 - [x] Input window method-select buttons (RGB/Multifile/etc.) showed no text. Root cause:
   `ui/inputs.py:MethodSelectButton.showActive()` sets `padding: 40px` in its stylesheet,
   while `sizeHint()` forces the button height down to `textSize.height() + 15` (~31px) —

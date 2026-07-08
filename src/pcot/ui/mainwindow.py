@@ -262,7 +262,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             # Ask user for directory
             defaultDir = pcot.config.getDefaultDir(configKey) or os.path.expanduser("~")
             chosen = QtWidgets.QFileDialog.getExistingDirectory(
-                self, f"Select {configKey} directory", defaultDir
+                self, f"Select {configKey} directory", str(defaultDir)
             )
             logger.info(f"Selected {chosen}")
 
