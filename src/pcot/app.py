@@ -22,20 +22,37 @@ app = None
 
 def setup_qt_platform():
     # only bother with this check on Linux.
-    if sys.platform.lower().startswith('linux'):
-        uid = os.getuid()
-        wayland_socket = f"/run/user/{uid}/wayland-0"
+    if not sys.platform.lower().startswith('linux'):
+        return
 
-        # No X11. Maybe headless, but need to check Wayland
-        if not os.environ.get("DISPLAY"):
-            if os.environ.get("WAYLAND_DISPLAY"):
-                # Wayland but no socket; that's no good.
-                if not os.path.exists(wayland_socket):
-                    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    uid = os.getuid()
+    wayland_socket = f"/run/user/{uid}/wayland-0"
+    has_display = bool(os.environ.get("DISPLAY"))
+    has_wayland = bool(os.environ.get("WAYLAND_DISPLAY"))
 
-            # No X11 and no Wayland - definitely headless
-            if not os.environ.get("WAYLAND_DISPLAY"):
+    # No X11. Maybe headless, but need to check Wayland
+    if not has_display:
+        if has_wayland:
+            # Wayland but no socket; that's no good.
+            if not os.path.exists(wayland_socket):
                 os.environ["QT_QPA_PLATFORM"] = "offscreen"
+                return
+        else:
+            # No X11 and no Wayland - definitely headless
+            os.environ["QT_QPA_PLATFORM"] = "offscreen"
+            return
+
+    # We have a working display. GNOME under Wayland fails to give Qt dialogs a
+    # server-side decoration (they render borderless and can overlap the main
+    # window - see PYSIDE6_MIGRATION_TODO.md), which forcing XWayland works around.
+    # Let the config override this since it's only confirmed on GNOME so far.
+    override = pcot.config.data.qt_platform if pcot.config.data is not None else "auto"
+    if override == "xcb":
+        os.environ["QT_QPA_PLATFORM"] = "xcb"
+    elif override == "auto" and not has_display and has_wayland:
+        desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+        if "gnome" in desktop:
+            os.environ["QT_QPA_PLATFORM"] = "xcb"
 
 def checkApp():
     """Makes sure an app exists - we can't run certain code without one, and we often
@@ -54,6 +71,8 @@ def run(args):
     Command line parsing is done in main, which calls this."""
 
     global app
+
+    setup_qt_platform()
 
     # note that we don't use Qt to process the args. This is just so Qt could
     # potentially use its internal arguments.

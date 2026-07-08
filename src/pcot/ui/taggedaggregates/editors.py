@@ -9,7 +9,7 @@ from typing import Tuple, Optional
 import logging
 
 from PySide6 import QtWidgets, QtGui
-from PySide6.QtCore import Qt, QObject
+from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QListWidgetItem, QSizePolicy, QListWidget
 
 from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType, TaggedDictType, \
@@ -171,10 +171,10 @@ class MaybeEditor(Editor):
         val = self.editor.aggregate[self.key_or_index]
         if val is None:
             self.editor.widget.setEnabled(False)
-            self.nullCheck.setChecked(Qt.Checked)
+            self.nullCheck.setChecked(True)
         else:
             self.editor.widget.setEnabled(True)
-            self.nullCheck.setChecked(Qt.Unchecked)
+            self.nullCheck.setChecked(False)
 
     def nullChanged(self):
         self.notifyBefore()

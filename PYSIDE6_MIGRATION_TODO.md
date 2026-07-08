@@ -83,6 +83,27 @@ migration is merged and verified.
   Every other file-dialog call site already wraps the value in `os.path.expanduser(...)`,
   which stringifies via `os.fspath` as a side effect — this one skipped that. Fixed by
   wrapping in `str(...)` at the one offending call site.
+- [x] **GNOME/Wayland dialog decoration bug**: on the Ubuntu VM (GNOME/Wayland session),
+  `QDialog`s (e.g. `cameras/show.py`'s "Filters and Reflectances" dialog) rendered with only
+  a minimal flat Qt-drawn title bar (no real OS decoration) and overlapped the main window.
+  `qt6-wayland` (Ubuntu's name for Debian's `qtwayland6`) was installed, so not a
+  missing-package issue — Mutter simply doesn't give these windows a server-side decoration.
+  Confirmed workaround: `QT_QPA_PLATFORM=xcb` (routes through XWayland) restores normal
+  decorations. Implemented as an auto-detected default: `app.py:setup_qt_platform()` now
+  checks `XDG_CURRENT_DESKTOP` and forces `xcb` when running GNOME on Wayland with no X11
+  `DISPLAY`; overridable via the new `qt_platform` config key (`auto`/`native`/`xcb`,
+  `config.py`) for other desktops (KDE's Wayland decorations are reportedly fine) or if a
+  future GNOME fixes this. Also fixed a related gap while in there: `setup_qt_platform()`
+  was only ever reached via `checkApp()` (used by headless/library callers) — the
+  interactive `app.run()` path built the `QApplication` directly without calling it first, so
+  none of this (including the pre-existing headless/offscreen detection) ever actually ran on
+  a normal GUI launch. Now called explicitly in `run()` before `QApplication` is constructed.
+  Not yet tested on KDE or other Wayland compositors — worth a spot-check if anyone runs one.
+- [x] Config editor (`taggedaggregates/editors.py:MaybeEditor.setStateFromInnerEditor`)
+  crashed with a `TypeError` calling `setChecked(Qt.Checked)`/`setChecked(Qt.Unchecked)` —
+  PySide6's `QAbstractButton.setChecked()` requires a plain `bool`, not the `Qt.CheckState`
+  enum PySide2 tolerated. Fixed both call sites to `True`/`False`; removed the now-unused
+  `Qt` import from that file.
 - [x] Input window method-select buttons (RGB/Multifile/etc.) showed no text. Root cause:
   `ui/inputs.py:MethodSelectButton.showActive()` sets `padding: 40px` in its stylesheet,
   while `sizeHint()` forces the button height down to `textSize.height() + 15` (~31px) —

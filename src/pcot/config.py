@@ -44,6 +44,9 @@ CONFIG_DICT_TYPE = TaggedDictType(
 
     testpds4data=("Location of testpds4data files (testing only)",Maybe(Path),None, True),
     nativefiledialog=("Use the native file dialog (best not)", bool, False),
+    # "auto" forces XWayland on GNOME/Wayland to work around a dialog decoration bug there;
+    # "native" always uses Qt's own platform choice; "xcb" always forces XWayland.
+    qt_platform=("Qt platform plugin selection on Linux", str, "auto", ["auto", "native", "xcb"]),
 
 ).setOrdered()
 
