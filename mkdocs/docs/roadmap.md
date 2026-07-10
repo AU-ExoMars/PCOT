@@ -13,7 +13,6 @@
 
 * Change from Conda+Poetry to UV for virtual environment and dependency
 management. This will change the installation procedure.
-* Change to PySide6. This will take some time.
 
 * Filter aberration
     * Filter aberration parameters need to be obtained and added to config

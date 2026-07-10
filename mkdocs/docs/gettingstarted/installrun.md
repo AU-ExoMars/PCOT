@@ -1,7 +1,7 @@
 # Installing and running PCOT
 
 PCOT is a Python program (and library) with a number of dependencies,
-notably numpy and PySide2 (the official Python interface to Qt).
+notably numpy and PySide6 (the official Python interface to Qt).
 We find the best way to manage these is to use
 [Anaconda](https://anaconda.com/)
 and
