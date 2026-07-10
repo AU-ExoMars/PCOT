@@ -11,7 +11,7 @@ from pcot.utils.colour import rgb2qcol
 logger = logging.getLogger(__name__)
 
 annotFont = QFont()
-annotFont.setStyleHint(QFont.SansSerif)
+annotFont.setFamily('Sans Serif')
 
 # I'm pretty sure this is now unecessary.
 def UNUSED_pixels2painter(v, p: QPainter):

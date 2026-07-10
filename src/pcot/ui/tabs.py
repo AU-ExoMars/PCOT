@@ -174,7 +174,7 @@ class ExpandedTab(QtWidgets.QMainWindow):
 
 
 tabErrorFont = QFont()
-tabErrorFont.setStyleHint(QFont.SansSerif)
+tabErrorFont.setFamily('Sans Serif')
 tabErrorFont.setBold(True)
 tabErrorFont.setPixelSize(15)
 
