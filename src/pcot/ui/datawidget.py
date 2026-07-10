@@ -20,7 +20,7 @@ class DataWidget(QtWidgets.QWidget):
         self.setLayout(outer)
 
         # contains the source and item type widgets
-        inner = QtWidgets.QHBoxLayout(self)
+        inner = QtWidgets.QHBoxLayout()
         lab = QtWidgets.QLabel("Type:")
         inner.addWidget(lab)
         self.typeEdit = QtWidgets.QLineEdit()

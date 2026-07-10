@@ -20,7 +20,7 @@ class GStringText(QtWidgets.QGraphicsTextItem):
         self.node = node
 
         font = QFont()
-        font.setFamily('Sans Serif')
+        font.setStyleHint(QFont.SansSerif)
         font.setPixelSize(node.params.fontSize)
         self.setFont(font)
 

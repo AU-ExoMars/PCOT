@@ -12,7 +12,7 @@ DEFAULTRANGE = 20  # default x range of set view when there are no items
 
 # font for drawing item text
 markerFont = QFont()
-markerFont.setFamily('Sans Serif')
+markerFont.setStyleHint(QFont.SansSerif)
 # markerFont.setBold(True)
 markerFont.setPixelSize(12)
 
@@ -120,7 +120,7 @@ class TickRenderer:
         self.textalways = textalways
         if fontsize > 0:
             self.font = QFont()
-            self.font.setFamily('Sans Serif')
+            self.font.setStyleHint(QFont.SansSerif)
             self.font.setPixelSize(fontsize)
         else:
             self.font = None

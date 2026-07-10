@@ -52,18 +52,18 @@ except ImportError:
 
 # the font we use for most things
 mainFont = QFont()
-mainFont.setFamily('Sans Serif')
+mainFont.setStyleHint(QFont.SansSerif)
 mainFont.setPixelSize(10)
 
 # bold version of the above
 boldMainFont = QFont()
-boldMainFont.setFamily('Sans Serif')
+boldMainFont.setStyleHint(QFont.SansSerif)
 boldMainFont.setPixelSize(10)
 boldMainFont.setBold(True)
 
 # the font for error codes
 errorFont = QFont()
-errorFont.setFamily('Sans Serif')
+errorFont.setStyleHint(QFont.SansSerif)
 errorFont.setBold(True)
 errorFont.setPixelSize(12)
 
