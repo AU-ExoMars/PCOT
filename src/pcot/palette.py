@@ -177,6 +177,7 @@ class Palette:
         self.collapseButton = collapseButton
         self.namesByGroup = None
         self.widgetsByName = None
+        self.preSearchOpenState = None
         self.populate()
 
     def hideMacrosAndFavouritesIfNone(self):
@@ -252,6 +253,12 @@ class Palette:
             ui.error(f"name '{name}' does not exist!")
 
     def paletteSearchChanged(self, text):
+        if text and self.preSearchOpenState is None:
+            # a search is starting - remember which sections were open so we can put them
+            # back the way they were once the search text is cleared again.
+            self.preSearchOpenState = {k: sec.isNowOpen for k, sec in self.collapser.sectionsByName.items()
+                                       if not sec.isAlwaysOpen}
+
         # hide widgets which don't have the text, if there is one
         is_vis = {}
         for k,v in self.widgetsByName.items():
@@ -259,14 +266,30 @@ class Palette:
             is_vis[k] = visible
             v.setVisible(visible)
 
-        # if a group has no widgets, hide the group. If it does, expand the group.
-        for k,v in self.namesByGroup.items():
-            visible = any(is_vis[v] for v in v)
-            self.collapser.setSectionVisible(k, visible)
-            if visible:
-                self.collapser.forceOpen(k)
+        if text:
+            # if a group has no widgets, hide the group. If it does, expand the group.
+            for k,v in self.namesByGroup.items():
+                visible = any(is_vis[v] for v in v)
+                self.collapser.setSectionVisible(k, visible)
+                if visible:
+                    self.collapser.forceOpen(k)
+        elif self.preSearchOpenState is not None:
+            # search cleared - restore section visibility and open/closed state to how they
+            # were before the search started, rather than leaving everything forced open.
+            for k in self.namesByGroup:
+                self.collapser.setSectionVisible(k, True)
+            for k, wasOpen in self.preSearchOpenState.items():
+                if wasOpen:
+                    self.collapser.forceOpen(k)
+                else:
+                    self.collapser.forceClose(k)
+            self.preSearchOpenState = None
+            self.hideMacrosAndFavouritesIfNone()
 
         self.collapser.update()
+        # search-driven expand/collapse can change which sections are open, so the
+        # collapse/expand-all button's icon needs to be kept in sync with that.
+        self.setCollapseButton()
 
     def paletteCollapseExpandAll(self):
         self.collapser.collapseExpandAll()

@@ -97,7 +97,15 @@ class CollapserSection(QtWidgets.QWidget):
         if not isAlwaysOpen:
             self.toggleButton.clicked.connect(self.toggleSectionOpen)
             if isOpen:
-                self.toggleSectionOpen(True)
+                # Don't call toggleSectionOpen()/start the animation here - the toggle
+                # animations don't get valid start/end values until resetContentHeight()
+                # runs (via setContentLayout(), called once addSection() has attached the
+                # content layout, after this constructor returns). Starting them now just
+                # triggers "starting an animation without end value" warnings. isNowOpen is
+                # already set above; just fix the arrow, and resetContentHeight()'s own
+                # already-open reflow will animate the correct heights into place once the
+                # content is known.
+                self.toggleButton.setArrowType(QtCore.Qt.DownArrow)
 
     def toggleSectionOpen(self, open):
         arrow_type = QtCore.Qt.DownArrow if open else QtCore.Qt.RightArrow
@@ -108,11 +116,11 @@ class CollapserSection(QtWidgets.QWidget):
         self.isNowOpen = open
 
     def forceOpen(self):
-        if not self.isNowOpen:
+        if not self.isAlwaysOpen and not self.isNowOpen:
             self.toggleSectionOpen(True)
 
     def forceClose(self):
-        if self.isNowOpen:
+        if not self.isAlwaysOpen and self.isNowOpen:
             self.toggleSectionOpen(False)
 
     def setContentLayout(self, contentLayout, stretch=False):
@@ -142,7 +150,10 @@ class CollapserSection(QtWidgets.QWidget):
 
             # a VERY hacky solution to the problem of the collapser section containing (directly or indirectly) lists which
             # shrink and expand. Whenever we call this, and the section is open, quickly close it and reopen it.
-            if self.isNowOpen:
+            # Skip this while the toggle animation is actually running, otherwise this reflow (triggered by the
+            # animation itself changing minimumHeight/maximumHeight, which calls updateGeometry) restarts the
+            # animation from scratch on every frame and it never finishes opening.
+            if self.isNowOpen and self.toggleAnimation.state() != QtCore.QAbstractAnimation.Running:
                 self.forceClose()
                 self.forceOpen()
 
@@ -203,7 +214,9 @@ class Collapser(QtWidgets.QScrollArea):
     def shouldCollapseWhenButtonClicked(self):
         # what would happen if we clicked the expandCollapse button?
         # if any sections are open, collapse all. Otherwise expand all.
-        return any(x.isNowOpen for x in self.sectionsByName.values())
+        # Always-open sections (e.g. "faves") don't count - they're always open, so including them
+        # would mean this always returns True and the button could never expand anything.
+        return any(x.isNowOpen for x in self.sectionsByName.values() if not x.isAlwaysOpen)
 
     def collapseExpandAll(self):
         collapse = self.shouldCollapseWhenButtonClicked()
