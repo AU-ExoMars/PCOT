@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 from PySide6 import QtWidgets
-from PySide6.QtCore import QCommandLineParser, QCommandLineOption
+from PySide6.QtCore import QCommandLineParser, QCommandLineOption, Qt
 import logging
 import os
 import getpass
@@ -80,9 +80,17 @@ def run(args):
     if sys.platform.lower().startswith('win'):
         # Qt 6.7+ defaults to the "Windows11" style on Windows 11, which uses wider
         # side-by-side spin box buttons instead of the old compact stacked arrows.
-        # Request the classic look back, which is more space-efficient. macOS and Linux
-        # use their own native/Fusion styles and are unaffected by this, so leave them be.
-        app.setStyle("windowsvista")
+        # Fusion keeps the compact spin boxes, and unlike "windowsvista" (which is
+        # light-only) it is palette-driven, so it can follow the system dark mode.
+        # macOS and Linux use their own native/Fusion styles and are unaffected by
+        # this, so leave them be.
+        app.setStyle("fusion")
+    # Pin the light colour scheme for now: Fusion (above) and the Linux default both
+    # follow the system dark mode, but many stylesheets around the codebase hardcode
+    # light-assuming colours that clash with a dark palette. Remove this once the
+    # dark-mode stylesheet audit is done — see PYSIDE6_MIGRATION_TODO.md.
+    # (setColorScheme needs Qt 6.8+; pyproject pins PySide6 ^6.8.)
+    app.styleHints().setColorScheme(Qt.ColorScheme.Light)
     app.setApplicationVersion(pcot.__fullversion__)  # this comes from the VERSION.txt file
     app.setApplicationName("PCOT")
     app.setOrganizationName('Aberystwyth University')

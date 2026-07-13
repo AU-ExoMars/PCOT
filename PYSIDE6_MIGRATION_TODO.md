@@ -113,6 +113,50 @@ migration is merged and verified.
   style change above — a latent pre-existing bug, just not previously noticed. Fixed by
   changing `padding: 40px` to `padding: 4px`.
 
+## Dark mode / Fusion style
+
+- The Windows style override in `app.py:run()` changed from `windowsvista` to `fusion`.
+  `windowsvista` is light-only (Qt keeps a light palette when it's active, so dark mode
+  never engages); Fusion is palette-driven and follows the system colour scheme (Qt 6.5+),
+  while still keeping the compact stacked spin-box arrows that motivated overriding the
+  `windows11` default in the first place.
+- [x] **Interim: light colour scheme pinned** in `app.py:run()` via
+  `app.styleHints().setColorScheme(Qt.ColorScheme.Light)` (`QStyleHints.setColorScheme` is
+  Qt 6.8+, which `pyproject.toml`'s `PySide6 = "^6.8"` guarantees). This stops a dark system
+  theme applying to PCOT until the stylesheet audit below is done, so the Fusion switch
+  lands with no visual change. Remove the pin as the final step of that audit.
+- [ ] **Audit hardcoded light-assuming stylesheet colours, then remove the light pin.**
+  Many `setStyleSheet` calls hardcode colours that would clash with a dark palette. The
+  plan, by category:
+  - *Colour swatch buttons* (`xformrect`, `xformmultidot`, `xformpoly`, `xforminset`,
+    `xformpainted`, `xformroiexpr`, `xformroidq`, `xformcolourmap`, `xformcirc`) show a
+    user-chosen annotation colour — these are data, not theming, so keep them literal;
+    just also set a contrasting text colour so the label reads on any swatch
+    (pre-existing issue).
+  - *Semantic status colours* — the "stale, needs re-run" red buttons
+    (`rgb(255,100,100)` in `xformexpr`, `xformspectrum`, `xformhist`, `xformreflectance`,
+    `xformtests`; `rgb(200,100,100)` in `ui/tabs.py`), the red-on-white warning labels in
+    `ui/canvas.py`, the yellow group headers in `palette.py` and help prompt in
+    `ui/graphview.py`. Fix via a small new `pcot/ui/theme.py`: detect the scheme once at
+    startup (`QApplication.styleHints().colorScheme()`), expose named colour constants
+    (`STALE_BUTTON_BG`, `WARNING_FG`/`BG`, `GROUP_HEADER_BG`, …) with light/dark variants,
+    plus helpers like `setStaleStyle(button, stale: bool)` for the toggle pattern
+    duplicated across ~6 files.
+  - *Colours restating the default* — e.g. `ui/tabs.py`'s `rgb(240,240,240)` lower area is
+    essentially the stock light window colour: delete it, or where a distinct tint is
+    genuinely wanted use QSS `palette(role)` syntax (`background-color: palette(window)`
+    etc.), which tracks the palette with no Python-side logic. Prefer `palette(role)`
+    wherever a colour maps onto a palette role; the theme module is for colours that
+    don't (yellows, status reds).
+  - Deliberately **not** supporting live scheme switching (`colorSchemeChanged` +
+    re-applying everything): read the scheme at startup and be done.
+  - Decide deliberately whether matplotlib widgets (`mplwidget.py`) keep white-background
+    plots in dark mode (probably yes — better for export).
+  - Rejected alternative: one app-wide QSS with dynamic properties
+    (`QPushButton[stale="true"]`) — the "proper Qt" route, but PCOT toggles styles
+    imperatively all over, so it means touching every call site plus
+    unpolish/repolish boilerplate for less benefit than the theme module.
+
 ## pytest run
 
 - [x] `QFontMetrics.width()` removed in Qt6 (renamed `horizontalAdvance()`) — was breaking 4
