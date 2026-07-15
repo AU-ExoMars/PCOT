@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 import cv2 as cv
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtCore import Qt, QTimer, QPoint
+from PySide6.QtCore import Qt, QTimer, QPoint, QPointF, QRectF
 from PySide6.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
 from PySide6.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel
 
@@ -41,7 +41,7 @@ class SpectrumCircleOverlay(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.radius = 10
-        self.center = QPoint(0, 0)
+        self.center = QPointF(0, 0)
 
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
@@ -62,10 +62,12 @@ class SpectrumCircleOverlay(QtWidgets.QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setPen(QPen(Qt.GlobalColor.red, 2))
-        x,y = self.center.toTuple()
+        x, y = self.center.toTuple()
         r = self.radius
-        p.drawEllipse(x, y, 2,2)
-        p.drawRect(x-r,y-r, r*2,r*2)
+        # drawEllipse(x,y,w,h) takes the bounding box top-left, which offset the dot
+        # down-right of the cursor; use the centre-based overload.
+        p.drawEllipse(QPointF(x, y), 1, 1)
+        p.drawRect(QRectF(x - r, y - r, r * 2, r * 2))
 
 
 class PersistBlock:
@@ -134,6 +136,10 @@ class InnerCanvas(QtWidgets.QWidget):
     # the size of that part of the image which is in view
     cutw: int
     cuth: int
+    # the size at which that part is actually displayed on the widget (see paintEvent:
+    # floored to ints, so the true displayed scale is cutw/dispw, not exactly getScale())
+    dispw: int
+    disph: int
 
     cursor: QCursor = None
 
@@ -152,6 +158,8 @@ class InnerCanvas(QtWidgets.QWidget):
         self.y = 0
         self.cutw = 0  # size of image in view
         self.cuth = 0
+        self.dispw = 0  # size at which the view is displayed
+        self.disph = 0
         self.panning = False
         self.panX = None
         self.panY = None
@@ -199,26 +207,48 @@ class InnerCanvas(QtWidgets.QWidget):
         if cls.cursor is not None:
             return cls.cursor
 
-        bm = QBitmap(32, 32)
-        CROSSHAIRLENTHICK = 4
-        CROSSHAIRLENTHIN = 10
+        # On Windows we build the cursor pre-scaled to the screen's device pixel ratio.
+        # Qt's Windows *bitmap*-cursor path (qwindowscursor.cpp createBitmapCursor) scales
+        # the bitmaps up under HiDPI but passes the hotspot through unscaled - unlike its
+        # pixmap-cursor path, which scales both. So a 32x32 bitmap at 150% scale becomes a
+        # 48px sprite whose clicks register 8 device pixels up-left of the drawn crosshair
+        # centre. Building at the scaled size ourselves and marking the bitmaps with the
+        # DPR makes Qt's scaling a no-op, so our device-pixel hotspot is used as-is.
+        # (The cursor is cached at class level, so a DPR change after creation - e.g.
+        # dragging to a monitor with a different scale - isn't handled.)
+        if platform.system() == 'Windows':
+            screen = QtWidgets.QApplication.primaryScreen()
+            dpr = screen.devicePixelRatio() if screen is not None else 1.0
+        else:
+            dpr = 1.0  # other platforms handle bitmap cursor scaling correctly themselves
+
+        def d(v):  # logical -> device pixels
+            return round(v * dpr)
+
+        size = d(32)
+        centre = d(16)
+        last = size - 1
+        CROSSHAIRLENTHICK = d(4)
+        CROSSHAIRLENTHIN = d(10)
+
+        bm = QBitmap(size, size)
         bm.clear()
         ptr = QPainter(bm)
         p = QPen()
-        p.setWidth(3)
+        p.setWidth(d(3))
         ptr.setPen(p)
-        ptr.drawLine(0, 16, CROSSHAIRLENTHICK, 16)
-        ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHICK, 16)
-        ptr.drawLine(16, 0, 16, CROSSHAIRLENTHICK)
-        ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHICK)
+        ptr.drawLine(0, centre, CROSSHAIRLENTHICK, centre)
+        ptr.drawLine(last, centre, last - CROSSHAIRLENTHICK, centre)
+        ptr.drawLine(centre, 0, centre, CROSSHAIRLENTHICK)
+        ptr.drawLine(centre, last, centre, last - CROSSHAIRLENTHICK)
 
-        p.setWidth(1)
+        p.setWidth(max(1, d(1)))
         ptr.setPen(p)
-        ptr.drawLine(0, 16, CROSSHAIRLENTHIN, 16)
-        ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHIN, 16)
-        ptr.drawLine(16, 0, 16, CROSSHAIRLENTHIN)
-        ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHIN)
-        ptr.drawPoint(16, 16)
+        ptr.drawLine(0, centre, CROSSHAIRLENTHIN, centre)
+        ptr.drawLine(last, centre, last - CROSSHAIRLENTHIN, centre)
+        ptr.drawLine(centre, 0, centre, CROSSHAIRLENTHIN)
+        ptr.drawLine(centre, last, centre, last - CROSSHAIRLENTHIN)
+        ptr.drawPoint(centre, centre)
 
         ptr.end()
         # BM and MASK work like this:
@@ -228,15 +258,17 @@ class InnerCanvas(QtWidgets.QWidget):
         # B=1 M=0 is XOR under Windows, but undefined elsewhere!
         if platform.system() == 'Windows':
             # we want to use XOR under windows
-            mask = QBitmap(32, 32)
+            mask = QBitmap(size, size)
             mask.clear()
         else:
             # on other platforms we want white on transparent.
             mask = bm  # gives white
-            bm = QBitmap(32, 32)
+            bm = QBitmap(size, size)
             bm.clear()
 
-        cls.cursor = QCursor(bm, mask, 16, 16)
+        bm.setDevicePixelRatio(dpr)
+        mask.setDevicePixelRatio(dpr)
+        cls.cursor = QCursor(bm, mask, centre, centre)
         return cls.cursor
 
     ## resets the canvas to zoom level 1, top left pan
@@ -363,8 +395,13 @@ class InnerCanvas(QtWidgets.QWidget):
             self.drawCursor(rgbcropped, cutx, cuty)
             tt.mark("cursor")
             # now resize the cut area up to fit the widget and draw it. Using area interpolation here:
-            # cubic produced odd artifacts on float images.
-            rgbcropped = cv.resize(rgbcropped, dsize=(int(self.cutw / scale), int(self.cuth / scale)),
+            # cubic produced odd artifacts on float images. We record the displayed size: the
+            # flooring here means the true on-screen scale is cutw/dispw, and the mouse mapping
+            # and annotation transform must use that, not getScale() (they diverge slightly,
+            # visibly so at fractional HiDPI factors).
+            self.dispw = int(self.cutw / scale)
+            self.disph = int(self.cuth / scale)
+            rgbcropped = cv.resize(rgbcropped, dsize=(self.dispw, self.disph),
                                    interpolation=cv.INTER_AREA)
             tt.mark("resize")
             p.drawImage(0, 0, self.img2qimage(rgbcropped))
@@ -384,8 +421,11 @@ class InnerCanvas(QtWidgets.QWidget):
                 rois = []
 
             p.save()
-            p.scale(1 / self.getScale(), 1 / self.getScale())
-            p.translate(-self.x, -self.y)
+            # use the scale the image was actually displayed at (see resize above) and the
+            # floored crop origin, not 1/getScale() and the fractional self.x/self.y, so
+            # annotations line up exactly with the pixels drawn.
+            p.scale(self.dispw / self.cutw, self.disph / self.cuth)
+            p.translate(-cutx, -cuty)
             # slightly mad chain of indirections to get the document alpha setting
             self.imgCube.drawAnnotationsAndROIs(p, onlyROI=rois, alpha=self.canv.graph.doc.settings.alpha / 100.0)
             p.restore()
@@ -537,20 +577,35 @@ class InnerCanvas(QtWidgets.QWidget):
     def getScale(self):
         return self.scale * self.zoomscale
 
-    ## given point in the widget, return coords in the image. Takes a QPoint or None; if the latter
-    # we get the point under the cursor
-    def getImgCoords(self, p: Optional[QtCore.QPoint] = None):
+    def getDisplayedScale(self):
+        """The scale the image is actually shown at, per axis (image px per widget px).
+        This differs slightly from getScale() because the displayed size is floored to
+        whole pixels in paintEvent. Falls back to getScale() before the first paint."""
+        if self.dispw > 0 and self.disph > 0:
+            return self.cutw / self.dispw, self.cuth / self.disph
+        s = self.getScale()
+        return s, s
+
+    ## given point in the widget, return coords in the image. Takes a QPoint/QPointF or None;
+    # if the latter we get the point under the cursor
+    def getImgCoords(self, p: Optional[Union[QtCore.QPoint, QtCore.QPointF]] = None):
         if p is None:
             return self.cursorX, self.cursorY
         else:
-            x = int(p.x() * (self.getScale()) + self.x)
-            y = int(p.y() * (self.getScale()) + self.y)
+            # map through the scale the image is actually displayed at, from the same
+            # floored origin as paintEvent's crop, so mouse coords agree with the pixels
+            # on screen. int() (floor) not round(): we're identifying the pixel the
+            # cursor is inside.
+            sx, sy = self.getDisplayedScale()
+            x = int(p.x() * sx) + int(self.x)
+            y = int(p.y() * sy) + int(self.y)
             return x, y
 
     ## given a point in the image, give coordinates in the widget
     def getCanvasCoords(self, x, y):
-        x = (x - self.x) / self.getScale()
-        y = (y - self.y) / self.getScale()
+        sx, sy = self.getDisplayedScale()
+        x = (x - int(self.x)) / sx
+        y = (y - int(self.y)) / sy
         return x, y
 
     def keyPressEvent(self, e: QKeyEvent):
@@ -560,7 +615,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## mouse press handler, can delegate to a hook
     def mousePressEvent(self, e):
-        x, y = self.getImgCoords(e.pos())
+        x, y = self.getImgCoords(e.position())
         if e.button() == Qt.MouseButton.MiddleButton:
             self.panning = True
             self.panX, self.panY = x, y
@@ -575,8 +630,8 @@ class InnerCanvas(QtWidgets.QWidget):
     ## mouse move handler, can delegate to a hook
     def mouseMoveEvent(self, e):
 
-        x, y = self.getImgCoords(e.pos())
-        self.specOverlay.set_center(e.pos())
+        x, y = self.getImgCoords(e.position())
+        self.specOverlay.set_center(e.position())
         self.cursorX, self.cursorY = x, y
         if self.panning:
             dx = x - self.panX
@@ -593,7 +648,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## mouse release handler, can delegate to a hook
     def mouseReleaseEvent(self, e):
-        x, y = self.getImgCoords(e.pos())
+        x, y = self.getImgCoords(e.position())
         if e.button() == Qt.MouseButton.MiddleButton:
             self.panning = False
         elif self.canv.mouseHook is not None:
@@ -605,7 +660,7 @@ class InnerCanvas(QtWidgets.QWidget):
         # get the mousepos in the image and calculate the new zoom
         wheel = 1 if e.angleDelta().y() < 0 else -1
         # x,y here is the zoom point
-        x, y = self.getImgCoords(e.position().toPoint())
+        x, y = self.getImgCoords(e.position())
         newzoom = self.zoomscale * math.exp(wheel * 0.2)
 
         # can't zoom when there's no image
@@ -642,7 +697,7 @@ class InnerCanvas(QtWidgets.QWidget):
             self.y = 0
         # update scrollbars and image
         self.canv.setScrollBarsFromCanvas()
-        self.cursorX, self.cursorY = self.getImgCoords(e.position().toPoint())
+        self.cursorX, self.cursorY = self.getImgCoords(e.position())
         self.update()
 
     def __del__(self):

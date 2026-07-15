@@ -233,7 +233,7 @@ class PaintedEditor(ROIEditor):
             self.roi().setCircle(x, y, n.brushSize, False, relativeSize=True)
 
     def canvasMouseMoveEvent(self, x, y, e):
-        self.mousePos = e.pos()
+        self.mousePos = e.position()
         if self.mouseDown:
             self.doSet(x, y, e)
             self.tab.changed()
