@@ -364,12 +364,12 @@ class TabSpectrum(ui.tabs.Tab):
 
     def ignorePixSDChanged(self, state):
         self.mark()
-        self.node.params.ignorePixSD = state == QtCore.Qt.Checked
+        self.node.params.ignorePixSD = state == QtCore.Qt.CheckState.Checked
         self.changed()
 
     def fixedYAxisChanged(self, state):
         self.mark()
-        self.node.params.fixedYAxis = state == QtCore.Qt.Checked
+        self.node.params.fixedYAxis = state == QtCore.Qt.CheckState.Checked
         self.changed()
 
     def errorbarmodeChanged(self, mode):

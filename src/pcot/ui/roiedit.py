@@ -38,7 +38,7 @@ class ROIEditDialog(QDialog):
             self.spins[name] = spin
             row += 1
 
-        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         self.buttonBox.accepted.connect(lambda: self.finished(True))
         self.buttonBox.rejected.connect(lambda: self.finished(False))
         layout.addWidget(self.buttonBox, row, 0, 1, 2)
@@ -159,10 +159,10 @@ class CircleEditor(ROIEditor):
         self.mouseDown = True
         self.tab.mark()
         roi = self.roi()
-        if e.button() == Qt.RightButton and roi.get() is not None:
+        if e.button() == Qt.MouseButton.RightButton and roi.get() is not None:
             self.setRadius(x, y)
         else:
-            if e.modifiers() & Qt.ShiftModifier and roi.get() is not None:
+            if e.modifiers() & Qt.KeyboardModifier.ShiftModifier and roi.get() is not None:
                 _, _, r = roi.get()
             else:
                 r = 10
@@ -185,7 +185,7 @@ class PolyEditor(ROIEditor):
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
         self.tab.mark()
-        if e.modifiers() & Qt.ShiftModifier:
+        if e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             self.roi().addPoint(x, y)
         else:
             self.roi().selPoint(x, y)
@@ -196,7 +196,7 @@ class PolyEditor(ROIEditor):
         self.mouseDown = False
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
-        if e.key() == Qt.Key_Delete:
+        if e.key() == Qt.Key.Key_Delete:
             self.tab.mark()
             self.roi().delSelPoint()
             self.tab.changed()
@@ -213,21 +213,21 @@ class PaintedEditor(ROIEditor):
     def canvasPaintHook(self, p: QPainter):
         c = self.tab.w.canvas
         if self.mousePos is not None and self.tab.node.previewRadius is not None:
-            p.setBrush(Qt.NoBrush)
+            p.setBrush(Qt.BrushStyle.NoBrush)
             p.setPen(QColor(*[v * 255 for v in self.tab.node.roi.colour]))
             r = self.tab.node.previewRadius / (c.canvas.getScale())
             p.drawEllipse(self.mousePos, r, r)
 
     def doSet(self, x, y, e):
         n = self.tab.node
-        if e.modifiers() & Qt.ControlModifier:
+        if e.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # we need to use the image stored in the node, which should be a copy of the original,
             # as the reference image for the flood fill. We have to fetch it from the node output.
             from pcot.xform import XFormROIType
             img = n.getOutput(XFormROIType.OUT_IMG)
             if img is not None:
                 self.roi().fill(img, x, y, FloodFillParams(threshold=0.03))  # flood fill
-        elif e.modifiers() & Qt.ShiftModifier:
+        elif e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             self.roi().setCircle(x, y, n.brushSize, True, relativeSize=True)  # delete
         else:
             self.roi().setCircle(x, y, n.brushSize, False, relativeSize=True)

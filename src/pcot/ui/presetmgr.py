@@ -141,7 +141,7 @@ class PresetModel(QAbstractListModel):
         # if the name is already in use, ask for confirmation
         if name in self.presets:
             if QMessageBox.question(owner, "Overwrite preset", f"Preset {name} already exists. Overwrite?",
-                                    QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) != QMessageBox.StandardButton.Yes:
                 return False
             self.presets[name] = data
         else:
@@ -165,7 +165,7 @@ class PresetModel(QAbstractListModel):
         return len(self.presets)
 
     def data(self, index: QModelIndex, role: int):
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             if index.row() < len(self.presetList):
                 return self.presetList[index.row()]
         return None
@@ -252,7 +252,7 @@ class PresetDialog(QDialog):
             selmod = QItemSelection()
             for x in newSel:
                 selmod.select(x, x)
-            self.listView.selectionModel().select(selmod, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Select)
+            self.listView.selectionModel().select(selmod, QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Select)
 
 
     def promotePreset(self):
@@ -279,7 +279,7 @@ class PresetDialog(QDialog):
 
     def deletePreset(self):
         if QMessageBox.question(self, "Delete preset", "Are you sure you want to delete the selected preset?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.model.delete(self.listView.selectedIndexes())
 
     def renamePreset(self):

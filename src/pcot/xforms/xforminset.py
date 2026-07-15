@@ -176,7 +176,7 @@ class TabInset(pcot.ui.tabs.Tab):
 
     def clearRectPressed(self):
         if QMessageBox.question(self.window, "Clear rectangle", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.mark()
             self.node.params.insetrect.set(0, 0, -1, -1)
             self.changed()

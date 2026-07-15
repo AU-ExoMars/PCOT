@@ -17,10 +17,10 @@ class NumberWidget(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
 
         layout = QtWidgets.QGridLayout()
-        layout.setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
+        layout.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetMinimumSize)
 
         self.title = QtWidgets.QLabel()
-        self.title.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        self.title.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
         layout.addWidget(self.title, 0, 0, 1, 3)
 
         self.dial = QtWidgets.QDial()
@@ -31,11 +31,11 @@ class NumberWidget(QtWidgets.QWidget):
         layout.addWidget(self.dial, 1, 0, 1, 3)
 
         self.mintext = QtWidgets.QLabel("min")
-        self.mintext.setAlignment(Qt.AlignHCenter)
+        self.mintext.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.mintext.setMinimumSize(0, 0)
         layout.addWidget(self.mintext, 2, 0)
         self.maxtext = QtWidgets.QLabel("max")
-        self.maxtext.setAlignment(Qt.AlignHCenter)
+        self.maxtext.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.maxtext.setMinimumSize(0, 0)
         layout.addWidget(self.maxtext, 2, 2)
 

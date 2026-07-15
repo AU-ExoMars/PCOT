@@ -167,9 +167,9 @@ def getFileDialogOptions():
     on some systems. For that reason, I'm defaulting to the Qt implementations.
     """
     if data.nativefiledialog:
-        return QtWidgets.QFileDialog.Options()
+        return QtWidgets.QFileDialog.Option(0)
     else:
-        return QtWidgets.QFileDialog.DontUseNativeDialog
+        return QtWidgets.QFileDialog.Option.DontUseNativeDialog
 
 
 def loadCameras():

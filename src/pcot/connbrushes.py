@@ -28,21 +28,21 @@ def quickGrad(c1: QColor, c2: QColor, c3: QColor, finalC: QColor) -> QBrush:
     grad.setColorAt(0.4, c2)
     grad.setColorAt(0.8, c3)
     grad.setColorAt(1, finalC)
-    return grad
+    return QBrush(grad)
 
 
 # register builtin types
 
-register(Datum.ANY, Qt.red)
-register(Datum.IMG, Qt.blue)
-register(Datum.ROI, Qt.cyan)
-register(Datum.TABLE, Qt.darkMagenta)
-register(Datum.TESTRESULT, Qt.darkYellow)
-register(Datum.NUMBER, Qt.darkGreen)
-register(Datum.VARIANT, QBrush(Qt.black, Qt.DiagCrossPattern))
-register(Datum.NONE, QBrush(Qt.red, Qt.BDiagPattern))
+register(Datum.ANY, Qt.GlobalColor.red)
+register(Datum.IMG, Qt.GlobalColor.blue)
+register(Datum.ROI, Qt.GlobalColor.cyan)
+register(Datum.TABLE, Qt.GlobalColor.darkMagenta)
+register(Datum.TESTRESULT, Qt.GlobalColor.darkYellow)
+register(Datum.NUMBER, Qt.GlobalColor.darkGreen)
+register(Datum.VARIANT, QBrush(Qt.GlobalColor.black, Qt.BrushStyle.DiagCrossPattern))
+register(Datum.NONE, QBrush(Qt.GlobalColor.red, Qt.BrushStyle.BDiagPattern))
 
-_unknown = QBrush(Qt.magenta)
+_unknown = QBrush(Qt.GlobalColor.magenta)
 
 
 def getBrush(typeObject):

@@ -52,23 +52,23 @@ class CollapserSection(QtWidgets.QWidget):
             self.headerLine = QtWidgets.QFrame()
             toggleButton = QtWidgets.QToolButton()
             toggleButton.setStyleSheet("QToolButton { border: none; }")
-            toggleButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-            toggleButton.setArrowType(QtCore.Qt.RightArrow)
+            toggleButton.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            toggleButton.setArrowType(QtCore.Qt.ArrowType.RightArrow)
             toggleButton.setText(str(title))
             toggleButton.setCheckable(True)
             toggleButton.setChecked(isOpen)
             self.toggleButton = toggleButton
 
             headerLine = self.headerLine
-            headerLine.setFrameShape(QtWidgets.QFrame.HLine)
-            headerLine.setFrameShadow(QtWidgets.QFrame.Sunken)
-            headerLine.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
+            headerLine.setFrameShape(QtWidgets.QFrame.Shape.HLine)
+            headerLine.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
+            headerLine.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
 
         self.contentArea.setStyleSheet("""
         QScrollArea { background-color: white; border: none; }
         """)
-        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                       QtWidgets.QSizePolicy.Minimum)
+        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                       QtWidgets.QSizePolicy.Policy.Minimum)
 
         if not isAlwaysOpen:
             # start out collapsed
@@ -88,7 +88,7 @@ class CollapserSection(QtWidgets.QWidget):
         if isAlwaysOpen:
             mainLayout.addWidget(self.contentArea, 0, 0, 1, 3)
         else:
-            mainLayout.addWidget(self.toggleButton, 0, 0, 1, 1, QtCore.Qt.AlignLeft)
+            mainLayout.addWidget(self.toggleButton, 0, 0, 1, 1, QtCore.Qt.AlignmentFlag.AlignLeft)
             mainLayout.addWidget(self.headerLine, 0, 2, 1, 1)
             mainLayout.addWidget(self.contentArea, 1, 0, 1, 3)
 
@@ -105,11 +105,11 @@ class CollapserSection(QtWidgets.QWidget):
                 # already set above; just fix the arrow, and resetContentHeight()'s own
                 # already-open reflow will animate the correct heights into place once the
                 # content is known.
-                self.toggleButton.setArrowType(QtCore.Qt.DownArrow)
+                self.toggleButton.setArrowType(QtCore.Qt.ArrowType.DownArrow)
 
     def toggleSectionOpen(self, open):
-        arrow_type = QtCore.Qt.DownArrow if open else QtCore.Qt.RightArrow
-        direction = QtCore.QAbstractAnimation.Forward if open else QtCore.QAbstractAnimation.Backward
+        arrow_type = QtCore.Qt.ArrowType.DownArrow if open else QtCore.Qt.ArrowType.RightArrow
+        direction = QtCore.QAbstractAnimation.Direction.Forward if open else QtCore.QAbstractAnimation.Direction.Backward
         self.toggleButton.setArrowType(arrow_type)
         self.toggleAnimation.setDirection(direction)
         self.toggleAnimation.start()
@@ -128,8 +128,8 @@ class CollapserSection(QtWidgets.QWidget):
         will expand contents horizontally. We don't do that for palettes, because the buttons should be small."""
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
-        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding if stretch else QtWidgets.QSizePolicy.Maximum,
-                                       QtWidgets.QSizePolicy.MinimumExpanding)
+        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding if stretch else QtWidgets.QSizePolicy.Policy.Maximum,
+                                       QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         self.contentLayout = contentLayout
         self.resetContentHeight()
 
@@ -153,7 +153,7 @@ class CollapserSection(QtWidgets.QWidget):
             # Skip this while the toggle animation is actually running, otherwise this reflow (triggered by the
             # animation itself changing minimumHeight/maximumHeight, which calls updateGeometry) restarts the
             # animation from scratch on every frame and it never finishes opening.
-            if self.isNowOpen and self.toggleAnimation.state() != QtCore.QAbstractAnimation.Running:
+            if self.isNowOpen and self.toggleAnimation.state() != QtCore.QAbstractAnimation.State.Running:
                 self.forceClose()
                 self.forceOpen()
 
@@ -169,7 +169,7 @@ class Collapser(QtWidgets.QScrollArea):
 
     def __init__(self, parent=None, animationDuration=200, lrmargins=2, topmargin=2, bottommargin=2):
         super().__init__(parent)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.animationDuration = animationDuration
         self.margins = (lrmargins, topmargin, lrmargins, bottommargin)
         self.w = None

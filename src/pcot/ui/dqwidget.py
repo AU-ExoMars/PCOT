@@ -40,13 +40,13 @@ class _BaseDQWidget(QWidget):
             check.stateChanged.connect(partial(self.stateChanged, name))
 
             if isVertical:
-                label.setAlignment(Qt.AlignRight)
-                layout.addWidget(label, i, 0, Qt.AlignRight)
-                layout.addWidget(check, i, 1, Qt.AlignCenter)
+                label.setAlignment(Qt.AlignmentFlag.AlignRight)
+                layout.addWidget(label, i, 0, Qt.AlignmentFlag.AlignRight)
+                layout.addWidget(check, i, 1, Qt.AlignmentFlag.AlignCenter)
             else:
-                label.setAlignment(Qt.AlignCenter)
-                layout.addWidget(label, 0, i, Qt.AlignCenter)
-                layout.addWidget(check, 1, i, Qt.AlignCenter)
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.addWidget(label, 0, i, Qt.AlignmentFlag.AlignCenter)
+                layout.addWidget(check, 1, i, Qt.AlignmentFlag.AlignCenter)
             i += 1
 
         self.setLayout(layout)

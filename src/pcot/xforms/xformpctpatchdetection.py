@@ -1080,11 +1080,11 @@ class TabPCTPatchDetection(Tab):
         Spawns a popup window with descriptions of parameters if the user needs to alter them
         """
         descriptionsWindow = QMessageBox()
-        descriptionsWindow.setIcon(QMessageBox.Information)
-        descriptionsWindow.setStandardButtons(QMessageBox.Ok)
+        descriptionsWindow.setIcon(QMessageBox.Icon.Information)
+        descriptionsWindow.setStandardButtons(QMessageBox.StandardButton.Ok)
         descriptionsWindow.setTextInteractionFlags(
-            Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse | Qt.TextBrowserInteraction)
-        descriptionsWindow.setTextFormat(Qt.RichText)
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse | Qt.TextInteractionFlag.TextBrowserInteraction)
+        descriptionsWindow.setTextFormat(Qt.TextFormat.RichText)
         descriptionsWindow.setWindowTitle("Patch Detection Parameter Descriptions")
         descriptionsWindow.setText("""
 DP: The inverse ratio of the accumulator resolution for the hough detections \nto the image resolution. The higher the DP, the lower the resolution of \nthe detection accumulator.
@@ -1139,7 +1139,7 @@ More information can be found under the HoughCircles() method documentation <a h
             # convert image array to a usable QImage
             h, w, _ = self.node.detectionsImage.shape
             bytesPerLine = 3 * w
-            qImageDetectionsImage = QImage(self.node.detectionsImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
+            qImageDetectionsImage = QImage(self.node.detectionsImage.data, w, h, bytesPerLine, QImage.Format.Format_RGB888)
             # convert Qimage to pixmap graphics item for the scene, and scale to size for display
             detectionsPlotScene.addItem(QGraphicsPixmapItem(QPixmap.fromImage(qImageDetectionsImage)))
         self.w.detectionsPlot.setScene(detectionsPlotScene)

@@ -8,9 +8,9 @@ from pcot.sources import nullSourceSet
 from pcot.value import Value
 from pcot.xform import xformtype, XFormType
 
-validKeys = {Qt.Key_0, Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9,
-             Qt.Key_Period, Qt.Key_Minus,
-             Qt.Key_Delete, Qt.Key_Backspace, Qt.Key_Left, Qt.Key_Right}
+validKeys = {Qt.Key.Key_0, Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4, Qt.Key.Key_5, Qt.Key.Key_6, Qt.Key.Key_7, Qt.Key.Key_8, Qt.Key.Key_9,
+             Qt.Key.Key_Period, Qt.Key.Key_Minus,
+             Qt.Key.Key_Delete, Qt.Key.Key_Backspace, Qt.Key.Key_Left, Qt.Key.Key_Right}
 
 
 
@@ -18,7 +18,7 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
     """text in middle of main rect and on connections - we can edit this!"""
     def __init__(self, parent, node):
         super().__init__(str(node.params.val), parent=parent)
-        self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+        self.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextEditorInteraction)
         self.setTextWidth(50)
         self.setTabChangesFocus(True)
         self.node = node
@@ -46,7 +46,7 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         # return means "go!"
-        if event.key() == Qt.Key_Return:
+        if event.key() == Qt.Key.Key_Return:
             try:
                 self.node.mark()
                 self.clearFocus()

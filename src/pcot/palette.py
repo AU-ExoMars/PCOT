@@ -37,8 +37,8 @@ class PaletteButtonBase(QtWidgets.QPushButton):
             PaletteButtonBase.helpAct = QAction("Help")
         self.name = name
         self.view = view
-        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         self.customContextMenuRequested.connect(self.contextMenu)
 
     # drag handling: nabbed from
@@ -48,19 +48,19 @@ class PaletteButtonBase(QtWidgets.QPushButton):
     def mousePressEvent(self, event):
         """handle a mouse down event"""
         super().mousePressEvent(event)
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.mousePos = event.pos()  # save click position for dragging
 
     def mouseMoveEvent(self, event):
         """handle mouse move for dragging with LMB.
         Note that the node is actually created when the box is dropped in GraphView.dropEvent.
         """
-        if event.buttons() != QtCore.Qt.LeftButton:
+        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
             return
         mimeData = QtCore.QMimeData()
         # create a byte array and a stream that is used to write into
         byteArray = QtCore.QByteArray()
-        stream = QtCore.QDataStream(byteArray, QtCore.QIODevice.WriteOnly)
+        stream = QtCore.QDataStream(byteArray, QtCore.QIODevice.OpenModeFlag.WriteOnly)
         stream.writeQString(self.name)
         mimeData.setData('data/palette', byteArray)
         drag = QtGui.QDrag(self)
@@ -69,13 +69,7 @@ class PaletteButtonBase(QtWidgets.QPushButton):
         drag.setMimeData(mimeData)
         # set the hotspot according to the mouse press position
         drag.setHotSpot(self.mousePos - self.rect().topLeft())
-        drag.exec(Qt.MoveAction)
-
-    def click(self):
-        # create node and rebuild the scene
-        # CURRENTLY DOES NOTHING; it seems I never get the signal.
-        self.createNode()
-        self.view.scene().rebuild()
+        drag.exec(Qt.DropAction.MoveAction)
 
 
 class PaletteButton(PaletteButtonBase):
@@ -111,7 +105,7 @@ class PaletteButton(PaletteButtonBase):
                                  doAutoLayout=False)
         elif act == self.deleteMacroAct:
             if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
-                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
                 macros.XFormMacro.deleteMacro(self.xformtype)
                 ui.mainwindow.MainUI.rebuildPalettes()
 

@@ -9,9 +9,7 @@ from pcot.cameras import getCamera, getCameraNames
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.sources import Source
-from pcot.ui.tablemodel import TableModel
 from pcot.ui.tabs import Tab
-from pcot.utils import SignalBlocker
 from pcot.xform import XFormType, xformtype, XFormException
 
 logger = logging.getLogger(__name__)
@@ -132,7 +130,7 @@ class TableModelStringList(QAbstractTableModel):
     def data(self, index, role):
         if not index.isValid():
             return None
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
                 if index.row() >= self.maxitems:
                     return "-"
@@ -142,7 +140,7 @@ class TableModelStringList(QAbstractTableModel):
         return None
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = ...) -> Any:
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             if section == 0:
                 return self.indexname
             else:
@@ -150,7 +148,7 @@ class TableModelStringList(QAbstractTableModel):
 
     def selectRow(self, r):
         sel = QItemSelection(self.model.index(r, 0), self.model.index(r, 2))
-        self.w.table.selectionModel().select(sel, QItemSelectionModel.ClearAndSelect)
+        self.w.table.selectionModel().select(sel, QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
     def _item_swap(self, a, b):
         self.d[a], self.d[b] = self.d[b], self.d[a]

@@ -43,9 +43,9 @@ class SpectrumCircleOverlay(QtWidgets.QWidget):
         self.radius = 10
         self.center = QPoint(0, 0)
 
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.setAttribute(Qt.WA_NoSystemBackground)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
     def set_radius(self, rad):
         """Radius in widget coordinates. It's actually edge width + 1. For example, if the "radius" is 2,
@@ -60,8 +60,8 @@ class SpectrumCircleOverlay(QtWidgets.QWidget):
 
     def paintEvent(self, event):
         p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        p.setPen(QPen(Qt.red, 2))
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(QPen(Qt.GlobalColor.red, 2))
         x,y = self.center.toTuple()
         r = self.radius
         p.drawEllipse(x, y, 2,2)
@@ -170,7 +170,7 @@ class InnerCanvas(QtWidgets.QWidget):
         self.specOverlay.setHidden(True)
 
         # needs to do this to get key events
-        self.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
         self.setMouseTracking(True)  # so we get move events with no button press
         self.setCursor(InnerCanvas.getCursor())
         self.reset()
@@ -191,7 +191,7 @@ class InnerCanvas(QtWidgets.QWidget):
         assert channel == 3
         bytesPerLine = 3 * width
         return QImage(self.origimg.data, width, height,
-                      bytesPerLine, QImage.Format_RGB888)
+                      bytesPerLine, QImage.Format.Format_RGB888)
 
     @classmethod
     def getCursor(cls):
@@ -308,7 +308,7 @@ class InnerCanvas(QtWidgets.QWidget):
     ## the paint event
     def paintEvent(self, event):
         p = QPainter(self)
-        p.fillRect(event.rect(), Qt.blue)
+        p.fillRect(event.rect(), Qt.GlobalColor.blue)
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
@@ -399,10 +399,10 @@ class InnerCanvas(QtWidgets.QWidget):
             tt.mark("hook")
 
             # and draw the descriptor
-            p.setPen(Qt.yellow)
-            p.setBrush(Qt.yellow)
+            p.setPen(Qt.GlobalColor.yellow)
+            p.setBrush(Qt.GlobalColor.yellow)
             r = QtCore.QRect(0, widgh - 20, widgw, 20)
-            p.drawText(r, Qt.AlignLeft, f"{self.desc} {dqtext}")
+            p.drawText(r, Qt.AlignmentFlag.AlignLeft, f"{self.desc} {dqtext}")
             tt.mark("descriptor")
         else:
             # there's nothing to draw
@@ -561,7 +561,7 @@ class InnerCanvas(QtWidgets.QWidget):
     ## mouse press handler, can delegate to a hook
     def mousePressEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if e.button() == Qt.MiddleButton:
+        if e.button() == Qt.MouseButton.MiddleButton:
             self.panning = True
             self.panX, self.panY = x, y
         elif self.canv.mouseHook is not None:
@@ -594,7 +594,7 @@ class InnerCanvas(QtWidgets.QWidget):
     ## mouse release handler, can delegate to a hook
     def mouseReleaseEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if e.button() == Qt.MiddleButton:
+        if e.button() == Qt.MouseButton.MiddleButton:
             self.panning = False
         elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMouseReleaseEvent(x, y, e)
@@ -658,7 +658,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
 def makesidebarLabel(t):
     lab = QtWidgets.QLabel(t)
-    lab.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+    lab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
     return lab
 
 
@@ -771,11 +771,11 @@ class Canvas(QtWidgets.QWidget):
         # Sidebar widgets.
 
         self.collapser = Collapser()
-        self.collapser.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
-                                     QtWidgets.QSizePolicy.MinimumExpanding)
+        self.collapser.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum,
+                                     QtWidgets.QSizePolicy.Policy.MinimumExpanding)
 
         outerlayout.addWidget(self.collapser)
-        outerlayout.setAlignment(Qt.AlignTop)
+        outerlayout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # create the widgets that go inside the collapser
         self.dqSections = []
@@ -791,8 +791,8 @@ class Canvas(QtWidgets.QWidget):
         layout = QtWidgets.QGridLayout()
         innercanvasContainer.setLayout(layout)
         innercanvasContainer.setSizePolicy(
-            QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding
+            QtWidgets.QSizePolicy.Policy.MinimumExpanding,
+            QtWidgets.QSizePolicy.Policy.MinimumExpanding
         )
         splitter.addWidget(innercanvasContainer)
         outerlayout.setContentsMargins(0, 0, 0, 0)
@@ -828,13 +828,13 @@ class Canvas(QtWidgets.QWidget):
 
         self.canvas = InnerCanvas(self)
         layout.addWidget(self.canvas, 0, 0)
-        # layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        # layout.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetFixedSize)
 
-        self.scrollV = QtWidgets.QScrollBar(Qt.Vertical)
+        self.scrollV = QtWidgets.QScrollBar(Qt.Orientation.Vertical)
         self.scrollV.valueChanged.connect(self.vertScrollChanged)
         layout.addWidget(self.scrollV, 0, 1)
 
-        self.scrollH = QtWidgets.QScrollBar(Qt.Horizontal)
+        self.scrollH = QtWidgets.QScrollBar(Qt.Orientation.Horizontal)
         self.scrollH.valueChanged.connect(self.horzScrollChanged)
         layout.addWidget(self.scrollH, 1, 0)
 
@@ -912,17 +912,17 @@ class Canvas(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout()
         self.missingFilterDataLabel = QtWidgets.QLabel("Missing filter data")
-        self.missingFilterDataLabel.setFont(QFont('Arial', 12, QFont.Bold))
+        self.missingFilterDataLabel.setFont(QFont('Arial', 12, QFont.Weight.Bold))
         self.missingFilterDataLabel.setStyleSheet("QLabel { background-color : white; color : red; }")
         self.missingFilterDataLabel.setVisible(False)
         layout.addWidget(self.missingFilterDataLabel)
-        # layout.setAlignment(self.missingFilterDataLabel, Qt.AlignHCenter)
+        # layout.setAlignment(self.missingFilterDataLabel, Qt.AlignmentFlag.AlignHCenter)
 
         self.badPixelsLabel = QtWidgets.QLabel('')
         self.badPixelsLabel.setStyleSheet("QLabel { background-color : white; color : red; }")
         self.badPixelsLabel.setVisible(False)
         layout.addWidget(self.badPixelsLabel)
-        # layout.setAlignment(self.badPixelsLabel, Qt.AlignHCenter)
+        # layout.setAlignment(self.badPixelsLabel, Qt.AlignmentFlag.AlignHCenter)
 
         self.collapser.addSection("warnings", layout, isAlwaysOpen=True)
 
@@ -1026,7 +1026,7 @@ class Canvas(QtWidgets.QWidget):
             row['col'] = colcb
 
             #            for widget in row.values():  # adjust each combobox
-            #                widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+            #                widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
 
             # sliders etc
             ll = QtWidgets.QLabel("transp")
@@ -1045,7 +1045,7 @@ class Canvas(QtWidgets.QWidget):
             layout.addWidget(ll, 5, 0)
             threshBox = QtWidgets.QDoubleSpinBox()
             threshBox.setMaximum(9.99)
-            threshBox.setStepType(QtWidgets.QDoubleSpinBox.AdaptiveDecimalStepType)
+            threshBox.setStepType(QtWidgets.QDoubleSpinBox.StepType.AdaptiveDecimalStepType)
             layout.addWidget(threshBox, 5, 1)
             row['thresh'] = threshBox
 
@@ -1347,17 +1347,17 @@ class Canvas(QtWidgets.QWidget):
                 annotations = False
                 desc, ok = QtWidgets.QInputDialog.getText(self, "Description",
                                                           "Enter text description (optional):",
-                                                          QtWidgets.QLineEdit.Normal,
+                                                          QtWidgets.QLineEdit.EchoMode.Normal,
                                                           "")
                 if not ok:
                     desc = ''
             else:
                 r = QMessageBox.question(self, "Save", "Save with annotations?",
-                                         QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-                if r == QMessageBox.Cancel:
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
+                if r == QMessageBox.StandardButton.Cancel:
                     ui.log("export cancelled")
                     return
-                annotations = (r == QMessageBox.Yes)
+                annotations = (r == QMessageBox.StandardButton.Yes)
                 desc = ''
 
             self.previmg.save(path, annotations=annotations, description=desc, gamma=self.canvaspersist.gamma)

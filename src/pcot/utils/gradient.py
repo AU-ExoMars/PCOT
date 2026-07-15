@@ -78,7 +78,7 @@ class Gradient:
             grad = QLinearGradient(QPointF(0, 1), QPointF(0, 0))
         else:
             grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
-        grad.setCoordinateMode(QGradient.ObjectMode)
+        grad.setCoordinateMode(QGradient.CoordinateMode.ObjectMode)
         dat = self.data.copy()
         if dat[0][0] != 0.0:
             dat.insert(0, (0, dat[0][1]))

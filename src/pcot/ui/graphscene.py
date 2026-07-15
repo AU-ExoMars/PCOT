@@ -113,7 +113,7 @@ class GHelpRect(QtWidgets.QGraphicsRectItem):
 
     def __init__(self, x, y, node, parent):
         super().__init__(x + node.w - CONNECTORHEIGHT, y, HELPBOXSIZE, HELPBOXSIZE, parent=parent)
-        self.setBrush(Qt.blue)
+        self.setBrush(Qt.GlobalColor.blue)
 
 
 class GText(QtWidgets.QGraphicsSimpleTextItem):
@@ -147,13 +147,13 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         self.aboutToMove = False
         self.resizing = False
         super().__init__(x1, y1, w, h)
-        self.setFlags(QtWidgets.QGraphicsItem.ItemIsSelectable |
-                      QtWidgets.QGraphicsItem.ItemIsMovable |
-                      QtWidgets.QGraphicsItem.ItemSendsGeometryChanges)
+        self.setFlags(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
+                      QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsMovable |
+                      QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
         self.node = node
 
         self.outdatedWarning = QtWidgets.QGraphicsSimpleTextItem("!!!",parent=self)
-        self.outdatedWarning.setBrush(Qt.red)
+        self.outdatedWarning.setBrush(Qt.GlobalColor.red)
         self.outdatedWarning.setFont(errorFont)
         self.outdatedWarning.setZValue(1)
         self.outdatedWarning.setPos(x1+XTEXTOFFSET+w-23,
@@ -188,7 +188,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
 
     def itemChange(self, change, value):
         """deal with items moving"""
-        if change == QtWidgets.QGraphicsItem.ItemPositionChange:
+        if change == QtWidgets.QGraphicsItem.GraphicsItemChange.ItemPositionChange:
             if self.aboutToMove:
                 self.aboutToMove = False
                 self.scene().mark()
@@ -208,7 +208,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         # near a corner and the node is resizable? Start resizing. Otherwise, start moving.
         # Also handle modified clicks - Ctrl-click runs a node (and its kids of autorun is set
 
-        if event.modifiers() & Qt.ControlModifier:
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # running the performNodes will actually _delete_ this object, so we don't call
             # the superclass handler in this case.
             ui.log(f"Running node {self.node}, autorun={XFormGraph.autoRun}")
@@ -315,7 +315,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         from pcot.xforms.favourite import Favourite
         # dialog to get name
         name,ok  = QInputDialog.getText(self.window(), "Favourite", "Enter favourite name:",
-                                   QtWidgets.QLineEdit.Normal, "")
+                                   QtWidgets.QLineEdit.EchoMode.Normal, "")
         if name and ok and len(name):
             doc = self.scene().graph.doc
             if name in doc.favourites:
@@ -368,7 +368,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         when we release the mouse, to delete the underlying connection
         and make a new one if we landed on a connection box. We should also
         check for if there is no effective change."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             if self.isVariant():  # can't connect variant connectors
                 return
 
@@ -424,7 +424,7 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         self.input = inp
         super().__init__(x1, y1, x2, y2)
         self.head = None
-        self.col = Qt.black if compat else Qt.red
+        self.col = Qt.GlobalColor.black if compat else Qt.GlobalColor.red
         self.setPen(QPen(self.col))
         self.makeHead()
 
@@ -799,7 +799,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.dragStartPos = event.pos()
         # temporarily disable drag-selection
         v = getEventView(event)
-        v.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+        v.setDragMode(QtWidgets.QGraphicsView.DragMode.NoDrag)
 
     def mouseMoveEvent(self, event):
         """here is where we handle actually dragging an arrow around. Dragging
@@ -818,7 +818,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         """handle releasing the mouse button during arrow dragging"""
         # first, go back to normal dragging
         v = getEventView(event)
-        v.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
+        v.setDragMode(QtWidgets.QGraphicsView.DragMode.RubberBandDrag)
         if self.draggingArrow is not None:
             self.mark()
             arrow = self.draggingArrow  # disconnects seem to remove this?

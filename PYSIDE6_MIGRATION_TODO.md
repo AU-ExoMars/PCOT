@@ -43,9 +43,20 @@ migration is merged and verified.
 
 ## Qt6 behavioural differences to spot-check once the rename compiles
 
-- [ ] Unscoped enum access (e.g. `Qt.AlignLeft`, `Qt.AlignTop` in `canvas.py`,
-  `collapser.py`) — PySide6 forwards most of these for compatibility, but worth confirming
-  none silently misbehave rather than trusting the shim blindly.
+- [x] Unscoped enum access (e.g. `Qt.AlignLeft`, `Qt.AlignTop` in `canvas.py`,
+  `collapser.py`) — PySide6 forwards most of these for compatibility, but the shim is a
+  deprecated transition aid and the stubs don't declare the old names (hence IDE warnings).
+  **Fixed by a codebase-wide sweep to Qt6 scoped enums** (383 rewrites, 56 files): a script
+  found every `X.Member` candidate, resolved it through the live PySide6 shim, and rewrote
+  it to exactly the scoped member the shim returns (`Qt.Vertical` →
+  `Qt.Orientation.Vertical`), so every replacement is equivalent by construction. Two
+  manual fixes for Qt5 QFlags-alias spellings: `QFileDialog.Options()` →
+  `QFileDialog.Option(0)` (`config.py`) and the `Qt.ItemFlags` return annotation →
+  `Qt.ItemFlag` (`ui/tablemodel.py`). Verified: rescan finds 0 remaining, import sweep of
+  all `pcot` modules clean (except the known-dead `ui/number.py`), full pytest matches the
+  pre-sweep baseline (1018 passed, 2 xfailed, only the known-unrelated
+  `test_disabled_nodes_dont_run` failure), GUI launches and runs. (`oldconf.py` is
+  untracked and was deliberately left with its deprecated `Options()` alias.)
 - [ ] High-DPI rendering — no `AA_EnableHighDpiScaling`/`AA_UseHighDpiPixmaps` flags found (Qt6
   makes high-DPI scaling always-on), but do a visual check on a HiDPI display since default
   behaviour changed even without explicit flags.
@@ -99,6 +110,14 @@ migration is merged and verified.
   none of this (including the pre-existing headless/offscreen detection) ever actually ran on
   a normal GUI launch. Now called explicitly in `run()` before `QApplication` is constructed.
   Not yet tested on KDE or other Wayland compositors — worth a spot-check if anyone runs one.
+- [x] `QPdfWriter.setPageSizeMM()` removed in Qt6 → `setPageSize(QPageSize(size, Unit.Millimeter))`.
+  Would have crashed PDF export in `imageexport.py:exportPDF`. Fixed (1 call site).
+- [x] **Long-standing pre-existing bug** (not migration-caused, found while clearing the
+  IDE's scoped-enum warnings): `DQDelegate.createEditor` in `ui/tablemodel.py` read
+  `self.model.tags[i].dq`, but no table model has ever had a `tags` attribute — double-
+  clicking a DQ cell raised `AttributeError` since the delegate was written. Fixed to read
+  `self.model.d[i].dq`, and the data list was hoisted into the `TableModel` base
+  constructor so `d` is guaranteed on the base class (both subclasses updated).
 - [x] Config editor (`taggedaggregates/editors.py:MaybeEditor.setStateFromInnerEditor`)
   crashed with a `TypeError` calling `setChecked(Qt.Checked)`/`setChecked(Qt.Unchecked)` —
   PySide6's `QAbstractButton.setChecked()` requires a plain `bool`, not the `Qt.CheckState`

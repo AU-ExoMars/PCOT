@@ -161,7 +161,7 @@ class MaybeEditor(Editor):
         self.oldvalue = self.editor.aggregate[self.editor.key_or_index]
 
         self.nullCheck = QtWidgets.QCheckBox("has no value")
-        self.nullCheck.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.nullCheck.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
         self.layout.addWidget(self.nullCheck)
         self.layout.addWidget(self.editor.widget)
         self.setStateFromInnerEditor()
@@ -194,7 +194,7 @@ class TallListWidget(QListWidget):
     def __init__(self, min_rows=1, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.min_rows = min_rows
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         # Recompute geometry when items change
         m = self.model()
@@ -345,7 +345,7 @@ class WrapperWidget(QtWidgets.QWidget):
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.widget = None
 
     def setWidget(self, new_widget):

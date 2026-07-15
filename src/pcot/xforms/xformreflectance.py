@@ -390,21 +390,21 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def showPatchesStateChanged(self, state):
         # data unchanged, no need to mark or call changed().
-        self.node.params.show_patches = state == Qt.Checked
+        self.node.params.show_patches = state == Qt.CheckState.Checked
         self.markReplotReady()
 
     def sepPlotsBoxStateChanged(self, state):
-        self.node.params.sep_plots = state == Qt.Checked
+        self.node.params.sep_plots = state == Qt.CheckState.Checked
         self.markReplotReady()
 
     def zeroFudgeStateChanged(self, state):
         self.mark()
-        self.node.params.zero_fudge = state == Qt.Checked
+        self.node.params.zero_fudge = state == Qt.CheckState.Checked
         self.changed()
 
     def simplifyFudgeStateChanged(self, state):
         self.mark()
-        self.node.params.simpler_data_fudge = state == Qt.Checked
+        self.node.params.simpler_data_fudge = state == Qt.CheckState.Checked
         self.changed()
 
     def onNodeChanged(self):

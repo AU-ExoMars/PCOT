@@ -9,7 +9,6 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-import pcot
 from pcot.utils.table import Table
 from pcot.xform import XFormException
 
@@ -138,7 +137,7 @@ class HelpWindow(QtWidgets.QDialog):
         - node: if this is present, a particular node's error will be shown if there is one"""
         super().__init__(parent=parent)
         self.setModal(True)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         layout = QtWidgets.QVBoxLayout(self)
         if tp is not None:
             tp.helpwin = self
@@ -157,8 +156,10 @@ class HelpWindow(QtWidgets.QDialog):
         font.setPixelSize(15)
         wid.setFont(font)
         wid.setMinimumSize(800, 500)
-        wid.document().setDefaultStyleSheet(pcot.ui.textedit.styleSheet)
-        #  wid.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+
+        from pcot.ui.textedit import styleSheet
+        wid.document().setDefaultStyleSheet(styleSheet)
+        #  wid.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
         wid.setText(txt)
         layout.addWidget(wid)
 

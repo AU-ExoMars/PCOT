@@ -38,8 +38,8 @@ class FilePathEdit(QWidget):
 
         self.completer = QCompleter(self.model, self)
 
-        self.completer.setFilterMode(Qt.MatchContains)
-        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
 
         self.edit.setCompleter(self.completer)
 

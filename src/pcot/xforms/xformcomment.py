@@ -13,7 +13,7 @@ from pcot.xform import xformtype, XFormType
 class GStringText(QtWidgets.QGraphicsTextItem):
     def __init__(self, parent, node):
         super().__init__(node.params.string, parent=parent)
-        self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+        self.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextEditorInteraction)
         self.setTextWidth(50)
         self.setTabChangesFocus(True)
         self.rect = parent

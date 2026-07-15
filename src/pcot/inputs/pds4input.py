@@ -191,10 +191,10 @@ class ImageMarkerItem(QtWidgets.QGraphicsRectItem):
         r2 = radius / 2  # radius of internal circle
         xoffset = -r2 if isLeft else r2
         sub = QtWidgets.QGraphicsEllipseItem(x + xoffset - radius / 2, y - r2, r2 * 2, r2 * 2, parent=self)
-        sub.setPen(QPen(Qt.NoPen))
-        sub.setBrush(Qt.black)
+        sub.setPen(QPen(Qt.PenStyle.NoPen))
+        sub.setBrush(Qt.GlobalColor.black)
         entityMarkerInitSetup(self, ent)
-        self.unselCol = Qt.cyan
+        self.unselCol = Qt.GlobalColor.cyan
 
     def paint(self, painter, option, widget):
         """and draw."""
@@ -226,7 +226,7 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.method.dir = d
         self.fileEdit.setText(str(self.method.dir))
 
-        self.recurseBox.setCheckState(Qt.Checked if self.method.recurse else Qt.Unchecked)
+        self.recurseBox.setCheckState(Qt.CheckState.Checked if self.method.recurse else Qt.CheckState.Unchecked)
 
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
@@ -423,7 +423,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         """Does a scanDir() if we confirm it"""
         if QMessageBox.question(None, "Rescan directory",
                                 "This will clear all loaded products. Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.scanDir()
 
     def readClicked(self):

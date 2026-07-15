@@ -24,7 +24,7 @@ class MplCanvas(Canvas):
         self.fig = Figure(figsize=(4, 2))
         self.create_default_subplot()
         Canvas.__init__(self, self.fig)
-        Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         Canvas.updateGeometry(self)
 
     def create_default_subplot(self):

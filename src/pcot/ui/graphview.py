@@ -26,8 +26,8 @@ class GraphView(QtWidgets.QGraphicsView):
     def wheelEvent(self, evt):
         """handle mouse wheel zooming"""
         # Remove possible Anchors
-        self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
-        self.setResizeAnchor(QtWidgets.QGraphicsView.NoAnchor)
+        self.setTransformationAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
+        self.setResizeAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
         # Get Scene Pos
         target_viewport_pos = self.mapToScene(evt.position().toPoint())
         # Translate Scene
@@ -46,14 +46,14 @@ class GraphView(QtWidgets.QGraphicsView):
         """handle right mouse button panning (when zoomed). This works by
         looking at the delta from right mouse button events and applying it
         to the scroll bar."""
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.MouseButton.RightButton:
             self._prevMousePos = event.pos()
         else:
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         """handle the mouse move event, doing panning if RMB down."""
-        if event.buttons() == Qt.RightButton:
+        if event.buttons() == Qt.MouseButton.RightButton:
             offset = self._prevMousePos - event.pos()
             self._prevMousePos = event.pos()
 
@@ -105,7 +105,7 @@ class GraphView(QtWidgets.QGraphicsView):
         """handle key presses"""
         scene = self.scene()#
         # we ignore these keys sometimes, typically when text item inside a box is being edited.
-        if not scene.lockDeleteKeys and (event.key() == Qt.Key_Delete or event.key() == Qt.Key.Key_Backspace):
+        if not scene.lockDeleteKeys and (event.key() == Qt.Key.Key_Delete or event.key() == Qt.Key.Key_Backspace):
             scene.mark()
             for n in scene.selection:
                 # remove the nodes
@@ -129,7 +129,7 @@ class GraphView(QtWidgets.QGraphicsView):
 
     def fitAll(self):
         """Reset the view to fit the entire scene"""
-        self.fitInView(self.scene().itemsBoundingRect(), Qt.KeepAspectRatio)
+        self.fitInView(self.scene().itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     def repaint(self, *args, **kwargs):
         logger.debug("Repaint forced")

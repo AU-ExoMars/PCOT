@@ -260,10 +260,10 @@ class Model(QAbstractTableModel):
         for i, r in enumerate(self.tab.node.rois):
             self.editors[i] = r.createEditor(tab)
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
             return COLNAMES[section]
-        if role == Qt.DisplayRole and orientation == Qt.Vertical:
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Vertical:
             return getROIName(section)  # index number to a,b,c,d...
         return super().headerData(section, orientation, role)
 
@@ -274,7 +274,7 @@ class Model(QAbstractTableModel):
         return len(COLNAMES)
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             item = index.row()
             field = index.column()
             roi = self.tab.node.rois[item]
@@ -454,7 +454,7 @@ class TabROIExpr(Tab):
     def deleteClicked(self):
         if (item := self.get_selected_item()) is not None:
             if QMessageBox.question(None, "Delete item", "Are you sure?",
-                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
                 self.model.delete_item(item)
 
     def getEditor(self):

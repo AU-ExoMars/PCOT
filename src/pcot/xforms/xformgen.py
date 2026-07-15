@@ -241,7 +241,7 @@ class TabGen(pcot.ui.tabs.Tab):
     def deleteClicked(self):
         if (col := self._getselcol()) is not None:
             if QMessageBox.question(self.window, "Delete channel", "Are you sure?",
-                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
                 self.model.delete_item(col)
 
     def sizeChanged(self, _):
@@ -258,7 +258,6 @@ class TabGen(pcot.ui.tabs.Tab):
     def onNodeChanged(self):
         self.w.canvas.setNode(self.node)
         self.w.tableView.resizeColumnsToContents()
-
         with SignalBlocker(self.w.spinWidth, self.w.spinHeight):
             self.w.spinWidth.setValue(self.node.params.imgwidth)
             self.w.spinHeight.setValue(self.node.params.imgheight)

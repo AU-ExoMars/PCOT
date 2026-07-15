@@ -9,7 +9,7 @@ from pcot.xform import allTypes
 def handleMenuEvent(self, ev):
     # get work under mouse cursor
     tc = self.cursorForPosition(ev.pos())
-    tc.select(QTextCursor.WordUnderCursor)
+    tc.select(QTextCursor.SelectionType.WordUnderCursor)
     funcname = tc.selectedText()
     menu = self.createStandardContextMenu()
 

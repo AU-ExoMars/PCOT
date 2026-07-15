@@ -37,7 +37,7 @@ class SpectrumWidget(QtWidgets.QWidget):
         self.repaint()
 
     def drawText(self, p, s):
-        p.drawText(50, 10, self.width() - 10, self.height() - 10, QtCore.Qt.TextWordWrap, s)
+        p.drawText(50, 10, self.width() - 10, self.height() - 10, QtCore.Qt.TextFlag.TextWordWrap, s)
 
     def paintEvent(self, event: QPaintEvent):
         p = QPainter(self)

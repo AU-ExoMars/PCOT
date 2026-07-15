@@ -15,8 +15,8 @@ class Gradient(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
 
         self.setSizePolicy(
-            QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding
+            QtWidgets.QSizePolicy.Policy.MinimumExpanding,
+            QtWidgets.QSizePolicy.Policy.MinimumExpanding
         )
 
         self._gradient = [
@@ -154,13 +154,13 @@ class Gradient(QtWidgets.QWidget):
 
     def mousePressEvent(self, e):
         # We're in this stop point.
-        if e.button() == Qt.RightButton:
+        if e.button() == Qt.MouseButton.RightButton:
             n = self._find_stop_handle_for_event(e)
             if n is not None:
                 _, color = self._gradient[n]
                 self.chooseColorAtPosition(n, color)
 
-        elif e.button() == Qt.LeftButton:
+        elif e.button() == Qt.MouseButton.LeftButton:
             n = self._find_stop_handle_for_event(e, to_exclude=self._end_stops)
             if n is not None:
                 # Activate drag mode.

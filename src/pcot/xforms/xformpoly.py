@@ -129,7 +129,7 @@ class TabPoly(pcot.ui.tabs.Tab):
 
     def clearPressed(self):
         if QMessageBox.question(self.window, "Clear region", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.mark()
             self.node.roi.clear()
             self.changed()

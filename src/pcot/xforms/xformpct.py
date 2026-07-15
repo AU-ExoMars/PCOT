@@ -253,7 +253,7 @@ class TabPCT(pcot.ui.tabs.Tab):
 
     def clearPressed(self):
         if QMessageBox.question(self.window, "Clear points", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.mark()
             # if we have ROIs, we just clear them. On the second press - no ROIs, but points, we clear points.
             if self.node.rois:
@@ -299,7 +299,7 @@ class TabPCT(pcot.ui.tabs.Tab):
             # done in the canvas for display purposes only
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         self.w.brushSize.setValue(self.node.brushSize)
-        self.w.stddevsBox.setCheckState(Qt.Checked if self.node.showStdDevs else Qt.Unchecked)
+        self.w.stddevsBox.setCheckState(Qt.CheckState.Checked if self.node.showStdDevs else Qt.CheckState.Unchecked)
         if len(self.node.rois) < 1:
             if readyToGen:
                 t = self.target.instructions2
@@ -314,15 +314,15 @@ class TabPCT(pcot.ui.tabs.Tab):
         if self.node.rois:
             FONTSIZE = 20
             prevfont = p.font()
-            p.setPen(Qt.black)
-            p.setBrush(Qt.black)
+            p.setPen(Qt.GlobalColor.black)
+            p.setBrush(Qt.GlobalColor.black)
             p.drawRect(0, 0, 400, 20*len(self.node.rois)+40)
             font = QFont("Consolas")
             # fontsize = pixels2painter(FONTSIZE, p)
             fontsize = FONTSIZE
             font.setPixelSize(fontsize)
             p.setFont(font)
-            p.setPen(Qt.white)
+            p.setPen(Qt.GlobalColor.white)
             for idx, roi in enumerate(self.node.rois):
                 patch = self.target.patches[idx]
                 if roi is not None:
@@ -347,7 +347,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         c = self.w.canvas
         n = self.node
         if not n.rois:  # if there are ROIs
-            p.setBrush(Qt.NoBrush)
+            p.setBrush(Qt.BrushStyle.NoBrush)
             p.setPen(QColor(255, 255, 255))
             for idx, pt in enumerate(n.pctPoints):
                 if idx == n.selPoint:
@@ -398,7 +398,7 @@ class TabPCT(pcot.ui.tabs.Tab):
             # we are editing ROIS; draw the preview circle
             if self.mousePos is not None and n.previewRadius is not None and n.selROI is not None:
                 # draw brush preview
-                p.setPen(Qt.white)
+                p.setPen(Qt.GlobalColor.white)
                 r = n.previewRadius / (self.w.canvas.canvas.getScale())
                 p.drawEllipse(self.mousePos, r, r)
             if n.showStdDevs:
@@ -455,7 +455,7 @@ class TabPCT(pcot.ui.tabs.Tab):
                 n.pctPoints.append((x, y))
                 changed = True
         else:
-            if e.modifiers() & Qt.ControlModifier:
+            if e.modifiers() & Qt.KeyboardModifier.ControlModifier:
                 # select an ROI
                 self.selectROI(x, y)
                 changed = True
@@ -469,7 +469,7 @@ class TabPCT(pcot.ui.tabs.Tab):
 
     def doSet(self, x, y, e):
         n = self.node
-        if e.modifiers() & Qt.ShiftModifier:
+        if e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             n.rois[n.selROI].setCircle(x, y, n.brushSize * BRUSHSCALE, True)
         else:
             n.rois[n.selROI].setCircle(x, y, n.brushSize * BRUSHSCALE, False)

@@ -105,7 +105,7 @@ class Model(QtCore.QAbstractTableModel):
     def data(self, index, role):
         if not index.isValid():
             return None
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             # get a sorted list of the manifest keys
             keys = sorted(list(self.manifest.keys()))
             # and return the appropriate item
@@ -125,7 +125,7 @@ class PARCMethodWidget(MethodWidget):
         self.openButton.clicked.connect(self.openFile)
         self.tableView.doubleClicked.connect(self.itemSelected)
         self.tableView.setModel(Model(self, m.manifest))
-        self.tableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        self.tableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
 
         # the canvas gets its "caption display" setting from the graph, so
         # we need to get it from the document, which is stored in the manager,

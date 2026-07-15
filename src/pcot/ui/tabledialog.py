@@ -11,7 +11,7 @@ class TableDialog(QtWidgets.QDialog):
     This is a handy class for displaying one of our Table objects in a dialog.
     """
     def __init__(self, title, table: Table):
-        super().__init__(None, QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowSystemMenuHint)
+        super().__init__(None, QtCore.Qt.WindowType.WindowTitleHint | QtCore.Qt.WindowType.WindowSystemMenuHint)
         self.setWindowTitle(title)
         tabwidg = QtWidgets.QTableWidget()
 
@@ -23,7 +23,7 @@ class TableDialog(QtWidgets.QDialog):
         layout.addWidget(ok)
         self.setLayout(layout)
 
-        self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Expanding)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Expanding)
 
         # add the headers to the table
         tabwidg.setColumnCount(len(table.keys()))

@@ -70,15 +70,15 @@ class TabROICull(Tab):
         selected_rois = self.node.params.rois
         for roi in self.node.rois:
             item = QListWidgetItem(roi.label)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Checked if roi.label in selected_rois else Qt.Unchecked)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Checked if roi.label in selected_rois else Qt.CheckState.Unchecked)
             self.w.roiList.addItem(item)
         self.w.checkCullBad.setChecked(self.node.params.cullbad)
         self.w.canvas.setNode(self.node)
         self.w.canvas.display(self.node.img)
 
     def onROIListItemChanged(self, item):
-        if item.checkState() == Qt.Checked:
+        if item.checkState() == Qt.CheckState.Checked:
             self.node.params.rois.append(item.text())
         else:
             self.node.params.rois.remove(item.text())

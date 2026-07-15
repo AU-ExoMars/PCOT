@@ -186,7 +186,7 @@ class StitchTableModel(QtCore.QAbstractTableModel):
 
     def data(self, index, role):
         n = self.node
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             r = index.row()
             c = index.column()
             i = n.order[r]
@@ -208,10 +208,10 @@ class StitchTableModel(QtCore.QAbstractTableModel):
     def columnCount(self, index):
         return 3
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
             return COLNAMES[section]
-        if role == Qt.DisplayRole and orientation == Qt.Vertical:
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Vertical:
             return str(section)
         return super().headerData(section, orientation, role)
 
@@ -244,7 +244,7 @@ class TabStitch(Tab):
 
     def selectRow(self, r):
         sel = QItemSelection(self.model.index(r, 0), self.model.index(r, 2))
-        self.w.table.selectionModel().select(sel, QItemSelectionModel.ClearAndSelect)
+        self.w.table.selectionModel().select(sel, QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
     def getSelected(self):
         return [mi.row() for mi in self.w.table.selectionModel().selectedRows()]
@@ -278,9 +278,9 @@ class TabStitch(Tab):
     def moveSel(self, e: QKeyEvent, x, y):
         self.mark()
         scale = 10
-        if e.modifiers() & Qt.ControlModifier:
+        if e.modifiers() & Qt.KeyboardModifier.ControlModifier:
             scale *= 10
-        if e.modifiers() & Qt.ShiftModifier:
+        if e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             scale /= 10
 
         n = self.node
@@ -295,11 +295,11 @@ class TabStitch(Tab):
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()
-        if k == Qt.Key_Left:
+        if k == Qt.Key.Key_Left:
             self.moveSel(e, -1, 0)
-        elif k == Qt.Key_Right:
+        elif k == Qt.Key.Key_Right:
             self.moveSel(e, 1, 0)
-        elif k == Qt.Key_Up:
+        elif k == Qt.Key.Key_Up:
             self.moveSel(e, 0, -1)
-        elif k == Qt.Key_Down:
+        elif k == Qt.Key.Key_Down:
             self.moveSel(e, 0, 1)

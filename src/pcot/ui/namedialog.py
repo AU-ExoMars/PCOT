@@ -18,7 +18,7 @@ class NameDialog(QDialog):
         self.edit.setText(name)
         textlayout.addWidget(label)
         textlayout.addWidget(self.edit)
-        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
         layout.addWidget(textwidget)

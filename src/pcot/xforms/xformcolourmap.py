@@ -167,7 +167,7 @@ presetGradients = {
 
 
 class GradientLegend(Annotation):
-    grad: QLinearGradient
+    grad: Gradient
     mn: float
     mx: float
     fontsize: float
@@ -251,7 +251,7 @@ class GradientLegend(Annotation):
             barThickness = w
 
         p.fillRect(QRectF(x, y, w, h), self.grad.getGradient(vertical=vertical))
-        p.setBrush(Qt.NoBrush)
+        p.setBrush(Qt.BrushStyle.NoBrush)
         pen = QPen(col)
         pen.setWidth(borderThickness)
         p.setPen(pen)
@@ -269,11 +269,11 @@ class GradientLegend(Annotation):
         if vertical:
             xt = x - (self.thickness + 2) + barThickness / 2
 
-            p.drawText(QPoint(xt - minw / 2, int(y + h + fontscale + textGap)), f"{mintext}")
-            p.drawText(QPoint(xt - maxw / 2, int(y - textGap)), f"{maxtext}")
+            p.drawText(QPoint(int(xt - minw / 2), int(y + h + fontscale + textGap)), f"{mintext}")
+            p.drawText(QPoint(int(xt - maxw / 2), int(y - textGap)), f"{maxtext}")
         else:
-            p.drawText(QPoint(x - minw / 2, int(y - self.fontscale + 2)), f"{mintext}")
-            p.drawText(QPoint((x + w) - maxw / 2, int(y - self.fontscale + 2)), f"{maxtext}")
+            p.drawText(QPoint(int(x - minw / 2), int(y - self.fontscale + 2)), f"{mintext}")
+            p.drawText(QPoint(int((x + w) - maxw / 2), int(y - self.fontscale + 2)), f"{maxtext}")
 
     def annotatePDF(self, p: QPainter, img):
         if self.legendpos != IN_IMAGE and self.legendpos != NONE and self.legendpos is not None:
@@ -558,7 +558,7 @@ class TabColourMap(pcot.ui.tabs.Tab):
 
     def loadPreset(self):
         # show a dialog
-        name, ok = QInputDialog.getItem(self.window, "Select a preset", "Preset", presetGradients.keys(),
+        name, ok = QInputDialog.getItem(self.window, "Select a preset", "Preset", list(presetGradients.keys()),
                                         0, False)
         if ok and name in presetGradients:
             # get a copy of the preset's data
@@ -600,7 +600,7 @@ class TabColourMap(pcot.ui.tabs.Tab):
         self.w.hSpin.setValue(h)
         self.w.orientCombo.setCurrentText('Vertical' if self.node.params.vertical else 'Horizontal')
         r, g, b = [x * 255 for x in self.node.params.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
 
         img = self.node.getOutput(0)
         # hack here to ensure that uichange gets called when the canvas changes gamma

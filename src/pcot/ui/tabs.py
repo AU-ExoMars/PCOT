@@ -36,7 +36,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         # and when we switch tab
         self.tabWidget.currentChanged.connect(self.currentChanged)
         # set up a context menu
-        self.tabWidget.tabBar().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tabWidget.tabBar().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabWidget.tabBar().customContextMenuRequested.connect(self.showMenu)
 
         # store the tabs in an ordered dict, so we can iterate them in create order
@@ -164,7 +164,7 @@ class ExpandedTab(QtWidgets.QMainWindow):
 
     ## window got focus. Tell the scene.
     def changeEvent(self, event):
-        if event.type() == QtCore.QEvent.ActivationChange:
+        if event.type() == QtCore.QEvent.Type.ActivationChange:
             if self.isActiveWindow() and self.window.scene():
                 self.window.scene().currentChanged(self.tab.node)
 
@@ -216,8 +216,8 @@ class Tab(QtWidgets.QWidget):
         # much of this is pointless, because the error message controls set the visibility.
         # Ideally, I'd like to have the widget have a zero height when it has no children, but
         # I can't figure out how to do that right now. Indeed, it may not be possible.
-        self.lower.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                                  QtWidgets.QSizePolicy.Fixed))
+        self.lower.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                  QtWidgets.QSizePolicy.Policy.Fixed))
         self.lower.setMinimumHeight(0)
 
         # There used to be a "comment" field, but it was never used and was removed.

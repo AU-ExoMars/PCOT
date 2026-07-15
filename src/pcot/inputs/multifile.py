@@ -398,7 +398,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             item = QtGui.QStandardItem(x)
             item.setCheckable(True)
             if x in self.method.files:
-                item.setCheckState(PySide6.QtCore.Qt.Checked)
+                item.setCheckState(PySide6.QtCore.Qt.CheckState.Checked)
             self.model.appendRow(item)
 
         self.filelist.setModel(self.model)
@@ -437,6 +437,6 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.method.files = []
         for i in range(self.model.rowCount()):
             item = self.model.item(i)
-            if item.checkState() == Qt.Checked:
+            if item.checkState() == Qt.CheckState.Checked:
                 self.method.files.append(item.text())
         self.onInputChanged()
