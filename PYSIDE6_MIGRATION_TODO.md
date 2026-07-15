@@ -5,20 +5,21 @@ migration is merged and verified.
 
 ## Environment / packaging
 
-- [ ] `matplotlib` resolved up to `3.10.9` (from the `^3.5.0` range) as a side effect of the
-  Python 3.11 / PySide6 resolve — do a sanity check that nothing in `mplwidget.py` /
-  `spectrumwidget.py` relies on older matplotlib behaviour.
-- [ ] Confirm `proctools = "^0.2.1"` doesn't itself depend on PySide2 (never actually checked
-  this — got interrupted mid-check earlier in the migration).
-- [ ] Confirm `pds4-tools = "^1.2"` works correctly under numpy 1.26 / Python 3.11 with an
-  actual PDS4 load, not just a clean `poetry install`.
+- [x] `matplotlib` resolved up to `3.10.9` (from the `^3.5.0` range) as a side effect of the
+  Python 3.11 / PySide6 resolve — confirmed working (`mplwidget.py` / `spectrumwidget.py`
+  exercised via the promoted-widgets checks below).
+- [x] Confirm `proctools = "^0.2.1"` doesn't itself depend on PySide2 — confirmed working
+  (PDS4 import exercised, Jim 2026-07-15).
+- [x] Confirm `pds4-tools = "^1.2"` works correctly under numpy 1.26 / Python 3.11 —
+  confirmed with an actual PDS4 data import (Jim, 2026-07-15).
 
 ## Cross-platform
 
-- [ ] Actually run the app on Ubuntu (not just resolve deps) — check for the `libxcb-cursor0`
-  runtime issue documented in the README.
-- [ ] Actually run the app on macOS (Apple Silicon) — confirm no repeat of the old
-  PySide2/shiboken2 Rosetta problems now that PySide6 ships native arm64 wheels.
+- [x] Actually run the app on Ubuntu (not just resolve deps) — runs under Ubuntu 26
+  (Jim, 2026-07-15).
+- [x] Actually run the app on macOS (Apple Silicon) — runs; no repeat of the old
+  PySide2/shiboken2 Rosetta problems. Confirmed by Helen Miles on an M4 Pro
+  (November 2024 model) running macOS Tahoe 26.5 (2026-07-15).
 
 ## Source rename (`PySide2` → `PySide6`)
 
@@ -57,9 +58,25 @@ migration is merged and verified.
   pre-sweep baseline (1018 passed, 2 xfailed, only the known-unrelated
   `test_disabled_nodes_dont_run` failure), GUI launches and runs. (`oldconf.py` is
   untracked and was deliberately left with its deprecated `Options()` alias.)
-- [ ] High-DPI rendering — no `AA_EnableHighDpiScaling`/`AA_UseHighDpiPixmaps` flags found (Qt6
-  makes high-DPI scaling always-on), but do a visual check on a HiDPI display since default
-  behaviour changed even without explicit flags.
+- [x] High-DPI rendering — no `AA_EnableHighDpiScaling`/`AA_UseHighDpiPixmaps` flags found (Qt6
+  makes high-DPI scaling always-on). Visual check done at `QT_SCALE_FACTOR=1.5` (Jim,
+  2026-07-15); found and fixed one real bug plus some latent sub-pixel issues:
+  - **Canvas cursor hotspot offset at fractional scale** (the visible bug: registered point
+    ~8 device px up-left of the crosshair at 150%, absent at 1x). Root cause is a Qt
+    asymmetry, verified in Qt 6.11's `qwindowscursor.cpp`: the *pixmap*-cursor path scales
+    both sprite and hotspot for HiDPI, but the monochrome *bitmap+mask* path (which the
+    canvas XOR crosshair uses) scales only the bitmaps and passes the hotspot through
+    unscaled. Fixed in `canvas.py:getCursor` by building the bitmaps pre-scaled to the
+    screen DPR and tagging them with it (Qt's scaling becomes a no-op; hotspot given in
+    device px). Windows-only path; other platforms unchanged; reduces to the old 32/16
+    values at 1x. Cursor is cached, so a DPR change mid-session (mixed-DPI monitor drag)
+    isn't handled.
+  - Latent canvas precision fixes made along the way (all scale factors): mouse mapping and
+    ROI/annotation painter now use the scale the image is *actually displayed at*
+    (`cutw/dispw`, recorded in `paintEvent` - the displayed size is floored, so it isn't
+    exactly `getScale()`) and the floored crop origin; mouse handlers use full-precision
+    `e.position()` rather than integer `e.pos()` (also the brush preview in `roiedit.py`);
+    the spectrum overlay dot is drawn centred instead of bounding-box-cornered.
 - Startup log shows `Designer: ... renderHints ... QPainter::HighQualityAntialiasing ...
   could not be read` — that enum was removed in Qt6. Traced to the `.ui` files, which
   predate Qt5 (created with the Qt4 Designer) and are already slightly out of date, so this
@@ -198,28 +215,34 @@ migration is merged and verified.
 
 - [x] App now launches and stays running (was previously crashing with `0xC0000005` before
   any code ran).
-- [ ] General smoke test of the full app: node graph canvas, tabs, spectrum/matplotlib
-  widgets, dialogs (`.exec()` sites).
+- [x] General smoke test of the full app: node graph canvas, tabs, spectrum/matplotlib
+  widgets, dialogs (`.exec()` sites). Canvas/tabs/matplotlib covered by the promoted-widget
+  checks below; all GUI/CLI-reachable `.exec()` dialogs exercised and working
+  (Jim, 2026-07-15): settings editor (menu and `pcot config`), node rename, macro rename,
+  multifile preset dialog (incl. preset save/rename name dialogs), raw loader settings,
+  import-from-document dialog, spectrum reorder, reflectance gradients table, colourmap
+  colour-stop picker, PCT patch detection help box. (`configui.py:107` is in a dev-only
+  `runtest()` harness, not reachable from the app; `app.exec()` is the main loop.)
 
 ### Promoted widgets to exercise (extracted from all 57 `.ui` files' `<customwidgets>`
 sections — confirms `loadUi`/`UiLoader.createWidget` resolves each one correctly under
 PySide6). `tabtest.ui`/`NumberWidget` deliberately excluded — confirmed dead/unreachable
-above.
+above. **All exercised manually and working (Jim, 2026-07-15).**
 
-- [ ] `Canvas` (`pcot.ui.canvas`) — by far the most common, used in ~30 tab/input `.ui` files
-- [ ] `DataWidget` (`pcot.ui.datawidget`) — `inputparc.ui`, `tabdata.ui`, `tabexpr.ui`
-- [ ] `GraphView` (`pcot.ui.graphview`) — `main.ui`
-- [ ] `TextEditWithHelp` (`pcot.ui.textedit`) — `main.ui`
-- [ ] `PlainTextEditWithHelp` (`pcot.ui.textedit`) — `tabexpr.ui`
-- [ ] `Collapser` (`pcot.ui.collapser`) — `main.ui`
-- [ ] `MplWidget` (`pcot.ui.mplwidget`) — `showcamsrefls.ui`, `tabcurve.ui`,
+- [x] `Canvas` (`pcot.ui.canvas`) — by far the most common, used in ~30 tab/input `.ui` files
+- [x] `DataWidget` (`pcot.ui.datawidget`) — `inputparc.ui`, `tabdata.ui`, `tabexpr.ui`
+- [x] `GraphView` (`pcot.ui.graphview`) — `main.ui`
+- [x] `TextEditWithHelp` (`pcot.ui.textedit`) — `main.ui`
+- [x] `PlainTextEditWithHelp` (`pcot.ui.textedit`) — `tabexpr.ui`
+- [x] `Collapser` (`pcot.ui.collapser`) — `main.ui`
+- [x] `MplWidget` (`pcot.ui.mplwidget`) — `showcamsrefls.ui`, `tabcurve.ui`,
   `tabhistogram.ui`, `tabreflectance.ui`, `tabspectrum.ui`
-- [ ] `LinearSetWidget` (`pcot.ui.linear`) — `inputpdsfile.ui`
-- [ ] `VariantWidget` (`pcot.ui.variantwidget`) — `tabbinop.ui`
-- [ ] `DatumTypeWidget` (`pcot.ui.variantwidget`) — `tabconnector.ui`
-- [ ] `Gradient` (`pcot.ui.gradient`) — `tabcolmap.ui`
-- [ ] `DQWidgetVertical` (`pcot.ui.dqwidget`) — `tabdqmod.ui`
-- [ ] `DQWidget` (`pcot.ui.dqwidget`) — `tabroidq.ui`
-- [ ] `TableView` (`pcot.ui.tablemodel`) — `tabgen.ui`, `tabpixtest.ui`, `tabroiexpr.ui`
-- [ ] `MouseReleaseSpinBox` (`pcot.ui.smallwidgets`) — `tabmultidot.ui`
-- [ ] `ModeWidget` (`pcot.xforms.xformmultidot`) — `tabmultidot.ui`
+- [x] `LinearSetWidget` (`pcot.ui.linear`) — `inputpdsfile.ui`
+- [x] `VariantWidget` (`pcot.ui.variantwidget`) — `tabbinop.ui`
+- [x] `DatumTypeWidget` (`pcot.ui.variantwidget`) — `tabconnector.ui`
+- [x] `Gradient` (`pcot.ui.gradient`) — `tabcolmap.ui`
+- [x] `DQWidgetVertical` (`pcot.ui.dqwidget`) — `tabdqmod.ui`
+- [x] `DQWidget` (`pcot.ui.dqwidget`) — `tabroidq.ui`
+- [x] `TableView` (`pcot.ui.tablemodel`) — `tabgen.ui`, `tabpixtest.ui`, `tabroiexpr.ui`
+- [x] `MouseReleaseSpinBox` (`pcot.ui.smallwidgets`) — `tabmultidot.ui`
+- [x] `ModeWidget` (`pcot.xforms.xformmultidot`) — `tabmultidot.ui`
