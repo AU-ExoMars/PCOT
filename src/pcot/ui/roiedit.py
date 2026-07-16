@@ -121,17 +121,22 @@ class RectEditor(ROIEditor):
         self.tab.w.canvas.update()
 
     def canvasMousePressEvent(self, x, y, e):
-        self.mouseDown = True
-        self.tab.mark()
-        self.roi().set(x, y, 5, 5)
-        self.tab.changed()
-        self.tab.w.canvas.update()
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.mouseDown = True
+            self.tab.mark()
+            self.roi().set(x, y, 5, 5)
+            self.tab.changed()
+            self.tab.w.canvas.update()
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False
 
 
 class CircleEditor(ROIEditor):
+    """Click+drag creates a circle: the click sets the centre, dragging sets the radius.
+    With shift held, click+drag sets the radius of an existing circle without moving its centre.
+    With ctrl held, click+drag moves an existing circle without changing its radius."""
+
     roiFields = (
         ('x', 0, 'w'),
         ('y', 0, 'h'),
@@ -139,6 +144,7 @@ class CircleEditor(ROIEditor):
     )
 
     def setRadius(self, x2, y2):
+        """Resize the circle about its current centre so it passes through (x2,y2)."""
         c = self.roi().get()
         x, y, r = c if c is not None else (0, 0, 0)
         dx = x - x2
@@ -151,22 +157,42 @@ class CircleEditor(ROIEditor):
         self.tab.changed()
         self.tab.w.canvas.update()
 
+    def setCentre(self, x, y):
+        """Move the circle's centre to (x,y), keeping its radius."""
+        c = self.roi().get()
+        _, _, r = c if c is not None else (0, 0, 10)
+        # we don't do a mark here to avoid multiple marks - one is done on mousedown.
+        self.roi().set(x, y, r)
+        self.tab.changed()
+        self.tab.w.canvas.update()
+
     def canvasMouseMoveEvent(self, x2, y2, e):
         if self.mouseDown:
-            self.setRadius(x2, y2)
+            if e.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                # ctrl-drag: move the whole circle, keeping its radius
+                self.setCentre(x2, y2)
+            else:
+                # plain or shift drag: set the radius about the fixed centre
+                self.setRadius(x2, y2)
 
     def canvasMousePressEvent(self, x, y, e):
+        if e.button() != Qt.MouseButton.LeftButton:
+            return
         self.mouseDown = True
-        self.tab.mark()
         roi = self.roi()
-        if e.button() == Qt.MouseButton.RightButton and roi.get() is not None:
+        self.tab.mark()
+        if e.modifiers() & Qt.KeyboardModifier.ShiftModifier and roi.get() is not None:
+            # shift: keep the centre, set the radius so the circle passes through the click;
+            # dragging then continues to adjust the radius
             self.setRadius(x, y)
+        elif e.modifiers() & Qt.KeyboardModifier.ControlModifier and roi.get() is not None:
+            # ctrl: move the centre to the click, keeping the radius;
+            # dragging then continues to move the circle
+            self.setCentre(x, y)
         else:
-            if e.modifiers() & Qt.KeyboardModifier.ShiftModifier and roi.get() is not None:
-                _, _, r = roi.get()
-            else:
-                r = 10
-            roi.set(x, y, r)
+            # plain click: start a new circle here with a default radius;
+            # dragging will then set the radius
+            roi.set(x, y, 10)
             self.tab.changed()
             self.tab.w.canvas.update()
 
@@ -183,14 +209,15 @@ class PolyEditor(ROIEditor):
                 self.tab.changed()
 
     def canvasMousePressEvent(self, x, y, e):
-        self.mouseDown = True
-        self.tab.mark()
-        if e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
-            self.roi().addPoint(x, y)
-        else:
-            self.roi().selPoint(x, y)
-        self.tab.changed()
-        self.tab.w.canvas.update()
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.mouseDown = True
+            self.tab.mark()
+            if e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                self.roi().addPoint(x, y)
+            else:
+                self.roi().selPoint(x, y)
+            self.tab.changed()
+            self.tab.w.canvas.update()
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False
@@ -241,10 +268,11 @@ class PaintedEditor(ROIEditor):
 
     def canvasMousePressEvent(self, x, y, e):
         # self.tab.mark()    We avoid marking here, because we'll mark when we lift the mouse button.
-        self.mouseDown = True
-        self.doSet(x, y, e)
-        self.tab.changed()
-        self.tab.w.canvas.update()
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.mouseDown = True
+            self.doSet(x, y, e)
+            self.tab.changed()
+            self.tab.w.canvas.update()
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.tab.mark()
