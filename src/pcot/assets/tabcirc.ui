@@ -18,7 +18,7 @@
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <item alignment="Qt::AlignTop">
+       <item alignment="Qt::AlignmentFlag::AlignTop">
         <widget class="QWidget" name="gridWidget" native="true">
          <property name="minimumSize">
           <size>
@@ -34,7 +34,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <property name="sizeConstraint">
-           <enum>QLayout::SetDefaultConstraint</enum>
+           <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
           </property>
           <item>
            <widget class="QLabel" name="label_4">
@@ -111,7 +111,7 @@
      <item>
       <widget class="QLabel" name="label_7">
        <property name="text">
-        <string>Left+drag to create, Right = set radius, Left+shift = set centre without changing radius</string>
+        <string>Click+drag to create, hold shift to set radius but keep centre, hold ctrl to set centre without changing radius</string>
        </property>
       </widget>
      </item>
@@ -130,7 +130,7 @@
        <item>
         <widget class="QCheckBox" name="drawbg">
          <property name="layoutDirection">
-          <enum>Qt::RightToLeft</enum>
+          <enum>Qt::LayoutDirection::RightToLeft</enum>
          </property>
          <property name="text">
           <string>Background</string>
@@ -140,7 +140,7 @@
        <item>
         <widget class="QCheckBox" name="captionTop">
          <property name="layoutDirection">
-          <enum>Qt::RightToLeft</enum>
+          <enum>Qt::LayoutDirection::RightToLeft</enum>
          </property>
          <property name="text">
           <string>Top</string>
