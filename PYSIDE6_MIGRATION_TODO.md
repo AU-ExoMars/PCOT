@@ -149,6 +149,24 @@ migration is merged and verified.
   style change above — a latent pre-existing bug, just not previously noticed. Fixed by
   changing `padding: 40px` to `padding: 4px`.
 
+- [x] **Checkbox `stateChanged` handlers comparing the signal argument to
+  `Qt.CheckState.Checked`** — `stateChanged` emits a plain `int`, and PySide6 enums are real
+  Python `enum.Enum`s, so `int == enum` is silently always `False`. The affected params could
+  never be set `True`; the checkbox then visibly reverted when `onNodeChanged()` wrote the
+  stale value back. Six handlers affected: `xformspectrum.py` (`ignorePixSD`, `fixedYAxis`)
+  and `xformreflectance.py` (`show_patches`, `sep_plots`, `zero_fudge`,
+  `simpler_data_fudge`). Fixed by connecting to `checkStateChanged` instead (Qt 6.7+, fine
+  under our `^6.8` pin), which emits a genuine `Qt.CheckState`, making the enum comparison
+  correct as written. All other `stateChanged` handlers were audited and are safe — they use
+  `!= 0`, `isChecked()`, or ignore the argument.
+- [ ] Sweep the remaining `stateChanged` connections over to `checkStateChanged` for
+  consistency (`stateChanged` is deprecated from Qt 6.9): `cameras/show.py`,
+  `inputs/pds4input.py`, `ui/canvas.py`, `ui/dqwidget.py`, `ui/taggedaggregates/editors.py`,
+  and xforms `circ`, `multidot`, `painted`, `pct`, `pctpatchdetection`, `poly`, `rect`,
+  `roicull`, `roiexpr`, `roidq`. Not urgent — all work correctly today. Handlers taking the
+  state argument will need switching from `!= 0` to `== Qt.CheckState.Checked` at the same
+  time.
+
 ## Dark mode / Fusion style
 
 - The Windows style override in `app.py:run()` changed from `windowsvista` to `fusion`.

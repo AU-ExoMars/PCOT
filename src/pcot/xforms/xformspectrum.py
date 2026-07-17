@@ -3,7 +3,8 @@ import math
 
 import matplotlib
 import numpy as np
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
 
 import pcot
@@ -247,8 +248,8 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.bottomSpaceSpin.valueChanged.connect(self.bottomSpaceChanged)
         self.w.rightSpaceSpin.valueChanged.connect(self.rightSpaceChanged)
         self.w.hideButton.clicked.connect(self.hideClicked)
-        self.w.ignorePixSD.stateChanged.connect(self.ignorePixSDChanged)
-        self.w.fixedYBox.stateChanged.connect(self.fixedYAxisChanged)
+        self.w.ignorePixSD.checkStateChanged.connect(self.ignorePixSDChanged)
+        self.w.fixedYBox.checkStateChanged.connect(self.fixedYAxisChanged)
         self.nodeChanged()
 
     def replot(self):
@@ -364,12 +365,12 @@ class TabSpectrum(ui.tabs.Tab):
 
     def ignorePixSDChanged(self, state):
         self.mark()
-        self.node.params.ignorePixSD = state == QtCore.Qt.CheckState.Checked
+        self.node.params.ignorePixSD = (state == Qt.CheckState.Checked)
         self.changed()
 
     def fixedYAxisChanged(self, state):
         self.mark()
-        self.node.params.fixedYAxis = state == QtCore.Qt.CheckState.Checked
+        self.node.params.fixedYAxis = (state == Qt.CheckState.Checked)
         self.changed()
 
     def errorbarmodeChanged(self, mode):

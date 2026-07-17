@@ -313,8 +313,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.targetCombo.currentIndexChanged.connect(self.targetChanged)
         self.w.filterCombo.currentIndexChanged.connect(self.filterChanged)
         self.w.replot.clicked.connect(self.replot)
-        self.w.showPatchesBox.stateChanged.connect(self.showPatchesStateChanged)
-        self.w.sepPlotsBox.stateChanged.connect(self.sepPlotsBoxStateChanged)
+        self.w.showPatchesBox.checkStateChanged.connect(self.showPatchesStateChanged)
+        self.w.sepPlotsBox.checkStateChanged.connect(self.sepPlotsBoxStateChanged)
         self.w.saveButton.clicked.connect(self.save)
         self.w.showMCButton.clicked.connect(self.showMCClicked)
 
@@ -323,8 +323,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.filterAngleSpin.valueChanged.connect(self.filterAngleChanged)
         self.w.recalcButton.clicked.connect(self.recalcButtonClicked)
 
-        self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
-        self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
+        self.w.zeroFudgeBox.checkStateChanged.connect(self.zeroFudgeStateChanged)
+        self.w.simplifyFudgeBox.checkStateChanged.connect(self.simplifyFudgeStateChanged)
         self.nodeChanged()
 
     def save(self):
