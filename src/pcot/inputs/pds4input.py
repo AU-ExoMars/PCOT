@@ -2,6 +2,7 @@ import fnmatch
 import logging
 import os
 import re
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional, List
 
@@ -9,7 +10,7 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPen
 from PySide6.QtWidgets import QMessageBox, QTableWidgetItem
-from proctools.products import ProductDepot, DataProduct
+from proctools.products import DataProduct
 
 import pcot
 import pcot.dq
@@ -80,30 +81,31 @@ class PDS4InputMethod(InputMethod):
 
         logger.debug("loadLabelsFromDirectory")
         if self.dir is not None:
-            # Exceptions might get thrown; the caller must handle them.
-            depot = ProductDepot()
-            # this is actually loading 'labels' in *my* terminology
+            # This is actually loading 'labels' in *my* terminology. We don't use
+            # ProductDepot.load here: its per-file error handling only catches TypeError
+            # and ExpatError, so an XML file that isn't a PDS4 label (ValueError from
+            # pds4_tools) or a label with no product_type_name (AttributeError) aborts
+            # the entire scan. Instead we load each file ourselves and skip failures.
             logger.debug("Loading products...")
-
-            for x in Path(self.dir).expanduser().rglob("*.xml"):
-                print(x)
-
-            depot.load(Path(self.dir), recursive=self.recurse)
+            path = Path(self.dir).expanduser()
+            byType = defaultdict(list)
+            for xmlfile in sorted(path.rglob("*.xml") if self.recurse else path.glob("*.xml")):
+                try:
+                    product = DataProduct.from_file(xmlfile)
+                except Exception as e:
+                    ui.log(f"skipping {xmlfile.name}, not a loadable PDS4 product: {e}")
+                    continue
+                if product in byType[product.type]:  # DataProduct equality is by LID
+                    ui.log(f"skipping {xmlfile.name}, product already loaded")
+                    continue
+                byType[product.type].append(product)
             logger.debug("...products loaded")
-            # Retrieve labels for all loaded PAN-PP-220/spec-rad products as instances of
-            # proctools.products.pancam:SpecRad; sub in the mnemonic of the product you're after
 
-            # OLD way of doing it, might still be useful - concatenate a bunch of calls to retrieve for each product
-            # type we are interested in.
-
-            # products = depot.retrieve("spec-rad")
-
-            # NEW way of doing it, just retrieve everything and deal with the fact that we get a defaultdict back.
+            # flatten to a single list, sorted within each type (the same ordering
+            # ProductDepot.load/retrieve produced)
             products = []
-            pdict = depot.retrieve(None)
-            for k, v in pdict.items():
-                if isinstance(v, list):
-                    products.extend(v)
+            for v in byType.values():
+                products.extend(sorted(v))
 
             # generate a list of PDS4Product objects
             self.products = ProductList(products)
@@ -244,7 +246,7 @@ class PDS4ImageMethodWidget(MethodWidget):
 
         # connect signals
 
-        self.recurseBox.stateChanged.connect(self.recurseChanged)
+        self.recurseBox.checkStateChanged.connect(self.recurseChanged)
         self.browse.clicked.connect(self.browseClicked)
         self.scanDirButton.clicked.connect(self.scanDirClicked)
         self.readButton.clicked.connect(self.readClicked)
@@ -405,7 +407,7 @@ class PDS4ImageMethodWidget(MethodWidget):
 
     def recurseChanged(self, v):
         """recursion checkbox toggled"""
-        self.method.recurse = (v != 0)
+        self.method.recurse = (v == Qt.CheckState.Checked)
 
     def scanDir(self):
         """Scan the selected directory for PDS4 products and populate the model, refreshing the timeline and table"""
