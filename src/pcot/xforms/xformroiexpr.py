@@ -333,7 +333,7 @@ class TabROIExpr(Tab):
         self.w.tableView.delete.connect(self.deleteClicked)
         self.w.tableView.selChanged.connect(self.selectionChanged)
         self.w.exprEdit.editingFinished.connect(self.exprChanged)
-        self.w.hideCheck.stateChanged.connect(self.hideCheckChanged)
+        self.w.hideCheck.checkStateChanged.connect(self.hideCheckChanged)
         self.w.outColButton.clicked.connect(self.outColButtonChanged)
         self.w.selColButton.clicked.connect(self.selColButtonChanged)
         self.w.unselColButton.clicked.connect(self.unselColButtonChanged)
@@ -423,7 +423,7 @@ class TabROIExpr(Tab):
         self.changed()
 
     def hideCheckChanged(self, t):
-        self.node.hideROIs = t != 0
+        self.node.hideROIs = (t == Qt.CheckState.Checked)
         self.changed()
 
     def selectionChanged(self, idx):

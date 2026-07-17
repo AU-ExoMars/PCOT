@@ -37,7 +37,7 @@ class _BaseDQWidget(QWidget):
             label = QLabel(f"{d.name}({d.char})", self)
             check = QCheckBox('', self)
             self.name2widget[name] = check
-            check.stateChanged.connect(partial(self.stateChanged, name))
+            check.checkStateChanged.connect(partial(self.stateChanged, name))
 
             if isVertical:
                 label.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -60,7 +60,7 @@ class _BaseDQWidget(QWidget):
 
     def stateChanged(self, name, val):
         mask = int(dq.DQs[name])
-        if val != 0:
+        if val == Qt.CheckState.Checked:
             self.bits |= mask
         else:
             self.bits &= ~mask

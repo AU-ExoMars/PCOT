@@ -935,7 +935,7 @@ class TabPCTPatchDetection(Tab):
         # setup parameter lock checkbox to spawn locked
         self.w.lockParametersCheckBox.setChecked(node.parametersLocked)
         # and connect it to function to toggle operability of all sliders
-        self.w.lockParametersCheckBox.stateChanged.connect(self.lockToggleClick)
+        self.w.lockParametersCheckBox.checkStateChanged.connect(self.lockToggleClick)
 
         # initialise parameter sliders
         self.initParamSliders()

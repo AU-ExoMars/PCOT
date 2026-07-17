@@ -1117,7 +1117,7 @@ class Canvas(QtWidgets.QWidget):
             transSlider.sliderReleased.connect(self.dqWidgetChanged)
             contrastSlider.sliderReleased.connect(self.dqWidgetChanged)
             threshBox.valueChanged.connect(lambda _: self.dqWidgetChanged())
-            additive.stateChanged.connect(lambda _: self.dqWidgetChanged())
+            additive.checkStateChanged.connect(lambda _: self.dqWidgetChanged())
 
             self.dqSections.append(collapser.addSection(f"DQ layer {i}", layout))
 

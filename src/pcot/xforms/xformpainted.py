@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import QMessageBox
 
@@ -88,7 +89,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
-        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
+        self.w.drawbg.checkStateChanged.connect(self.drawbgChanged)
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
@@ -101,7 +102,7 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.roi.drawbg = (val != 0)
+        self.node.roi.drawbg = (val == Qt.CheckState.Checked)
         self.changed()
 
     def drawModeChanged(self, idx):

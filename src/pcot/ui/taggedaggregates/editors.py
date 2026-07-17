@@ -141,7 +141,7 @@ class BoolEditor(Editor):
         if container[key_or_index] is not None:
             self.widget.setChecked(container[key_or_index])
         # can't connect to the method directly, because the class is not a QObject
-        self.widget.stateChanged.connect(lambda t: self.changed(t))
+        self.widget.checkStateChanged.connect(lambda t: self.changed(t))
 
     def changed(self, _):
         self.notifyBefore()
@@ -165,7 +165,7 @@ class MaybeEditor(Editor):
         self.layout.addWidget(self.nullCheck)
         self.layout.addWidget(self.editor.widget)
         self.setStateFromInnerEditor()
-        self.nullCheck.stateChanged.connect(lambda: self.nullChanged())
+        self.nullCheck.checkStateChanged.connect(lambda: self.nullChanged())
 
     def setStateFromInnerEditor(self):
         val = self.editor.aggregate[self.key_or_index]

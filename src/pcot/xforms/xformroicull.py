@@ -61,7 +61,7 @@ class TabROICull(Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabroicull.ui')
         self.w.roiList.itemChanged.connect(self.onROIListItemChanged)
-        self.w.checkCullBad.stateChanged.connect(self.onCullBadStateChanged)
+        self.w.checkCullBad.checkStateChanged.connect(self.onCullBadStateChanged)
         self.w.canvas.setNode(node)
         self.nodeChanged()
 

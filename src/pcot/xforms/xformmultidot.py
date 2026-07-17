@@ -308,7 +308,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
-        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
+        self.w.drawbg.checkStateChanged.connect(self.drawbgChanged)
         self.w.caption.returnPressed.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.clearButton.pressed.connect(self.clearPressed)
@@ -371,7 +371,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.drawbg = (val != 0)
+        self.node.drawbg = (val == Qt.CheckState.Checked)
         self.changed()
 
     def modeChanged(self, i):

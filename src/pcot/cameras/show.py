@@ -35,7 +35,7 @@ class Dialog(QtWidgets.QDialog):
         self.filterAngleSpin.valueChanged.connect(self._replot)
         self.thetaSpin.valueChanged.connect(self._replot)
         self.phiSpin.valueChanged.connect(self._replot)
-        self.y01Box.stateChanged.connect(self._replot)
+        self.y01Box.checkStateChanged.connect(self._replot)
 
         self.filterPlotButton.clicked.connect(self._filter_plot)
         self.reflPlotButton.clicked.connect(self._refl_plot)

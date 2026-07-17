@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QIntValidator
 
 import pcot.ui.tabs
@@ -65,7 +66,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.editor = RectEditor(self)
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
-        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
+        self.w.drawbg.checkStateChanged.connect(self.drawbgChanged)
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
@@ -89,7 +90,7 @@ class TabRect(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.roi.drawbg = (val != 0)
+        self.node.roi.drawbg = (val == Qt.CheckState.Checked)
         self.changed()
 
     def topChanged(self, checked):

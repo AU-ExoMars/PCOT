@@ -1,4 +1,5 @@
 import numpy as np
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox
 
 import pcot
@@ -152,7 +153,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabroidq.ui')
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
-        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
+        self.w.drawbg.checkStateChanged.connect(self.drawbgChanged)
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
@@ -186,7 +187,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.params.drawbg = (val != 0)
+        self.node.params.drawbg = (val == Qt.CheckState.Checked)
         self.changed()
 
     def topChanged(self, checked):

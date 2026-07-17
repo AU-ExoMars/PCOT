@@ -159,13 +159,13 @@ migration is merged and verified.
   under our `^6.8` pin), which emits a genuine `Qt.CheckState`, making the enum comparison
   correct as written. All other `stateChanged` handlers were audited and are safe — they use
   `!= 0`, `isChecked()`, or ignore the argument.
-- [ ] Sweep the remaining `stateChanged` connections over to `checkStateChanged` for
-  consistency (`stateChanged` is deprecated from Qt 6.9): `cameras/show.py`,
+- [x] Sweep the remaining `stateChanged` connections over to `checkStateChanged`
+  (`stateChanged` is deprecated from Qt 6.9): done for `cameras/show.py`,
   `inputs/pds4input.py`, `ui/canvas.py`, `ui/dqwidget.py`, `ui/taggedaggregates/editors.py`,
   and xforms `circ`, `multidot`, `painted`, `pct`, `pctpatchdetection`, `poly`, `rect`,
-  `roicull`, `roiexpr`, `roidq`. Not urgent — all work correctly today. Handlers taking the
-  state argument will need switching from `!= 0` to `== Qt.CheckState.Checked` at the same
-  time.
+  `roicull`, `roiexpr`, `roidq`. Handlers taking the state argument switched from `!= 0` to
+  `== Qt.CheckState.Checked`; `Qt` imports added where missing (`circ`, `painted`, `poly`,
+  `rect`, `roidq`). Zero `stateChanged.connect` calls remain in `src/`.
 
 ## Dark mode / Fusion style
 

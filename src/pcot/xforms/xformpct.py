@@ -221,7 +221,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.clearButton.clicked.connect(self.clearPressed)
         self.w.genButton.clicked.connect(self.genPressed)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
-        self.w.stddevsBox.stateChanged.connect(self.stddevsBoxChanged)
+        self.w.stddevsBox.checkStateChanged.connect(self.stddevsBoxChanged)
         self.w.radiusScale.valueChanged.connect(self.radiusScaleChanged)
         self.w.roiLabelSize.valueChanged.connect(self.roiLabelSizeChanged)
         self.w.canvas.canvas.setMouseTracking(True)
@@ -244,7 +244,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.changed()
 
     def stddevsBoxChanged(self, val):
-        self.node.showStdDevs = (val != 0)
+        self.node.showStdDevs = (val == Qt.CheckState.Checked)
         self.changed()
 
     def brushSizeChanged(self, val):
