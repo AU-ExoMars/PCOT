@@ -14,6 +14,7 @@ import pcot.datum as datum
 import pcot.ui as ui
 import pcot.ui.namedialog
 import pcot.utils.deb
+from pcot.ui import theme
 from pcot.xform import XForm, XFormGraph
 import pcot.xform
 
@@ -343,6 +344,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         self.isInput = isInput
         self.index = index
         self.node = node
+        self.setPen(QPen(theme.graphLineColor()))
         self.name = self.typeChanged()
 
     def typeChanged(self):
@@ -424,7 +426,7 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         self.input = inp
         super().__init__(x1, y1, x2, y2)
         self.head = None
-        self.col = Qt.GlobalColor.black if compat else Qt.GlobalColor.red
+        self.col = theme.graphLineColor() if compat else Qt.GlobalColor.red
         self.setPen(QPen(self.col))
         self.makeHead()
 
@@ -493,6 +495,7 @@ def makeConnectors(n, x, y):
             text = GText(n.rect, r.name, n)
             text.setPos(xx + CONNECTORTEXTXOFF, y + INCONNECTORTEXTYOFF)
             text.setFont(mainFont)
+            text.setColour(theme.graphLineColor())
             text.setZValue(1)
             n.inrects[i] = r
             xx += size
@@ -507,6 +510,7 @@ def makeConnectors(n, x, y):
             text = GText(n.rect, r.name, n)
             text.setPos(xx + CONNECTORTEXTXOFF, yy + OUTCONNECTORTEXTYOFF)
             text.setFont(mainFont)
+            text.setColour(theme.graphLineColor())
             text.setZValue(1)
             n.outrects[i] = r
             xx += size
@@ -759,8 +763,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     # out-of-date node recolouring: child nodes of more recently run parents in non-macros!
                     b //= 2
                 n.rect.setBrush(QColor(r, g, b))
-                r, g, b = (0, 0, 0) if n.enabled else (255, 0, 0)
-                rect_pen = QPen(QColor(r,g,b))
+                rect_pen = QPen(theme.graphLineColor() if n.enabled else QColor(255, 0, 0))
                 n.rect.setPen(rect_pen)
 
                 if self.graph.isMacro:

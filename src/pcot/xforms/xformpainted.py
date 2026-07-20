@@ -6,6 +6,7 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
+from pcot.ui import theme
 from pcot.rois import ROIPainted, getRadiusFromSlider
 from pcot.ui.roiedit import PaintedEditor
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
@@ -172,7 +173,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.drawbg.setChecked(self.node.roi.drawbg)
 
         r, g, b = [x * 255 for x in self.node.roi.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
 
     # extra drawing! Preview of brush
     def canvasPaintHook(self, p: QPainter):

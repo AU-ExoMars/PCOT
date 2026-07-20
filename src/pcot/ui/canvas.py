@@ -19,6 +19,7 @@ from pcot import canvasnormalise, dq
 from pcot.assets import getAssetAsFile
 from pcot.datum import Datum
 from pcot.ui import canvasdq
+from pcot.ui import theme
 from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.collapser import Collapser, CollapserSection
 from pcot.ui.spectrumwidget import SpectrumWidget
@@ -968,13 +969,13 @@ class Canvas(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         self.missingFilterDataLabel = QtWidgets.QLabel("Missing filter data")
         self.missingFilterDataLabel.setFont(QFont('Arial', 12, QFont.Weight.Bold))
-        self.missingFilterDataLabel.setStyleSheet("QLabel { background-color : white; color : red; }")
+        self.missingFilterDataLabel.setStyleSheet(theme.warningLabelStyle())
         self.missingFilterDataLabel.setVisible(False)
         layout.addWidget(self.missingFilterDataLabel)
         # layout.setAlignment(self.missingFilterDataLabel, Qt.AlignmentFlag.AlignHCenter)
 
         self.badPixelsLabel = QtWidgets.QLabel('')
-        self.badPixelsLabel.setStyleSheet("QLabel { background-color : white; color : red; }")
+        self.badPixelsLabel.setStyleSheet(theme.warningLabelStyle())
         self.badPixelsLabel.setVisible(False)
         layout.addWidget(self.badPixelsLabel)
         # layout.setAlignment(self.badPixelsLabel, Qt.AlignmentFlag.AlignHCenter)

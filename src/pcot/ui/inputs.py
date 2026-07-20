@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QFileSystemModel
 
 import pcot
 from pcot.ui import uiloader
+from pcot.ui import theme
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +44,7 @@ class MethodSelectButton(QtWidgets.QPushButton):
 
     def showActive(self):
         """Colour the button to show that this method is active"""
-        if self.method.isActive():
-            r, g, b = 200, 200, 255
-        else:
-            r, g, b = 200, 200, 200
-        self.setStyleSheet(
-            f"border-style: outset; padding: 4px; border-width:1px; border-color:black; background-color:rgb({r},{g},{b})")
+        self.setStyleSheet(theme.methodButtonStyle(self.method.isActive()))
 
 
 class InputWindow(QtWidgets.QMainWindow):

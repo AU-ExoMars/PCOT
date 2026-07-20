@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QComboBox
 import pcot
 from pcot import dq
 from pcot.datum import Datum
+from pcot.ui import theme
 from pcot.parameters.taggedaggregates import taggedColourType, TaggedDictType
 from pcot.rois import ROIPainted
 from pcot.sources import nullSourceSet
@@ -250,7 +251,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
         self.w.captionTop.setChecked(p.captiontop)
         self.w.drawbg.setChecked(p.drawbg)
         r, g, b = [x * 255 for x in p.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
 
         self.populateBandList()
 

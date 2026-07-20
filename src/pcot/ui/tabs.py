@@ -15,6 +15,7 @@ from PySide6.QtGui import QFont, QAction
 
 from pcot import ui
 from pcot.ui import uiloader
+from pcot.ui import theme
 from pcot.ui.canvas import Canvas
 
 logger = logging.getLogger(__name__)
@@ -205,12 +206,11 @@ class Tab(QtWidgets.QWidget):
         lowerLay = QtWidgets.QHBoxLayout()
         self.lower.setLayout(lowerLay)
         lay.addWidget(self.lower)
-        self.lower.setStyleSheet("background-color: rgb(240, 240, 240);")
 
         # default invisible error
         self.errorText = QtWidgets.QLabel("")
         self.errorText.setFont(tabErrorFont)
-        self.errorText.setStyleSheet("QLabel{color: rgb(200, 0, 0);}")
+        self.errorText.setStyleSheet(theme.errorLabelStyle())
         lowerLay.addWidget(self.errorText)
         self.errorText.setVisible(False)
         # much of this is pointless, because the error message controls set the visibility.
@@ -285,7 +285,7 @@ class Tab(QtWidgets.QWidget):
             self.enableRadioButton.setChecked(self.node.enabled)
             # if the node is enabled, the run button is disabled because the node will run automatically.
             self.runButton.setDisabled(self.node.enabled)
-            self.runButton.setStyleSheet("background-color: rgb(200, 100, 100);" if not self.node.enabled else "")
+            theme.setDisabledRunStyle(self.runButton, not self.node.enabled)
 
     def nodeDeleted(self):
         """node has been deleted, remove me from tabs"""

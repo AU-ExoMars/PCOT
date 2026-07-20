@@ -13,6 +13,7 @@ from pcot.datum import Datum
 from pcot.cameras.filters import wav2RGB, Filter
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.ui import uiloader
+from pcot.ui import theme
 from pcot.ui.tabs import Tab
 from pcot.utils import SignalBlocker
 from pcot.utils.spectrum import SpectrumSet
@@ -349,7 +350,7 @@ class TabSpectrum(ui.tabs.Tab):
             ax.set_yticks([x for x in ax.get_yticks() if x >= 0])
 
         self.w.mpl.draw()
-        self.w.replot.setStyleSheet("")
+        theme.setStaleStyle(self.w.replot, False)
 
     def save(self):
         self.w.mpl.save()
@@ -426,7 +427,7 @@ class TabSpectrum(ui.tabs.Tab):
 
     def markReplotReady(self):
         """make the replot button red"""
-        self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.replot, True)
 
     def onNodeChanged(self):
         # this is done in replot - the user replots this node manually because it takes

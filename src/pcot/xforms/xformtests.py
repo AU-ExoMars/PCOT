@@ -17,6 +17,7 @@ from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import nullSourceSet
 from pcot.ui.tablemodel import TableModelDataClass, ComboBoxDelegate, DQDelegate, DQDialog
+from pcot.ui import theme
 from pcot.utils.annotations import IndexedPointAnnotation
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
@@ -657,11 +658,11 @@ class TabStringTest(pcot.ui.tabs.Tab):
         self.nodeChanged()
 
     def textChanged(self):
-        self.w.finishedButton.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.finishedButton, True)
 
     def onNodeChanged(self):
         self.w.expected.setPlainText(self.node.params.string)
-        self.w.finishedButton.setStyleSheet("")
+        theme.setStaleStyle(self.w.finishedButton, False)
         self.w.actual.setPlainText(self.node.inp)
 
     def editFinished(self, t):

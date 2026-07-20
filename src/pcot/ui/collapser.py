@@ -65,7 +65,7 @@ class CollapserSection(QtWidgets.QWidget):
             headerLine.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
 
         self.contentArea.setStyleSheet("""
-        QScrollArea { background-color: white; border: none; }
+        QScrollArea { background-color: palette(base); border: none; }
         """)
         self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                                        QtWidgets.QSizePolicy.Policy.Minimum)

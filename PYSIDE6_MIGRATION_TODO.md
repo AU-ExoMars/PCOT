@@ -174,42 +174,66 @@ migration is merged and verified.
   never engages); Fusion is palette-driven and follows the system colour scheme (Qt 6.5+),
   while still keeping the compact stacked spin-box arrows that motivated overriding the
   `windows11` default in the first place.
-- [x] **Interim: light colour scheme pinned** in `app.py:run()` via
-  `app.styleHints().setColorScheme(Qt.ColorScheme.Light)` (`QStyleHints.setColorScheme` is
-  Qt 6.8+, which `pyproject.toml`'s `PySide6 = "^6.8"` guarantees). This stops a dark system
-  theme applying to PCOT until the stylesheet audit below is done, so the Fusion switch
-  lands with no visual change. Remove the pin as the final step of that audit.
-- [ ] **Audit hardcoded light-assuming stylesheet colours, then remove the light pin.**
-  Many `setStyleSheet` calls hardcode colours that would clash with a dark palette. The
-  plan, by category:
+- [x] ~~Interim: light colour scheme pinned~~ — pinned via
+  `app.styleHints().setColorScheme(Qt.ColorScheme.Light)` while the audit below was done,
+  then **removed** (2026-07-20) now that the audit is complete; `app.py:run()` no longer
+  touches the colour scheme at all and just follows the system setting.
+- [x] **Audit hardcoded light-assuming stylesheet colours, then remove the light pin.**
+  Done 2026-07-20. New `pcot/ui/theme.py` holds every colour that doesn't map onto a Qt
+  palette role, with light/dark variants picked via `isDarkMode()` (reads
+  `QApplication.styleHints().colorScheme()`, called fresh each time — no live
+  scheme-switching support, as planned):
+  - *Stale/needs-rerun red buttons* (`xformexpr`, `xformspectrum`, `xformhist`,
+    `xformreflectance`, `xformtests`) → `theme.setStaleStyle(button, stale)`. `ui/tabs.py`'s
+    generic Run button (a slightly different red, since it means "disabled by autorun and
+    not yet run" rather than "click to update") → `theme.setDisabledRunStyle(button,
+    needsRun)`, kept as a separate constant rather than merged into the first to avoid any
+    visible colour change.
+  - *Warning labels* (`ui/canvas.py`'s missing-filter-data / bad-pixels labels, red-on-white)
+    → `theme.warningLabelStyle()`.
+  - *Error text* (`ui/tabs.py`'s dark-red error label — not called out explicitly in the
+    original plan, but the same problem: low contrast on a dark background) →
+    `theme.errorLabelStyle()`.
+  - *Macro/favourite tagging* — the yellow palette-button tint (`palette.py`, was
+    `rgb(220,220,140)`) → `theme.macroTagStyle()`; the pale-yellow macro editor window
+    background (`ui/graphview.py`, was `rgb(255,255,220)`) → `theme.macroWindowStyle()`.
+  - *Input method-select buttons* (`ui/inputs.py`'s active/inactive highlighting, not called
+    out explicitly in the original plan but the same category) → `theme.methodButtonStyle
+    (active)`; the hardcoded `border-color:black` became `palette(mid)` so the border doesn't
+    vanish/clash on a dark palette.
   - *Colour swatch buttons* (`xformrect`, `xformmultidot`, `xformpoly`, `xforminset`,
-    `xformpainted`, `xformroiexpr`, `xformroidq`, `xformcolourmap`, `xformcirc`) show a
-    user-chosen annotation colour — these are data, not theming, so keep them literal;
-    just also set a contrasting text colour so the label reads on any swatch
-    (pre-existing issue).
-  - *Semantic status colours* — the "stale, needs re-run" red buttons
-    (`rgb(255,100,100)` in `xformexpr`, `xformspectrum`, `xformhist`, `xformreflectance`,
-    `xformtests`; `rgb(200,100,100)` in `ui/tabs.py`), the red-on-white warning labels in
-    `ui/canvas.py`, the yellow group headers in `palette.py` and help prompt in
-    `ui/graphview.py`. Fix via a small new `pcot/ui/theme.py`: detect the scheme once at
-    startup (`QApplication.styleHints().colorScheme()`), expose named colour constants
-    (`STALE_BUTTON_BG`, `WARNING_FG`/`BG`, `GROUP_HEADER_BG`, …) with light/dark variants,
-    plus helpers like `setStaleStyle(button, stale: bool)` for the toggle pattern
-    duplicated across ~6 files.
-  - *Colours restating the default* — e.g. `ui/tabs.py`'s `rgb(240,240,240)` lower area is
-    essentially the stock light window colour: delete it, or where a distinct tint is
-    genuinely wanted use QSS `palette(role)` syntax (`background-color: palette(window)`
-    etc.), which tracks the palette with no Python-side logic. Prefer `palette(role)`
-    wherever a colour maps onto a palette role; the theme module is for colours that
-    don't (yellows, status reds).
-  - Deliberately **not** supporting live scheme switching (`colorSchemeChanged` +
-    re-applying everything): read the scheme at startup and be done.
-  - Decide deliberately whether matplotlib widgets (`mplwidget.py`) keep white-background
-    plots in dark mode (probably yes — better for export).
-  - Rejected alternative: one app-wide QSS with dynamic properties
-    (`QPushButton[stale="true"]`) — the "proper Qt" route, but PCOT toggles styles
-    imperatively all over, so it means touching every call site plus
-    unpolish/repolish boilerplate for less benefit than the theme module.
+    `xformpainted`, `xformroiexpr`, `xformroidq`, `xformcolourmap`, `xformcirc`,
+    `xformcomment`) — genuine user-chosen data, kept literal via `theme.setSwatchColour(button,
+    r, g, b)`, which also fixes the pre-existing issue of 8 of the 9 not setting a
+    contrasting label colour (`xformcomment` already did this per-colour; the others just
+    had no text-colour rule at all, so a very light or very dark chosen colour could make
+    the "Colour" caption unreadable — now all 9 go through the same contrast logic).
+  - *Colours restating the default* — `ui/tabs.py`'s `rgb(240,240,240)` lower-panel
+    background (essentially the stock light window colour) deleted outright;
+    `ui/collapser.py`'s hardcoded `background-color: white` on `CollapserSection`'s content
+    area changed to `palette(base)`.
+  - **Node graph view (`ui/graphscene.py`)** — found by Jim visually testing dark mode after
+    the rest of the audit: the `QGraphicsScene` canvas itself already follows the palette
+    (dark grey via Fusion in dark mode), but connector arrows, connector name labels, node
+    box borders, and connector-pad (`GConnectRect`) borders are drawn with `QPen`/`QBrush`
+    directly, not QSS, so they don't pick up the palette automatically and were hardcoded
+    black — invisible against a dark canvas. Added `theme.graphLineColor()` (black in light
+    mode, light grey in dark mode) and used it for: `GArrow`'s pen for compatible
+    connections (incompatible stays red — semantic, fine on either background), the two
+    `GText` connector-name labels in `makeConnectors`, `GMainRect`'s border pen in
+    `setColourToState()` (was unconditionally `(0,0,0)` when enabled), and `GConnectRect`'s
+    border pen (previously unset, so it used Qt's default black cosmetic pen — the last of
+    these was missed on the first pass and caught by Jim testing again). Node box *fill* and
+    title text were already fine untouched: `getDefaultRectColour`/`getTextColour` default
+    to white/black and the box is always a fixed light colour regardless of scheme, so black
+    title text inside it never had a contrast problem. Confirmed working in both light and
+    dark mode by Jim (2026-07-20).
+  - matplotlib widgets (`mplwidget.py`) were checked and already don't override any
+    background — plots stay on matplotlib's own white figure background regardless of the
+    Qt palette, which is the deliberate choice (better for export).
+  - Verified: full pytest matches the established baseline (1018 passed, 2 xfailed, only the
+    pre-existing unrelated `test_disabled_nodes_dont_run` failure); all touched modules
+    import cleanly.
 
 ## pytest run
 

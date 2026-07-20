@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QInputDialog
 
 from pcot.datum import Datum
 import pcot.ui.tabs
+from pcot.ui import theme
 from pcot.imagecube import ImageCube
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, taggedColourType, taggedRectType, Maybe
 from pcot.rois import ROI
@@ -600,7 +601,7 @@ class TabColourMap(pcot.ui.tabs.Tab):
         self.w.hSpin.setValue(h)
         self.w.orientCombo.setCurrentText('Vertical' if self.node.params.vertical else 'Horizontal')
         r, g, b = [x * 255 for x in self.node.params.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
 
         img = self.node.getOutput(0)
         # hack here to ensure that uichange gets called when the canvas changes gamma

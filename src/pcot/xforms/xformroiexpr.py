@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from pcot.rois import ROICircle, ROIPainted, ROIPoly, ROIRect, ROI
 import pcot.ui
 from pcot import ui
+from pcot.ui import theme
 from pcot.datum import Datum
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ImageCube
@@ -321,7 +322,7 @@ class Model(QAbstractTableModel):
 
 def setColourButton(but, col):
     r, g, b = [x * 255 for x in col]
-    but.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
+    theme.setSwatchColour(but, r, g, b)
 
 
 class TabROIExpr(Tab):

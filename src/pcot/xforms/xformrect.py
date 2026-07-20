@@ -5,6 +5,7 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
+from pcot.ui import theme
 from pcot.rois import ROIRect
 from pcot.ui.roiedit import RectEditor
 from pcot.parameters.taggedaggregates import TaggedDict, TaggedDictType
@@ -191,7 +192,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.captionTop.setChecked(roi.labeltop)
         self.w.drawbg.setChecked(roi.drawbg)
         r, g, b = [x * 255 for x in roi.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
         bb = roi.bb()
         if bb is not None:
             x, y, w, h = [str(x) for x in (bb.x, bb.y, bb.w, bb.h)]

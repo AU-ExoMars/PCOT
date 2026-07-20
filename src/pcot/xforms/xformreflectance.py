@@ -13,6 +13,7 @@ from pcot.calib import SimpleValue
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
 from pcot.ui.tabledialog import TableDialog
+from pcot.ui import theme
 from pcot.utils import SignalBlocker, image
 from pcot.utils.maths import pooled_sd
 from pcot.utils.table import Table
@@ -333,7 +334,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def changed(self):
         # when the node change is run, we need to clear the recalc button's style.
         super().changed()
-        self.w.recalcButton.setStyleSheet("")
+        theme.setStaleStyle(self.w.recalcButton, False)
 
     def recalcButtonClicked(self):
         # recalculate; call changed() so that the new values are copied into the node and the node runs,
@@ -344,7 +345,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def mustRecalc(self):
         # if an angle etc. changed we need to recalculate the node and all its children  - typically slow,
         # so we make it a user action, indicating that necessity by making the recalc button red.
-        self.w.recalcButton.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.recalcButton, True)
 
     def showMCClicked(self):
         # open a dialog containing a single text edit box with the gradient and intercept values
@@ -444,7 +445,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def markReplotReady(self):
         """make the replot button red"""
-        self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.replot, True)
 
     @staticmethod
     def set_axis_data(ax, sep_plots=False):
@@ -513,7 +514,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.mpl.draw()
 
     def replot(self):
-        self.w.replot.setStyleSheet("")
+        theme.setStaleStyle(self.w.replot, False)
         # the MPL widget creates a default subplot, let's clear it...
         self.w.mpl.fig.clf()
         if self.node.params.sep_plots:
@@ -574,4 +575,4 @@ class TabReflectance(pcot.ui.tabs.Tab):
             ax.legend(loc="lower right")
 
         self.w.mpl.draw()
-        self.w.replot.setStyleSheet("")
+        theme.setStaleStyle(self.w.replot, False)

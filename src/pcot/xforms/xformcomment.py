@@ -5,6 +5,7 @@ from PySide6.QtGui import QColor, QFont, QPen
 
 from pcot import ui
 from pcot.parameters.taggedaggregates import TaggedDictType, taggedColourType
+from pcot.ui import theme
 from pcot.ui.tabs import Tab
 from pcot.utils.colour import colDialog
 from pcot.xform import xformtype, XFormType
@@ -112,12 +113,8 @@ class XFormComment(XFormType):
 
 
 def setButtonColour(b, col):
-    b.setAutoFillBackground(True)
     r1, g1, b1 = [x*255 for x in col.get()]
-
-    t = 255 if r1 + g1 + b1 < (128 * 3) else 0
-    s = f"background-color: rgb({r1},{g1},{b1}); color: rgb({t},{t},{t})"
-    b.setStyleSheet(s)
+    theme.setSwatchColour(b, r1, g1, b1)
 
 
 

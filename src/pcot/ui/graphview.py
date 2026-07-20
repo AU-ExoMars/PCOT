@@ -6,6 +6,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMenu
 import logging
 
+from pcot.ui import theme
+
 logger = logging.getLogger(__name__)
 
 class GraphView(QtWidgets.QGraphicsView):
@@ -21,7 +23,7 @@ class GraphView(QtWidgets.QGraphicsView):
         if it is showing a macro."""
         self.window = win
         if macroWindow:
-            self.setStyleSheet("background-color:rgb(255,255,220)")
+            self.setStyleSheet(theme.macroWindowStyle())
 
     def wheelEvent(self, evt):
         """handle mouse wheel zooming"""

@@ -11,6 +11,7 @@ from PySide6.QtGui import QAction
 import pcot.assets
 import pcot.macros as macros
 import pcot.ui as ui
+from pcot.ui import theme
 from pcot.ui.collapser import Collapser
 from pcot.xform import XFormType, XFormException
 from pcot.xforms.favourite import Favourite
@@ -132,7 +133,7 @@ class PaletteButtonFavourite(PaletteButtonBase):
         super().__init__(name, view, parent=parent)
         if PaletteButtonFavourite.removeAct is None:
             PaletteButtonFavourite.removeAct = QAction("Remove from favourites")
-        self.setStyleSheet("background-color:rgb(220,220,140)")
+        self.setStyleSheet(theme.macroTagStyle())
         self.fav = fav
         self.name = name
         self.palette = palette
@@ -215,7 +216,7 @@ class Palette:
                 b = PaletteButton(k, alltypes[k], self.view)
                 self.widgetsByName[k] = b
                 if g == 'macros':
-                    b.setStyleSheet("background-color:rgb(220,220,140)")
+                    b.setStyleSheet(theme.macroTagStyle())
                 layout.addWidget(b)
             self.collapser.addSection(g, layout)
         self.collapser.end()

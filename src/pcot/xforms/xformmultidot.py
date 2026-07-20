@@ -11,6 +11,7 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
+from pcot.ui import theme
 from pcot.datum import Datum
 from pcot.rois import ROICircle, ROIPainted, ROI
 from pcot.ui.variantwidget import VariantWidget
@@ -499,7 +500,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.tolerance.setValidator(QDoubleValidator(0, 1000, 4, self.w.tolerance))
 
         r, g, b = [x * 255 for x in self.node.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
 
     def canvasPaintHook(self, p: QPainter):
         """Called after the canvas has painted the image, but before it has painted the ROIs. We use

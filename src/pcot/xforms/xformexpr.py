@@ -4,6 +4,7 @@ import logging
 from pcot import ui
 from pcot.datum import Datum
 import pcot.ui.tabs
+from pcot.ui import theme
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ChannelMapping
 from pcot.parameters.taggedaggregates import TaggedDictType
@@ -309,7 +310,7 @@ class TabExpr(pcot.ui.tabs.Tab):
 
     def exprChanged(self):
         # set a red background to show the user that they have to click run
-        self.w.run.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.run, True)
         # we don't call changed() or we'll run the expr on every key press!
 
     def run(self):
@@ -317,7 +318,7 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.node.params.expr = self.w.expr.toPlainText()
         self.node.rect.setSizeToText()
         # clear the RUN button's red background
-        self.w.run.setStyleSheet("")
+        theme.setStaleStyle(self.w.run, False)
         self.changed()
         # rebuild the tab titles.
         ui.mainwindow.MainUI.rebuildAll(scene=False)

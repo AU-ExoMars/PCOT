@@ -4,6 +4,7 @@ from PySide6.QtGui import QIntValidator
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
+from pcot.ui import theme
 from pcot.rois import ROICircle
 from pcot.ui.roiedit import CircleEditor
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
@@ -162,7 +163,7 @@ class TabCirc(pcot.ui.tabs.Tab):
         self.w.captionTop.setChecked(roi.labeltop)
         self.w.drawbg.setChecked(roi.drawbg)
         r, g, b = [x * 255 for x in roi.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
         c = roi.get()
         if c is not None:
             x, y, r = [str(x) for x in c]
