@@ -225,9 +225,13 @@ migration is merged and verified.
 
 ## Docs/examples still referencing PySide2 (non-blocking)
 
-- [ ] `mkdocs/docs/devguide/plugins.md`, `mkdocs/docs/gettingstarted/genbrushes.py`,
-  `mkdocs/docs/gettingstarted/installrun.md` — published docs with PySide2 example code/
-  instructions. Not load-bearing for the app itself, but will mislead anyone following them.
+- `mkdocs/docs/devguide/plugins.md` and `mkdocs/docs/gettingstarted/installrun.md` have
+  since been updated elsewhere and no longer mention PySide2 (re-checked 2026-07-19).
+- [x] `mkdocs/docs/gettingstarted/genbrushes.py` — imports switched to `PySide6`; also
+  updated the two unscoped enum uses it had (`QImage.Format_RGB888` →
+  `QImage.Format.Format_RGB888`, `Qt.white` → `Qt.GlobalColor.white`), verified against the
+  live PySide6 shim. Only other `.py` files under `mkdocs/` are mkdocs build tooling with no
+  Qt/PySide usage, so nothing else to migrate there.
 
 ## Functional verification (once rename is done)
 
