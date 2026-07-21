@@ -1287,9 +1287,9 @@ def pix(img,x,y):
     if x<0 or y<0 or x>=img.w or y>=img.h:
         return Datum.null
 
-    n = img.img[x,y]
-    u = img.uncertainty[x,y]
-    dq = img.dq[x,y]
+    n = img.img[y,x]
+    u = img.uncertainty[y,x]
+    dq = img.dq[y,x]
     r = Value(n,u,dq)
 
     return Datum(Datum.NUMBER,r,sources=img.sources)
