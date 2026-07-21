@@ -1,6 +1,23 @@
+from typing import Optional
+
 import numpy as np
 
 """Various low-level image utilities"""
+
+
+def bitdepth_max(bitdepth: int, container_bits: Optional[int], leftjustified: bool) -> int:
+    """Given a number of significant bits and the bit-width of the container the data is stored in,
+    return the maximum representable value - used to normalise integer image/raw data into the range 0-1.
+
+    If leftjustified is True and the container is wider than bitdepth, the significant bits are assumed
+    to occupy the top of the container (so the unused low bits are always zero, as is common when e.g. a
+    10-bit sensor reading is stored/stretched to fill a 16-bit container) and the maximum value is scaled
+    up accordingly. Otherwise the significant bits are assumed to occupy the bottom of the container as
+    normal (so the value ranges directly from 0 to 2^bitdepth-1)."""
+    maxval = (1 << bitdepth) - 1
+    if leftjustified and container_bits is not None and container_bits > bitdepth:
+        maxval <<= (container_bits - bitdepth)
+    return maxval
 
 
 def imgsplit(img):

@@ -53,6 +53,8 @@ multifileDictType = TaggedDictType(
     filter_pattern=("pattern for filter identification", Maybe(str), None),
     camera=("name of camera to use", Maybe(str), pcot.config.data.default_camera),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
+    left_justified=("whether the significant bits (given by bit_depth) occupy the top of their container, "
+                    "rather than the bottom", bool, True),
     preset=("preset name for some params (can be overridden by other params)", Maybe(str), None),
     raw=("parameters for loading raw data", TaggedDictType(
         format=("integer format (u16 u8 or f32)", str, "u16"),  # default is uint16

@@ -328,11 +328,17 @@ class CannotLoadImageBadFormatException(CannotLoadImageException):
         super().__init__(fname, "not a valid raster format")
 
 
-def load_rgb_image(fname:str|Path, bitdepth=None, debayer_algo=None, debayer_pattern=None,
+def load_rgb_image(fname:str|Path, bitdepth=None, leftjustified=False, debayer_algo=None, debayer_pattern=None,
                    neg_method="Leave") -> np.ndarray:
     """This is used by ImageCube to load its image data. It's a function because it's
     also used by the multifile loader. Can also debayer given an algorithm and pattern. In this case only
-    the first band will be used (see pcot.utils.demosaicing). See pcot.dataformats.load.rgb()"""
+    the first band will be used (see pcot.utils.demosaicing). See pcot.dataformats.load.rgb()
+
+    - bitdepth: how many bits are actually significant (None means use the full container width - 8 or 16
+      bits depending on the image's own data type).
+    - leftjustified: if True, the significant bits are assumed to occupy the top of the container (i.e. the
+      low bits are always zero) rather than the bottom - see pcot.utils.image.bitdepth_max.
+    """
     fname = str(fname)  # fname could potentially be some kind of Path object.
     debayer_pattern = pcot.config.data.defaultbayerpattern if not debayer_pattern else debayer_pattern
 
@@ -349,11 +355,17 @@ def load_rgb_image(fname:str|Path, bitdepth=None, debayer_algo=None, debayer_pat
         img = image.imgmerge((img, img, img))
     # get the scaling factor, which depends on the bitdepth if one is provided, or will be the full bitdepth of
     # the image if not.
-    if bitdepth is not None:
-        scale = 2 ** bitdepth - 1
-    elif img.dtype == np.uint8:
-        scale = 255.0
+    if img.dtype == np.uint8:
+        container_bits = 8
     elif img.dtype == np.uint16:
+        container_bits = 16
+    else:
+        container_bits = None
+    if bitdepth is not None and container_bits is not None:
+        scale = image.bitdepth_max(bitdepth, container_bits, leftjustified)
+    elif container_bits == 8:
+        scale = 255.0
+    elif container_bits == 16:
         scale = 65535.0
     else:
         scale = 1.0
@@ -519,16 +531,16 @@ class ImageCube(SourcesObtainable):
         return self
 
     @classmethod
-    def load(cls, fname:str|Path, mapping, sources, bitdepth=None, debayer_algo='NONE', debayer_pattern=None,
-             neg_method="Leave"):
+    def load(cls, fname:str|Path, mapping, sources, bitdepth=None, leftjustified=False, debayer_algo='NONE',
+             debayer_pattern=None, neg_method="Leave"):
         """
         Load an RGB image using opencv's imread. Can also debayer - see pcot.utils.demosaicing.
         For more details, see pcot.dataformats.load.rgb
         Sources must be provided.
         """
         logger.info(f"ImageCube load: {str(fname)}")
-        img = load_rgb_image(fname, bitdepth=bitdepth, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern,
-                             neg_method=neg_method)
+        img = load_rgb_image(fname, bitdepth=bitdepth, leftjustified=leftjustified, debayer_algo=debayer_algo,
+                             debayer_pattern=debayer_pattern, neg_method=neg_method)
         # create sources if none given
         if sources is None:
             sources = MultiBandSource([Source().setBand('R'),

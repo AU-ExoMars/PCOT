@@ -20,7 +20,7 @@
       <bool>false</bool>
      </property>
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="handleWidth">
       <number>10</number>
@@ -41,7 +41,7 @@ most six
 for output)</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
          </property>
         </widget>
        </item>
@@ -68,7 +68,7 @@ for output)</string>
           <string>Selected files</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
          </property>
         </widget>
        </item>
@@ -119,24 +119,26 @@ Settings</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="1" colspan="2">
-        <widget class="QComboBox" name="bitdepth">
-         <item>
-          <property name="text">
-           <string>Full</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>10 bits</string>
-          </property>
-         </item>
+       <item row="6" column="1">
+        <widget class="QComboBox" name="bitdepth"/>
+       </item>
+       <item row="6" column="2">
+        <widget class="QCheckBox" name="leftJustified">
+         <property name="toolTip">
+          <string>If checked, the significant bits are assumed to occupy the top of their container (e.g. a 10-bit value stored in the top of a 16-bit word, with the bottom 6 bits always zero) rather than the bottom.</string>
+         </property>
+         <property name="text">
+          <string>Left-justified</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item row="3" column="1" colspan="2">
         <widget class="QListView" name="filelist">
          <property name="editTriggers">
-          <set>QAbstractItemView::NoEditTriggers</set>
+          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
          </property>
         </widget>
        </item>

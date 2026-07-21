@@ -242,12 +242,13 @@ class Document:
         """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
 
-    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camera=None, bitdepth=None, rawloader=None):
+    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camera=None, bitdepth=None,
+                      leftjustified=False, rawloader=None):
         """set graph's input to multiple files"""
         camera = camera or pcot.config.data.default_camera
 
         def fn(method):
-            method.setFileNames(directory, fnames, filterpat, camera, bitdepth)
+            method.setFileNames(directory, fnames, filterpat, camera, bitdepth, leftjustified)
             method.setRawLoader(rawloader)
 
 

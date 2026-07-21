@@ -99,6 +99,7 @@ def multifile(directory: Path|str,
               preset: Optional[str] = None,
               filterpat: str = None,
               bitdepth: int = None,
+              leftjustified: bool = False,
               camera: str = None,
               rawloader: Optional[RawLoader] = None,
               inpidx: int = None,
@@ -122,6 +123,9 @@ def multifile(directory: Path|str,
     - filterpat: a regular expression pattern that extracts the filter name from the filename
     - bitdepth: how many bits are actually used in the image - we divide by 2^bitdepth-1 to normalise. If none,
         we use the "nominal" depth (8 or 16).
+    - leftjustified: if True, the significant bits given by bitdepth are assumed to occupy the top of
+        their container (e.g. a 10-bit value stored in the top of a 16-bit word, with the bottom 6 bits
+        always zero) rather than the bottom. Has no effect if bitdepth is None.
     - inpidx: the input index to use or None if not connected to a graph input
     - mapping: the channel mapping to use or None if the default
     - camera: the name of the camera to use for filter name lookup etc. If not set or None, default camera is used
@@ -180,14 +184,21 @@ def multifile(directory: Path|str,
                 self.filterpat = filterpat
                 self.bitdepth = bitdepth
                 self.rawloader = rawloader
+                self.leftjustified = leftjustified
 
             def applyPreset(self, d: Dict[str, Any]):
                 # override the values with the ones from the preset file, but
-                # only if they haven't been set already
+                # only if they haven't been set already.
+                # Note that this can be called with d=None - loadPresetByName() calls applyPreset()
+                # itself and we then get called again with its (empty) return value, so this is a
+                # deliberate no-op in that case.
+                if d is None:
+                    return
                 logger.debug(f"Applying preset: {d}")
                 self.camera = self.camera or d['camera']
                 self.filterpat = self.filterpat or d['filterpat']
-                self.bitdepth = self.bitdepth or (None if d is None else d.get('bitdepth', None))
+                self.bitdepth = self.bitdepth or d.get('bitdepth', None)
+                self.leftjustified = self.leftjustified or d.get('leftjustified', False)
                 if self.rawloader is None:
                     self.rawloader = RawLoader()
                     self.rawloader.deserialise(d['rawloader'])
@@ -206,6 +217,7 @@ def multifile(directory: Path|str,
         else:
             camera = r.camera or pcot.config.data.default_camera
         rawloader = r.rawloader
+        leftjustified = r.leftjustified
 
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""
@@ -272,11 +284,11 @@ def multifile(directory: Path|str,
                         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
             def load(path: Path) -> np.ndarray:
-                logger.debug(f"Loading {path} at bitdepth {bitdepth}")
+                logger.debug(f"Loading {path} at bitdepth {bitdepth}, leftjustified={leftjustified}")
                 if rawloader is not None and rawloader.is_raw_file(path):
-                    return rawloader.load(path, bitdepth=bitdepth)
+                    return rawloader.load(path, bitdepth=bitdepth, leftjustified=leftjustified)
                 else:
-                    return load_rgb_image(path, bitdepth=bitdepth)
+                    return load_rgb_image(path, bitdepth=bitdepth, leftjustified=leftjustified)
 
             if cache is None:
                 img = load(path)

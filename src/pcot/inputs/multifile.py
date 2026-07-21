@@ -55,6 +55,11 @@ class MultifileInputMethod(InputMethod):
         # are used, set this to 10. The data will then by divided by 1023 (2^10-1) rather than 65535 (2^16-1).
         # If it is None, the data is always divided by 65535 for 16 bit data, 255 for 8 bit.
         self.bitdepth = None
+        # if True, the significant bits given by bitdepth are assumed to occupy the top of their container
+        # (e.g. a 10-bit value stored in the top of a 16-bit word, with the bottom 6 bits always zero) rather
+        # than the bottom. Has no effect if bitdepth is None. Defaults on for new inputs, but old documents
+        # which predate this setting are loaded as if it were off, to preserve their existing appearance.
+        self.leftjustified = True
         self.camera = pcot.config.data.default_camera
         self.filterpat = pcot.config.data.multifile_pattern
         self.filterre = None
@@ -91,9 +96,10 @@ class MultifileInputMethod(InputMethod):
         img = load.multifile(self.dir, self.files,
                              filterpat=self.filterpat,
                              bitdepth=self.bitdepth,
+                             leftjustified=self.leftjustified,
                              inpidx=self.input.idx,
                              mapping=self.mapping,
-                             cache=self.cachedFiles,
+                             cache={},     # TODO put the cache back!!!! Not being invalidated making debug hard
                              rawloader=self.rawLoader,
                              camera=self.camera)
         logger.debug(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
@@ -103,16 +109,19 @@ class MultifileInputMethod(InputMethod):
         return "Multifile"
 
     # used from external code. Filterpat == none means leave unchanged.
-    def setFileNames(self, directory, fnames, filterpat=None, camera=None, bitdepth=None) -> InputMethod:
+    def setFileNames(self, directory, fnames, filterpat=None, camera=None, bitdepth=None,
+                     leftjustified=False) -> InputMethod:
         """This is used in scripts to set the input method to a read a set of files. It also
         takes a camera name (e.g. PANCAM) and a filter pattern. The filter pattern is a regular
         expression that is used to extract the filter name from the filename. See the class documentation
-        for more information. We also accept bitdepth - None means the full depth is used."""
+        for more information. We also accept bitdepth - None means the full depth is used - and
+        leftjustified, which says whether the significant bits occupy the top of the container."""
 
         self.dir = directory
         self.files = fnames
         self.camera = camera
         self.bitdepth = bitdepth
+        self.leftjustified = leftjustified
         if filterpat is not None:
             self.filterpat = filterpat
         self.mapping = ChannelMapping()
@@ -126,6 +135,7 @@ class MultifileInputMethod(InputMethod):
             'dir': str(self.dir),
             'files': self.files,
             'bitdepth': self.bitdepth,
+            'leftjustified': self.leftjustified,
             'filterpat': self.filterpat,
             'camera': self.camera,
             'rawloader': self.rawLoader.serialise(),
@@ -140,6 +150,9 @@ class MultifileInputMethod(InputMethod):
         self.dir = Path(data['dir'])
         self.files = data['files']
         self.bitdepth = data.get('bitdepth', None)
+        # old documents which predate this setting are loaded as if it were off, to preserve
+        # their existing appearance rather than silently changing already-saved images.
+        self.leftjustified = data.get('leftjustified', False)
         self.filterpat = data['filterpat']
         if 'rawloader' in data:
             self.rawLoader.deserialise(data['rawloader'])
@@ -171,6 +184,7 @@ class MultifileInputMethod(InputMethod):
                     self.filterpat = None
                     self.bitdepth = None
                     self.rawloader = None
+                    self.leftjustified = False
 
                 def applyPreset(self, preset: Dict[str, Any]):
                     self.camera = preset['camera'] if 'camera' in preset else preset['filterset']  # legacy issue
@@ -178,6 +192,7 @@ class MultifileInputMethod(InputMethod):
                     self.rawloader.deserialise(preset['rawloader'])
                     self.filterpat = preset['filterpat']
                     self.bitdepth = preset.get('bitdepth', None)
+                    self.leftjustified = preset.get('leftjustified', False)
 
             preset = Preset()
             # will throw if we can't find the preset. Otherwise it will apply the loaded
@@ -189,6 +204,7 @@ class MultifileInputMethod(InputMethod):
             self.filterpat = preset.filterpat
             self.bitdepth = preset.bitdepth
             self.rawLoader = preset.rawloader
+            self.leftjustified = preset.leftjustified
 
         # get the files
         self._getFilesFromParameterDict(m)
@@ -201,6 +217,8 @@ class MultifileInputMethod(InputMethod):
             self.camera = m.camera
         if m.isNotDefault('bit_depth'):
             self.bitdepth = m.bit_depth
+        if m.isNotDefault('left_justified'):
+            self.leftjustified = m.left_justified
         # and the raw parameters block. Ugly, but comprehensible.
         if m.raw is not None:
             p = m.raw
@@ -235,6 +253,11 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.model = None
         # all the files in the current directory (which match the filters)
         self.allFiles = []
+        # populate bit depth widget
+        self.bitdepth.addItem("Full")
+        for x in range(10,16):
+            self.bitdepth.addItem(f"{x} bits")
+
         # these record the image last clicked on - we need to do that so we can
         # regenerate it with new sources if the camera is changed
         self.activatedImagePath = None
@@ -243,6 +266,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.filelist.activated.connect(self.itemActivated)
         self.filterpat.editingFinished.connect(self.patChanged)
         self.bitdepth.currentTextChanged.connect(self.bitdepthChanged)
+        self.leftJustified.toggled.connect(self.leftJustifiedChanged)
         self.cameraCombo.currentIndexChanged.connect(self.cameraChanged)
         self.loaderSettingsButton.clicked.connect(self.loaderSettings)
         self.loaderSettingsText.setText(str(self.method.rawLoader))
@@ -274,6 +298,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.method.rawLoader.deserialise(preset['rawloader'])
         self.method.filterpat = preset['filterpat']
         self.method.bitdepth = preset.get('bitdepth', None)
+        self.method.leftjustified = preset.get('leftjustified', False)
         self.onInputChanged()
 
     def fetchPreset(self):
@@ -282,7 +307,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             "camera": self.method.camera,
             "rawloader": self.method.rawLoader.serialise(),
             "filterpat": self.method.filterpat,
-            "bitdepth": self.method.bitdepth
+            "bitdepth": self.method.bitdepth,
+            "leftjustified": self.method.leftjustified,
         }
 
     def cameraChanged(self, i):
@@ -317,6 +343,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         else:
             i = 0
         self.bitdepth.setCurrentIndex(i)
+        self.leftJustified.setChecked(self.method.leftjustified)
         self.filterpat.setText(self.method.filterpat)
         # this won't work if the camera isn't in the combobox.
         self.cameraCombo.setCurrentText(self.method.camera)
@@ -375,6 +402,10 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.method.filterpat = self.filterpat.text()
         self.onInputChanged()
 
+    def leftJustifiedChanged(self, checked):
+        self.method.leftjustified = checked
+        self.onInputChanged()
+
     def bitdepthChanged(self, s):
         try:
             # strings in the combobox are typically "10 bits" or "FulL"
@@ -412,12 +443,14 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.method.compileRegex()
         if RawLoader.is_raw_file(path):
             # if it's a raw file, load it with the raw loader and create an ImageCube
-            arr = self.method.rawLoader.load(path, bitdepth=self.method.bitdepth)
+            arr = self.method.rawLoader.load(path, bitdepth=self.method.bitdepth,
+                                             leftjustified=self.method.leftjustified)
             img = ImageCube(arr, self.method.mapping)
         else:
             # otherwise load it with the ImageCube RGB loader
             img = ImageCube.load(path, self.method.mapping, None,
-                                 bitdepth=self.method.bitdepth)  # RGB image, null sources
+                                 bitdepth=self.method.bitdepth,
+                                 leftjustified=self.method.leftjustified)  # RGB image, null sources
 
         self.activatedImagePath = path
         self.activatedImage = img

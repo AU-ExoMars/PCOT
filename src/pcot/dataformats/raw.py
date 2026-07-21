@@ -8,6 +8,7 @@ import logging
 from PySide2.QtWidgets import QDialog
 
 from pcot.ui import uiloader
+from pcot.utils.image import bitdepth_max
 
 logger = logging.getLogger(__name__)
 
@@ -77,23 +78,33 @@ class RawLoader:
                f"bigendian={self.bigendian}, offset={self.offset}, " \
                f"rot={self.rot}, horzflip={self.horzflip}, vertflip={self.vertflip}"
 
-    def load(self, filename: str|Path, bitdepth=None) -> np.ndarray:
-        """Loads the raw file and returns an array object."""
+    def load(self, filename: str|Path, bitdepth=None, leftjustified=False) -> np.ndarray:
+        """Loads the raw file and returns an array object.
+
+        - bitdepth: how many bits are actually significant (None means use the full container width).
+        - leftjustified: if True, the significant bits are assumed to occupy the top of the container
+          (i.e. the low (container_bits - bitdepth) bits are always zero) rather than the bottom.
+        """
         if self.format == RawLoader.FLOAT32:
             dtype = np.float32
             scale = 1.0
+            container_bits = None
         elif self.format == RawLoader.UINT16:
             dtype = np.uint16
             scale = 1.0 / 65535.0
+            container_bits = 16
         elif self.format == RawLoader.UINT8:
             dtype = np.uint8
             scale = 1.0 / 255.0
+            container_bits = 8
         else:
             raise ValueError(f"Unknown format {self.format}")
 
         # override the scale if we have an explicit bit depth
-        if bitdepth is not None:
-            scale = 1.0 / ((1 << bitdepth) - 1)
+        if bitdepth is not None and container_bits is not None:
+            maxbitval = bitdepth_max(bitdepth, container_bits, leftjustified)
+            scale = 1.0 / maxbitval
+            print(f"SCALE IS 1/{maxbitval}")
 
         data = np.fromfile(filename, dtype=dtype, offset=self.offset)
         if self.bigendian:
