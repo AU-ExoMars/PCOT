@@ -1263,3 +1263,37 @@ def default(val,deflt):
         return deflt
     else:
         return val
+
+
+@datumfunc
+def pix(img,x,y):
+    """Get the value of a given pixel in the image
+
+    @param img:img:the image
+    @param x:number:the x position of the pixel
+    @param y:number:the y position of the pixel
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return Datum.null
+
+    x = x.get(Datum.NUMBER)
+    y = y.get(Datum.NUMBER)
+    if x is None or y is None:
+        return Datum.null
+    x = int(x.n)
+    y = int(y.n)
+
+    if x<0 or y<0 or x>=img.w or y>=img.h:
+        return Datum.null
+
+    n = img.img[x,y]
+    u = img.uncertainty[x,y]
+    dq = img.dq[x,y]
+    r = Value(n,u,dq)
+
+    return Datum(Datum.NUMBER,r,sources=img.sources)
+
+
+
+
