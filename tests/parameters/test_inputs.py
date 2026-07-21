@@ -340,6 +340,68 @@ def test_multifile_raw_somepreset():
         assert img[31, 15][1].approxeq(Value(2 / 255, 0, dq.NOUNCERTAINTY))
 
 
+def test_multifile_raw_preset_bitdepth_override():
+    """Here the preset deliberately has the WRONG bit_depth/left_justified (8, True) for
+    the actual data (which is 10-bit, right-justified) - the parameter file must override
+    both via bit_depth/left_justified so the pixel values come out correct. If either
+    override failed to take effect, the fully-saturated pixel would come out as roughly
+    1023/65280 =~ 0.0157 instead of 1.0 (255<<8 = 65280 is what bitdepth_max(8, 16, True)
+    computes), which is how this test would catch a regression in the isNotDefault
+    override logic for these two fields."""
+
+    from pcot.inputs.multifile import presetModel
+    from pcot.dataformats.raw import RawLoader
+    from direct.test_image_load_raw import create_raw_uint16
+
+    pcot.setup()
+
+    # create a preset by hand, with a wrong bitdepth/leftjustified
+    loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, bigendian=False, offset=0)
+    preset = {
+        'rawloader': loader.serialise(),
+        'filterpat': '.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+        'camera': 'AUPE_LEFT_NOCALIB',
+        'bitdepth': 8,
+        'leftjustified': True,
+    }
+    presetModel.addPreset("bitdepthtest", preset)
+
+    with tempfile.TemporaryDirectory() as d:
+        # 10-bit right-justified data: 1 is a low value, 1023 (2^10-1) is fully saturated
+        create_raw_uint16(d, "Test-L01.raw", width=16, height=32, fill=[(0, 0, 1), (0, 31, 1023)])
+        create_raw_uint16(d, "Test-L02.raw", width=16, height=32, fill=[(0, 0, 2), (15, 0, 2)])
+
+        doc = Document()
+        test = f"""
+        inputs.0.multifile.directory = {d}
+        .preset = bitdepthtest
+        .filenames.+ = Test-L01.raw
+        .+ = Test-L02.raw
+        # override the preset's (wrong) bit_depth/left_justified (extra leading dot
+        # needed to pop back up from the "filenames" path level to "multifile")
+        ..bit_depth = 10
+        .left_justified = false
+        """
+        f = ParameterFile().parse(test)
+        processParameterFileForInputsTest(doc, f)
+        doc.run()
+        img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
+
+        assert img.channels == 2
+        assert img.w == 16
+        assert img.h == 32
+
+        # check the wavelengths are correct for AUPE positions 01 and 02 (proves the
+        # preset's camera/filterpat were still applied, just not bit_depth/leftjustified)
+        assert img.sources[0].getOnlyItem().getFilter().cwl == 440
+        assert img.sources[1].getOnlyItem().getFilter().cwl == 540
+
+        assert img[0, 0][0].approxeq(Value(1 / 1023, 0, dq.NOUNCERTAINTY))
+        assert img[0, 31][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+        assert img[0, 0][1].approxeq(Value(2 / 1023, 0, dq.NOUNCERTAINTY))
+        assert img[15, 0][1].approxeq(Value(2 / 1023, 0, dq.NOUNCERTAINTY))
+
+
 def test_pds4():
     """Basic test of reading a PDS4 file"""
 
