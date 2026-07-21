@@ -2,7 +2,7 @@ import errno
 import logging
 import os
 from pathlib import Path
-from typing import List, Tuple, Optional, Union, Dict, Any
+from typing import List, Tuple, Optional, Union, Dict
 
 import numpy as np
 from proctools.products import DataProduct
@@ -15,7 +15,6 @@ from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
 from pcot.sources import StringExternal, MultiBandSource, Source
-from pcot.ui.presetmgr import PresetOwner
 from pcot.utils import image
 from pcot.utils.datumstore import readParc
 
@@ -169,55 +168,36 @@ def multifile(directory: Path|str,
 
     """
 
-    from pcot.inputs.multifile import presetModel
+    # NB: these two imports are kept local (not at module level) because
+    # pcot.inputs.multifile imports pcot.dataformats.load at module level - a top-level
+    # import here would be circular.
+    from pcot.inputs.multifile import presetModel, MultifileInputMethod
     logger.debug(f"Multifile load from directory {str(directory)} at bitdepth {bitdepth}")
     if rawloader is None:
-        class RawPresets(PresetOwner):
-            """
-            This class stores presets for the multifile input method. It is used to hold settings
-            for loading raw data. In normal multifile loading, the multifile widget is the preset owner
-            (because it's the thing which has presets).
-            """
-            def __init__(self):
-                # initialise with the settings passed into the containing function
-                self.camera = camera
-                self.filterpat = filterpat
-                self.bitdepth = bitdepth
-                self.rawloader = rawloader
-                self.leftjustified = leftjustified
-
-            def applyPreset(self, d: Dict[str, Any]):
-                # override the values with the ones from the preset file, but
-                # only if they haven't been set already.
-                # Note that this can be called with d=None - loadPresetByName() calls applyPreset()
-                # itself and we then get called again with its (empty) return value, so this is a
-                # deliberate no-op in that case.
-                if d is None:
-                    return
-                logger.debug(f"Applying preset: {d}")
-                self.camera = self.camera or d['camera']
-                self.filterpat = self.filterpat or d['filterpat']
-                self.bitdepth = self.bitdepth or d.get('bitdepth', None)
-                self.leftjustified = self.leftjustified or d.get('leftjustified', False)
-                if self.rawloader is None:
-                    self.rawloader = RawLoader()
-                    self.rawloader.deserialise(d['rawloader'])
-
-        # create the reader object, which will initialise its values with those
-        # passed into the function and then fill missing values with those from the preset.
-        # This is a slight abuse of the normal system seen in the multifile input method, where
-        # the multifile input widget is a PresetOwner (i.e. a thing which has presets).
-        r = RawPresets()
+        # preset handling (ALL fields, not just rawloader) only happens when the caller
+        # hasn't already supplied an explicit rawloader - preserves existing behaviour
+        # where passing rawloader= bypasses preset lookup entirely.
         if preset is not None:
-            r.applyPreset(presetModel.loadPresetByName(r, preset))
-        # now we can use the settings in r
-        filterpat = r.filterpat or pcot.config.data.multifile_pattern
+            # Throwaway "orphan" MultifileInputMethod (inp=None is an explicitly supported
+            # use - see InputMethod.__init__) purely to reuse the canonical applyPreset()
+            # instead of re-declaring the multifile preset field list here.
+            presetHolder = MultifileInputMethod(None)
+            presetHolder.applyPreset(presetModel.loadPresetByName(preset))
+            # merge: explicit args passed into this function win over the preset - opposite
+            # precedence to MultifileInputMethod.modifyWithParameterDict's preset-then-
+            # override, deliberately so, since this is the "convenience defaults" scripting
+            # entry point.
+            camera = camera or presetHolder.camera
+            filterpat = filterpat or presetHolder.filterpat
+            bitdepth = bitdepth or presetHolder.bitdepth
+            leftjustified = leftjustified or presetHolder.leftjustified
+            rawloader = presetHolder.rawLoader
+
+        filterpat = filterpat or pcot.config.data.multifile_pattern
         if really_no_camera:
             camera = None
         else:
-            camera = r.camera or pcot.config.data.default_camera
-        rawloader = r.rawloader
-        leftjustified = r.leftjustified
+            camera = camera or pcot.config.data.default_camera
 
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""

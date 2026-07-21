@@ -105,17 +105,28 @@ class PresetModel(QAbstractListModel):
         with open(self.filename, 'w') as f:
             json.dump((self.presets, self.presetList), f, indent=2)
 
-    def loadPresetByName(self, owner, preset: str):
-        """Load a preset by name"""
-        if preset not in self.presets:
-            raise KeyError(f"Preset {preset} not found")
-        owner.applyPreset(self.presets[preset])
+    def loadPresetByName(self, name: str) -> Any:
+        """Fetch and return the raw preset data for the given name (typically a dict).
+        Raises KeyError if the name is not found. This method does NOT apply the preset
+        to anything - if you want that, call owner.applyPreset(result) yourself.
+
+        (This used to take an `owner` argument and call owner.applyPreset() itself while
+        returning None. That shape made it very easy to accidentally apply a preset twice -
+        once inside this method, once again by a caller which (reasonably) assumed the
+        return value was meant to be passed to applyPreset(). Fetch and apply are now two
+        explicit steps.)
+        """
+        if name not in self.presets:
+            raise KeyError(f"Preset {name} not found")
+        return self.presets[name]
 
     def loadPreset(self, owner, row):
-        """Load the preset at the given row. This is called from the dialog - it then
-        applies the preset to the owner."""
-        preset = self.presetList[row]
-        self.loadPresetByName(owner, preset)
+        """Load the preset at the given row and apply it to owner (calls owner.applyPreset()
+        for you). This is the one place where fetch+apply are still combined in a single
+        call, because the dialog only has a row index, not a name, and always wants both
+        steps done together."""
+        name = self.presetList[row]
+        owner.applyPreset(self.loadPresetByName(name))
 
     def savePreset(self, owner, selectedName=None):
         """Save the current settings as a new preset. It fetches the settings from the owner

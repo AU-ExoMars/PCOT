@@ -3,6 +3,7 @@ import pcot
 from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
 from pcot.document import Document
+from pcot.inputs.multifile import presetModel, MultifileInputMethod
 from fixtures import *
 
 
@@ -229,3 +230,57 @@ def test_multifile_raw(globaldatadir):
         assert bands[1].dq == dq.NOUNCERTAINTY
         assert bands[2].u == 0
         assert bands[2].dq == dq.NOUNCERTAINTY
+
+
+def test_multifile_preset_apply_legacy_and_missing_fields():
+    """MultifileInputMethod.applyPreset() is the single canonical implementation used by
+    the GUI widget, the parameter-file path and the scripting load.multifile() path.
+    Check it tolerates presets which predate 'bitdepth'/'leftjustified' (older presets)
+    and which use the legacy 'filterset' key instead of 'camera' (very old presets)."""
+    pcot.setup()
+
+    loader = RawLoader(format=RawLoader.UINT16, width=16, height=32)
+    preset = {
+        'rawloader': loader.serialise(),
+        'filterpat': '.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+        'filterset': 'AUPE_LEFT_NOCALIB',  # legacy key, not 'camera'
+        # bitdepth/leftjustified deliberately omitted, as in presets saved before
+        # those fields existed
+    }
+
+    m = MultifileInputMethod(None)
+    m.applyPreset(preset)
+
+    assert m.camera == 'AUPE_LEFT_NOCALIB'
+    assert m.filterpat == '.*Test-(L|R)(?P<pos>[0-9][0-9]).*'
+    assert m.bitdepth is None
+    assert m.leftjustified is False
+    assert m.rawLoader.format == RawLoader.UINT16
+    assert m.rawLoader.width == 16
+    assert m.rawLoader.height == 32
+
+    # fetchPreset() should round-trip the now-normalised values (using 'camera', not
+    # 'filterset', since that's the current key)
+    fetched = m.fetchPreset()
+    assert fetched['camera'] == 'AUPE_LEFT_NOCALIB'
+    assert fetched['bitdepth'] is None
+    assert fetched['leftjustified'] is False
+
+
+def test_preset_model_load_by_name_is_a_pure_fetch():
+    """PresetModel.loadPresetByName() must not apply the preset to anything or have any
+    other side effect - it should be safe to call repeatedly. This guards against the
+    double-apply bug class where a caller (dataformats.load.multifile()) used to invoke
+    applyPreset() a second time with the (None) return value of a method that had
+    already applied the preset itself."""
+    loader = RawLoader(format=RawLoader.UINT8, width=8, height=8)
+    preset = {
+        'rawloader': loader.serialise(),
+        'filterpat': '.*',
+        'camera': 'AUPE_LEFT_NOCALIB',
+    }
+    presetModel.addPreset("puretest", preset)
+
+    first = presetModel.loadPresetByName("puretest")
+    second = presetModel.loadPresetByName("puretest")
+    assert first == second == preset

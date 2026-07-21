@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 presetModel = PresetModel(None, "MFpresets")
 
 
-class MultifileInputMethod(InputMethod):
+class MultifileInputMethod(InputMethod, PresetOwner):
     """
     This turns a set of files into a single image. It pulls data out of the filename which it uses to lookup
     into a set of filter objects.
@@ -168,43 +168,50 @@ class MultifileInputMethod(InputMethod):
 
         Canvas.deserialise(self, data)
 
+    def fetchPreset(self) -> Dict[str, Any]:
+        """Fetch the current loader settings as a preset dict. This is the canonical
+        multifile preset field set (camera, filterpat, bitdepth, leftjustified, rawloader),
+        used - directly or via a thin delegator - by the GUI widget, the parameter-file/
+        batch loader, and the scripting load.multifile() path."""
+        return {
+            "camera": self.camera,
+            "rawloader": self.rawLoader.serialise(),
+            "filterpat": self.filterpat,
+            "bitdepth": self.bitdepth,
+            "leftjustified": self.leftjustified,
+        }
+
+    def applyPreset(self, preset: Dict[str, Any]):
+        """Apply a preset dict (as produced by fetchPreset(), or a hand-built/legacy one)
+        to this method's fields. This is the single canonical implementation of preset
+        application for multifile - all other preset-owner code paths call this rather
+        than re-implementing the field list.
+
+        Compatibility notes:
+        - 'camera' was previously called 'filterset'; very old presets may still use that
+          key, so we fall back to it if 'camera' isn't present.
+        - 'bitdepth' and 'leftjustified' are optional (older presets predate them).
+          leftjustified defaults to False when missing - NOT the True default used for
+          brand new inputs - so old presets don't silently change behaviour, matching the
+          choice already made in deserialise() for whole documents.
+        - 'rawloader' is always required; if it's missing this raises KeyError, matching
+          the behaviour every existing preset-owner implementation already had.
+        """
+        self.camera = preset['camera'] if 'camera' in preset else preset['filterset']
+        self.filterpat = preset['filterpat']
+        self.bitdepth = preset.get('bitdepth', None)
+        self.leftjustified = preset.get('leftjustified', False)
+        self.rawLoader.deserialise(preset['rawloader'])
+
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:
         m = d.multifile
         if m.directory is None:
             return False  # no change to this input (directory must be provided)
 
-        # attempt to load presets
+        # attempt to load presets - applied directly as defaults; explicit parameter-file
+        # fields checked via isNotDefault() below may override them.
         if m.preset is not None:
-            class Preset(PresetOwner):
-                """This owns presets for when we modify with a parameter dict. It sort
-                of works the same way as the RawPresets in dataformats.load."""
-
-                def __init__(self):
-                    self.camera = None
-                    self.filterpat = None
-                    self.bitdepth = None
-                    self.rawloader = None
-                    self.leftjustified = False
-
-                def applyPreset(self, preset: Dict[str, Any]):
-                    self.camera = preset['camera'] if 'camera' in preset else preset['filterset']  # legacy issue
-                    self.rawloader = RawLoader()
-                    self.rawloader.deserialise(preset['rawloader'])
-                    self.filterpat = preset['filterpat']
-                    self.bitdepth = preset.get('bitdepth', None)
-                    self.leftjustified = preset.get('leftjustified', False)
-
-            preset = Preset()
-            # will throw if we can't find the preset. Otherwise it will apply the loaded
-            # preset to the object we just created.
-            preset.applyPreset(presetModel.presets[m.preset])
-            # now initialise things with the data we just loaded. Some of these may get
-            # overriden further down.
-            self.camera = preset.camera
-            self.filterpat = preset.filterpat
-            self.bitdepth = preset.bitdepth
-            self.rawLoader = preset.rawloader
-            self.leftjustified = preset.leftjustified
+            self.applyPreset(presetModel.loadPresetByName(m.preset))
 
         # get the files
         self._getFilesFromParameterDict(m)
@@ -293,23 +300,16 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.canvas.onClose()
 
     def applyPreset(self, preset):
-        # see comments in presetPressed for why this is here and not in the input method
-        self.method.camera = preset['camera']
-        self.method.rawLoader.deserialise(preset['rawloader'])
-        self.method.filterpat = preset['filterpat']
-        self.method.bitdepth = preset.get('bitdepth', None)
-        self.method.leftjustified = preset.get('leftjustified', False)
+        # see comments in presetPressed for why this is here and not in the input method:
+        # applying a preset changes self.method's fields, but only the widget knows which
+        # bits of UI (combo boxes, checkboxes, canvas, graph re-run) need refreshing
+        # afterwards.
+        self.method.applyPreset(preset)
         self.onInputChanged()
 
     def fetchPreset(self):
         # see comments in presetPressed for why this is here and not in the input method
-        return {
-            "camera": self.method.camera,
-            "rawloader": self.method.rawLoader.serialise(),
-            "filterpat": self.method.filterpat,
-            "bitdepth": self.method.bitdepth,
-            "leftjustified": self.method.leftjustified,
-        }
+        return self.method.fetchPreset()
 
     def cameraChanged(self, i):
         self.method.camera = self.cameraCombo.currentText()

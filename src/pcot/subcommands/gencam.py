@@ -46,17 +46,10 @@ def get_raw_loader(d):
 
     if 'preset' in d:
         from pcot.inputs.multifile import presetModel
-        from pcot.ui.presetmgr import PresetOwner
         preset_name = d['preset']
-        class Preset(PresetOwner):
-            """Minimal preset owner class to hold the rawloader preset"""
-            def applyPreset(self, preset):
-                self.rawloader = RawLoader()
-                self.rawloader.deserialise(preset['rawloader'])
-        preset = Preset()
         try:
-            preset.applyPreset(presetModel.presets[preset_name])
-            rawloader = preset.rawloader    # pretty sure that variable IS used, despite the warning.
+            preset_data = presetModel.loadPresetByName(preset_name)
+            rawloader = RawLoader().deserialise(preset_data['rawloader'])
             logger.info("Using rawloader preset '%s'", preset_name)
         except KeyError:
             raise ValueError(
