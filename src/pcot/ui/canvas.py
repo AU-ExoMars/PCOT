@@ -162,8 +162,7 @@ class InnerCanvas(QtWidgets.QWidget):
         self.dispw = 0  # size at which the view is displayed
         self.disph = 0
         self.panning = False
-        self.panX = None
-        self.panY = None
+        self.panPos = None
         self.canv = canv
         self.timer = QTimer(self)
 
@@ -619,7 +618,7 @@ class InnerCanvas(QtWidgets.QWidget):
         x, y = self.getImgCoords(e.position())
         if e.button() == Qt.MouseButton.MiddleButton:
             self.panning = True
-            self.panX, self.panY = x, y
+            self.panPos = e.position()
         elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMousePressEvent(x, y, e)
         return super().mousePressEvent(e)
@@ -635,13 +634,19 @@ class InnerCanvas(QtWidgets.QWidget):
         self.specOverlay.set_center(e.position())
         self.cursorX, self.cursorY = x, y
         if self.panning:
-            dx = x - self.panX
-            dy = y - self.panY
-            self.x -= dx * 0.5
-            self.y -= dy * 0.5
+            # work out the drag delta in widget pixels and scale it into image
+            # pixels ourselves, rather than going via getImgCoords() (which would
+            # truncate to int and also bake in the *current* self.x/self.y, making
+            # the delta wrong) - this keeps the image moving 1:1 with the cursor.
+            sx, sy = self.getDisplayedScale()
+            pos = e.position()
+            dx = (pos.x() - self.panPos.x()) * sx
+            dy = (pos.y() - self.panPos.y()) * sy
+            self.x -= dx
+            self.y -= dy
             self.x = max(0, min(self.x, self.rgb.shape[1] - self.cutw))
             self.y = max(0, min(self.y, self.rgb.shape[0] - self.cuth))
-            self.panX, self.panY = x, y
+            self.panPos = pos
         else:
             self.canv.mouseMove(x, y, e)
         self.update()
@@ -658,24 +663,14 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## mouse wheel handler, changes zoom
     def wheelEvent(self, e):
-        # get the mousepos in the image and calculate the new zoom
-        wheel = 1 if e.angleDelta().y() < 0 else -1
-        # x,y here is the zoom point
-        x, y = self.getImgCoords(e.position())
-        newzoom = self.zoomscale * math.exp(wheel * 0.2)
-
         # can't zoom when there's no image
         if self.rgb is None:
             return
 
-        # get image coords, and clip the event's coords to those
-        # (to make sure we're not clicking on the background of the canvas)
-        imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
-        if x >= imgw:
-            x = imgw - 1
-        if y >= imgh:
-            y = imgh - 1
+        wheel = 1 if e.angleDelta().y() < 0 else -1
+        newzoom = self.zoomscale * math.exp(wheel * 0.2)
 
+        imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
         # work out the new image size
         cutw = int(imgw * newzoom)
         cuth = int(imgh * newzoom)
@@ -683,19 +678,38 @@ class InnerCanvas(QtWidgets.QWidget):
         if cutw == 0 or cuth == 0 or newzoom > 1:
             return
 
-        # calculate change in zoom and use it to move the offset
-
-        zoomchange = newzoom - self.zoomscale
-        self.x -= zoomchange * x
-        self.y -= zoomchange * y
+        # x,y is the image point currently under the cursor (at the OLD zoom level).
+        # We want that same image point to stay under the cursor at the new zoom
+        # level, so recompute self.x/self.y from scratch at the new scale rather than
+        # nudging them by a delta - the old delta-based approach only happened to work
+        # while the cursor stayed at the same widget position across zoom events (or
+        # from a fresh reset), and drifted as soon as the cursor moved or the view
+        # had been panned.
+        # NB: we compute x,y here directly rather than via getImgCoords(), which
+        # truncates to int - going through that would throw away sub-pixel precision
+        # on every wheel tick and make repeated zooming drift. We use the displayed
+        # (per-axis) scale for the old point, matching how getImgCoords maps the
+        # cursor onto the pixels actually on screen, and the continuous scale for the
+        # new point since the new displayed scale isn't known until the next paint.
+        pos = e.position()
+        sx, sy = self.getDisplayedScale()
+        x = pos.x() * sx + self.x
+        y = pos.y() * sy + self.y
+        newScale = self.scale * newzoom
+        self.x = x - pos.x() * newScale
+        self.y = y - pos.y() * newScale
 
         # set the new zoom
         self.zoomscale = newzoom
-        # clip the change
+        # clip the change so the viewport can't be pushed past the image edges
         if self.x < 0:
             self.x = 0
         if self.y < 0:
             self.y = 0
+        if self.x > imgw - cutw:
+            self.x = imgw - cutw
+        if self.y > imgh - cuth:
+            self.y = imgh - cuth
         # update scrollbars and image
         self.canv.setScrollBarsFromCanvas()
         self.cursorX, self.cursorY = self.getImgCoords(e.position())
