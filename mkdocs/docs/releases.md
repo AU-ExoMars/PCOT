@@ -15,6 +15,44 @@ None
 
 ## Beta releases
 
+## 1.0.0-beta DATE TBD LITTLE DENNIS
+
+The big one: PCOT has been migrated from PySide2 (Qt5) to PySide6 (Qt6), which is why this is
+the first major version bump. Most of the migration is invisible to users - it's the same UI -
+but there's a long tail of small Qt6-shaped fixes alongside it, and a couple of unrelated fixes
+that were sitting on `dev` at the same time.
+
+**Because this is a major version change (PySide2 to PySide6), you'll need to run `poetry
+install` again to pick up the new dependencies - your existing environment won't do it
+automatically.**
+
+* **Migrated to PySide6/Qt6** throughout the application (was PySide2/Qt5).
+* Dark mode support (follows the OS theme).
+* Windows now uses the Fusion style rather than the OS-native one, for consistency.
+* Workaround for a GNOME/Wayland dialog decoration bug, and a config-editor checkbox crash, both
+found during the migration.
+* Canvas cursor hotspot and mouse-to-image mapping precision fixed at HiDPI scale factors.
+* Canvas mouse-wheel zoom now actually zooms to the cursor position rather than drifting towards
+the centre of the view, and middle-button panning now tracks the cursor properly instead of
+moving at half speed.
+* Fixes to circle ROI shift/ctrl-drag behaviour, the palette collapse/expand-all button, PDF
+export, and a DQDelegate crash - all regressions found during the Qt6 migration.
+* Multifile loader: left-justified bit-depth handling, and preset handling consolidated into a
+single implementation (fixes a bug where presets could be double-applied).
+* New `pix()` datumfunc to get a pixel value directly.
+* Fixed `Value.out` to correctly use `config.data.sigfigs` (was a mutable default argument bug).
+* PDS4 directory scan now skips invalid files instead of aborting the whole scan.
+
+Site
+
+* TODO: Google maps link
+* TODO: NLS map link
+* [Megalithic Portal entry](https://www.megalithic.co.uk/article.php?sid=29324)
+* A promontory fort (cliff castle), probably Iron Age, on a headland at St Anthony-in-Meneage
+on the Lizard - the earthworks cutting off the headland show up well on LIDAR, though on the
+ground it's mostly reduced to crop marks and a bank on the sloping southern side.
+
+
 ## 0.13.0-beta 2026-07-03 KENWYN FOUR BURROWS
 
 Quite a lot in this one. We don't have HRC colour correction yet, but it's
