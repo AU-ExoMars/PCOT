@@ -29,6 +29,11 @@ from the ExoMars PANCAM instrument - but we also support
 Existing PCOT installs can be updated by following the instructions
 [here](userguide/update.md).
 
+## The PCOT Cookbook
+
+The [PCOT Cookbook](https://pcot.aber.ac.uk) is a separate site
+with useful techniques and examples. It also hosts the 
+camera and reflectance target definition files.
 
 ## Reporting bugs
 
