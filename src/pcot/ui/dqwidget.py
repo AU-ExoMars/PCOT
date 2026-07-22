@@ -1,7 +1,7 @@
 from functools import partial
 
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtWidgets import QWidget, QGridLayout, QLabel, QCheckBox, QPushButton
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QWidget, QGridLayout, QLabel, QCheckBox, QPushButton
 
 from pcot import dq
 from pcot.utils import SignalBlocker
@@ -37,16 +37,16 @@ class _BaseDQWidget(QWidget):
             label = QLabel(f"{d.name}({d.char})", self)
             check = QCheckBox('', self)
             self.name2widget[name] = check
-            check.stateChanged.connect(partial(self.stateChanged, name))
+            check.checkStateChanged.connect(partial(self.stateChanged, name))
 
             if isVertical:
-                label.setAlignment(Qt.AlignRight)
-                layout.addWidget(label, i, 0, Qt.AlignRight)
-                layout.addWidget(check, i, 1, Qt.AlignCenter)
+                label.setAlignment(Qt.AlignmentFlag.AlignRight)
+                layout.addWidget(label, i, 0, Qt.AlignmentFlag.AlignRight)
+                layout.addWidget(check, i, 1, Qt.AlignmentFlag.AlignCenter)
             else:
-                label.setAlignment(Qt.AlignCenter)
-                layout.addWidget(label, 0, i, Qt.AlignCenter)
-                layout.addWidget(check, 1, i, Qt.AlignCenter)
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.addWidget(label, 0, i, Qt.AlignmentFlag.AlignCenter)
+                layout.addWidget(check, 1, i, Qt.AlignmentFlag.AlignCenter)
             i += 1
 
         self.setLayout(layout)
@@ -60,7 +60,7 @@ class _BaseDQWidget(QWidget):
 
     def stateChanged(self, name, val):
         mask = int(dq.DQs[name])
-        if val != 0:
+        if val == Qt.CheckState.Checked:
             self.bits |= mask
         else:
             self.bits &= ~mask

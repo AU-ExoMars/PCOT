@@ -480,6 +480,17 @@ class MultiBandSource(SourcesObtainable):
                 return []
             return [band]
 
+        # if the filter name is a small integer, it's a band number.
+        try:
+            band = int(filterNameOrCWL)
+            if 0 <= band < 20:
+                # it's a band
+                if band >= len(self.sourceSets):
+                    return []
+                return [band]
+        except (ValueError, TypeError):
+            pass    # just pass through; this "exception" is fine, just means it's not an integer
+
         # otherwise we do the search as usual
         for i, s in enumerate(self.sourceSets):
             if s.matches(inp, filterNameOrCWL, single, hasFilter):

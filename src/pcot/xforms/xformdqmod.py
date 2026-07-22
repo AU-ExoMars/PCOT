@@ -1,7 +1,7 @@
 import math
 
 import numpy as np
-from PySide2.QtGui import QDoubleValidator
+from PySide6.QtGui import QDoubleValidator
 
 from pcot import ui
 from pcot.datum import Datum

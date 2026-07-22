@@ -1,5 +1,5 @@
-from PySide2 import QtWidgets
-from PySide2.QtGui import QColor
+from PySide6 import QtWidgets
+from PySide6.QtGui import QColor
 import numpy as np
 
 # functions for colour manipulation: converting from (r,g,b) range 0-1 triples to QColor

@@ -1,9 +1,11 @@
-from PySide2.QtGui import QIntValidator
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIntValidator
 
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
+from pcot.ui import theme
 from pcot.rois import ROIRect
 from pcot.ui.roiedit import RectEditor
 from pcot.parameters.taggedaggregates import TaggedDict, TaggedDictType
@@ -65,7 +67,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.editor = RectEditor(self)
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
-        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
+        self.w.drawbg.checkStateChanged.connect(self.drawbgChanged)
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
@@ -89,7 +91,7 @@ class TabRect(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.roi.drawbg = (val != 0)
+        self.node.roi.drawbg = (val == Qt.CheckState.Checked)
         self.changed()
 
     def topChanged(self, checked):
@@ -190,7 +192,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.captionTop.setChecked(roi.labeltop)
         self.w.drawbg.setChecked(roi.drawbg)
         r, g, b = [x * 255 for x in roi.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
         bb = roi.bb()
         if bb is not None:
             x, y, w, h = [str(x) for x in (bb.x, bb.y, bb.w, bb.h)]

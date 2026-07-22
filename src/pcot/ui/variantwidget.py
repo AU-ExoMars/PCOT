@@ -1,5 +1,5 @@
-from PySide2 import QtWidgets
-from PySide2.QtCore import Signal
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal
 
 from pcot.datum import Datum
 from pcot import datumtypes

@@ -5,6 +5,7 @@ from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import SourceSet
 from pcot.ui.tabs import Tab
+from pcot.ui import theme
 from pcot.utils import image
 from pcot.utils.table import Table
 from pcot.xform import xformtype, XFormType
@@ -111,7 +112,7 @@ class TabHistogram(Tab):
                 colct += 1
             self.w.mpl.ax.legend()
             self.w.mpl.draw()
-        self.w.replot.setStyleSheet("")
+        theme.setStaleStyle(self.w.replot, False)
 
     def save(self):
         self.w.mpl.save()
@@ -124,5 +125,5 @@ class TabHistogram(Tab):
     def onNodeChanged(self):
         # this is done in replot - the user replots this node manually because it takes
         # a while to run. But we do make the replot button red!
-        self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.replot, True)
         self.w.bins.setValue(self.node.params.bincount)

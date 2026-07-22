@@ -1,4 +1,4 @@
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
 from pcot.datum import Datum
 import pcot.operations as operations

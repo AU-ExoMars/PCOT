@@ -1,4 +1,4 @@
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
 import pcot.ui.tabs
 from pcot.datum import Datum
@@ -42,7 +42,7 @@ class TabGeneric(pcot.ui.tabs.Tab):
         self.w.data = DataWidget(self.w, source_section)
         splitter.addWidget(self.w.data)
 
-        if hasattr(node.type,"params") and len(node.type.params)>0 and not suppress_editor:
+        if hasattr(node.type,"params") and node.type.params is not None and len(node.type.params)>0 and not suppress_editor:
             # we set internal_editor to True to avoid the editor having
             # an unreasonable minimum width
             self.editor = AggregateEditorWidget(node.params,

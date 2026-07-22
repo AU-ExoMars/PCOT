@@ -144,8 +144,9 @@ is left as an exercise for the reader).
 ```python
 import pcot
 import os
-from PySide2 import QtWidgets
-from PySide2.QtWidgets import QAction, QMessageBox
+from PySide6 import QtWidgets
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMessageBox
 from pcot.dataformats import envi
 
 def saveEnvi(w):

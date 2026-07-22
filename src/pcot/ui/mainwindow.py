@@ -10,10 +10,10 @@ from string import Template
 from typing import List, Optional, OrderedDict, ClassVar, Dict
 
 import markdown
-from PySide2 import QtWidgets
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QTextCursor
-from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu, QApplication
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QTextCursor, QAction
+from PySide6.QtWidgets import QMessageBox, QDialog, QMenu, QApplication
 
 #
 # Warning: these imports are VERY brittle. Changing the order often results in circular imports.
@@ -255,14 +255,14 @@ class MainUI(ui.tabs.DockableTabWindow):
     def _ensureDataPresent(self, getNamesFn, title, message, configKey, loadFn):
         """Generic helper to ensure a dataset exists, prompting the user if not."""
         while len(getNamesFn()) == 0:
-            res = QMessageBox.question(self, title, message, QMessageBox.Yes | QMessageBox.No)
-            if res == QMessageBox.No:
+            res = QMessageBox.question(self, title, message, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if res == QMessageBox.StandardButton.No:
                 break
 
             # Ask user for directory
             defaultDir = pcot.config.getDefaultDir(configKey) or os.path.expanduser("~")
             chosen = QtWidgets.QFileDialog.getExistingDirectory(
-                self, f"Select {configKey} directory", defaultDir
+                self, f"Select {configKey} directory", str(defaultDir)
             )
             logger.info(f"Selected {chosen}")
 
@@ -300,7 +300,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         return [w for w in cls.windows if w.doc == d]
 
     def fitClicked(self):
-        self.view.fitInView(self.graph.scene.sceneRect(), Qt.KeepAspectRatio)
+        self.view.fitInView(self.graph.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     def rebuildRecents(self):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end
@@ -356,7 +356,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def quitAction(self):
         if QMessageBox.question(self, "Quit", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             QApplication.quit()
 
     def closeEvent(self, evt):
@@ -365,7 +365,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             MainUI.windows.remove(self)
             evt.accept()
         elif QMessageBox.question(self, "Close graph", "Are you sure?",
-                                  QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             MainUI.windows.remove(self)
             self.closeAllTabs()
             # if the only remaining windows at this point are macro windows, close them too.
@@ -530,7 +530,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         doc.setDefaultStyleSheet(pcot.assets.getAssetAsString('about.css'))
         txt = markdown.markdown(txt)
         doc.setHtml(txt)
-        dialog.textEdit.moveCursor(QTextCursor.Start)
+        dialog.textEdit.moveCursor(QTextCursor.MoveOperation.Start)
         # print(dialog.textEdit.toHtml())
         dialog.show()
 
@@ -548,7 +548,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             doc.load(res[0], add_to_recents=False)
             # open the dialog
             dlg = ImportDialog(doc)
-            dlg.exec_()
+            dlg.exec()
             self.doc.importFrom(doc, dlg.macstoimport, dlg.favstoimport)
 
     def findOrAddMenu(self, name):

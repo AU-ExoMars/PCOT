@@ -2,19 +2,20 @@
 should inherit DockableTabWindow.
 """
 
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import Qt
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtCore import Qt
 import collections
 import logging
 
-from PySide2.QtWidgets import QMenu, QAction
+from PySide6.QtWidgets import QMenu
 
 ## the main UI window class. Your application window should inherit from
 # this to use dockable tabs, and have a tabWidget tab container.
-from PySide2.QtGui import QFont
+from PySide6.QtGui import QFont, QAction
 
 from pcot import ui
 from pcot.ui import uiloader
+from pcot.ui import theme
 from pcot.ui.canvas import Canvas
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         # and when we switch tab
         self.tabWidget.currentChanged.connect(self.currentChanged)
         # set up a context menu
-        self.tabWidget.tabBar().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tabWidget.tabBar().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabWidget.tabBar().customContextMenuRequested.connect(self.showMenu)
 
         # store the tabs in an ordered dict, so we can iterate them in create order
@@ -56,7 +57,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         closeAct = QAction("Close all other tabs")
         menu.addAction(closeAct)
 
-        act = menu.exec_(self.mapToGlobal(p))
+        act = menu.exec(self.mapToGlobal(p))
         if act == closeAct:
             self.closeAllTabsExcept(idx)
 
@@ -164,7 +165,7 @@ class ExpandedTab(QtWidgets.QMainWindow):
 
     ## window got focus. Tell the scene.
     def changeEvent(self, event):
-        if event.type() == QtCore.QEvent.ActivationChange:
+        if event.type() == QtCore.QEvent.Type.ActivationChange:
             if self.isActiveWindow() and self.window.scene():
                 self.window.scene().currentChanged(self.tab.node)
 
@@ -205,19 +206,18 @@ class Tab(QtWidgets.QWidget):
         lowerLay = QtWidgets.QHBoxLayout()
         self.lower.setLayout(lowerLay)
         lay.addWidget(self.lower)
-        self.lower.setStyleSheet("background-color: rgb(240, 240, 240);")
 
         # default invisible error
         self.errorText = QtWidgets.QLabel("")
         self.errorText.setFont(tabErrorFont)
-        self.errorText.setStyleSheet("QLabel{color: rgb(200, 0, 0);}")
+        self.errorText.setStyleSheet(theme.errorLabelStyle())
         lowerLay.addWidget(self.errorText)
         self.errorText.setVisible(False)
         # much of this is pointless, because the error message controls set the visibility.
         # Ideally, I'd like to have the widget have a zero height when it has no children, but
         # I can't figure out how to do that right now. Indeed, it may not be possible.
-        self.lower.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                                  QtWidgets.QSizePolicy.Fixed))
+        self.lower.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                  QtWidgets.QSizePolicy.Policy.Fixed))
         self.lower.setMinimumHeight(0)
 
         # There used to be a "comment" field, but it was never used and was removed.
@@ -285,7 +285,7 @@ class Tab(QtWidgets.QWidget):
             self.enableRadioButton.setChecked(self.node.enabled)
             # if the node is enabled, the run button is disabled because the node will run automatically.
             self.runButton.setDisabled(self.node.enabled)
-            self.runButton.setStyleSheet("background-color: rgb(200, 100, 100);" if not self.node.enabled else "")
+            theme.setDisabledRunStyle(self.runButton, not self.node.enabled)
 
     def nodeDeleted(self):
         """node has been deleted, remove me from tabs"""

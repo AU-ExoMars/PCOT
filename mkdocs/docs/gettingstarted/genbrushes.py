@@ -1,13 +1,13 @@
 from pcot import connbrushes
-from PySide2.QtGui import *
-from PySide2.QtCore import *
-from PySide2.QtSvg import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from PySide6.QtSvg import *
 
 SIZE=64
 
 def render(filename,b):
-    img = QImage(SIZE,SIZE,QImage.Format_RGB888)
-    img.fill(Qt.white)
+    img = QImage(SIZE,SIZE,QImage.Format.Format_RGB888)
+    img.fill(Qt.GlobalColor.white)
   
     painter = QPainter(img)
     painter.setBrush(b)

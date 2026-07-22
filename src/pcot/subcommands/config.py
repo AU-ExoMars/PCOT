@@ -1,6 +1,6 @@
 import sys
 
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
 from pcot.parameters.taggedaggregates import TaggedDict, TaggedList
 from pcot.subcommands import subcommand,argument
@@ -113,7 +113,7 @@ def config(args):
     app = QtWidgets.QApplication(sys.argv)
 
     dialog = AggregateEditorDialog(pcot.config.data)
-    dialog.exec_()
+    dialog.exec()
     if dialog.data():
         pcot.config.data = dialog.data()
         pcot.config.save()

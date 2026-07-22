@@ -1,9 +1,11 @@
 import numpy as np
-from PySide2.QtWidgets import QComboBox
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QComboBox
 
 import pcot
 from pcot import dq
 from pcot.datum import Datum
+from pcot.ui import theme
 from pcot.parameters.taggedaggregates import taggedColourType, TaggedDictType
 from pcot.rois import ROIPainted
 from pcot.sources import nullSourceSet
@@ -152,7 +154,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabroidq.ui')
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
-        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
+        self.w.drawbg.checkStateChanged.connect(self.drawbgChanged)
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
@@ -186,7 +188,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.params.drawbg = (val != 0)
+        self.node.params.drawbg = (val == Qt.CheckState.Checked)
         self.changed()
 
     def topChanged(self, checked):
@@ -249,7 +251,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
         self.w.captionTop.setChecked(p.captiontop)
         self.w.drawbg.setChecked(p.drawbg)
         r, g, b = [x * 255 for x in p.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
 
         self.populateBandList()
 

@@ -1,10 +1,12 @@
-from PySide2.QtGui import QPainter
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import QMessageBox
 
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
+from pcot.ui import theme
 from pcot.rois import ROIPainted, getRadiusFromSlider
 from pcot.ui.roiedit import PaintedEditor
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
@@ -88,7 +90,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
-        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
+        self.w.drawbg.checkStateChanged.connect(self.drawbgChanged)
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
@@ -101,7 +103,7 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.roi.drawbg = (val != 0)
+        self.node.roi.drawbg = (val == Qt.CheckState.Checked)
         self.changed()
 
     def drawModeChanged(self, idx):
@@ -126,7 +128,7 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def clearPressed(self):
         if QMessageBox.question(self.window, "Clear region", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.mark()
             self.node.roi.clear()
             self.changed()
@@ -171,7 +173,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.drawbg.setChecked(self.node.roi.drawbg)
 
         r, g, b = [x * 255 for x in self.node.roi.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
 
     # extra drawing! Preview of brush
     def canvasPaintHook(self, p: QPainter):

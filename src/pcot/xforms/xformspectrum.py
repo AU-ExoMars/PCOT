@@ -3,8 +3,9 @@ import math
 
 import matplotlib
 import numpy as np
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtWidgets import QDialog
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog
 
 import pcot
 import pcot.ui as ui
@@ -12,6 +13,7 @@ from pcot.datum import Datum
 from pcot.cameras.filters import wav2RGB, Filter
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.ui import uiloader
+from pcot.ui import theme
 from pcot.ui.tabs import Tab
 from pcot.utils import SignalBlocker
 from pcot.utils.spectrum import SpectrumSet
@@ -247,8 +249,8 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.bottomSpaceSpin.valueChanged.connect(self.bottomSpaceChanged)
         self.w.rightSpaceSpin.valueChanged.connect(self.rightSpaceChanged)
         self.w.hideButton.clicked.connect(self.hideClicked)
-        self.w.ignorePixSD.stateChanged.connect(self.ignorePixSDChanged)
-        self.w.fixedYBox.stateChanged.connect(self.fixedYAxisChanged)
+        self.w.ignorePixSD.checkStateChanged.connect(self.ignorePixSDChanged)
+        self.w.fixedYBox.checkStateChanged.connect(self.fixedYAxisChanged)
         self.nodeChanged()
 
     def replot(self):
@@ -348,7 +350,7 @@ class TabSpectrum(ui.tabs.Tab):
             ax.set_yticks([x for x in ax.get_yticks() if x >= 0])
 
         self.w.mpl.draw()
-        self.w.replot.setStyleSheet("")
+        theme.setStaleStyle(self.w.replot, False)
 
     def save(self):
         self.w.mpl.save()
@@ -364,12 +366,12 @@ class TabSpectrum(ui.tabs.Tab):
 
     def ignorePixSDChanged(self, state):
         self.mark()
-        self.node.params.ignorePixSD = state == QtCore.Qt.Checked
+        self.node.params.ignorePixSD = (state == Qt.CheckState.Checked)
         self.changed()
 
     def fixedYAxisChanged(self, state):
         self.mark()
-        self.node.params.fixedYAxis = state == QtCore.Qt.Checked
+        self.node.params.fixedYAxis = (state == Qt.CheckState.Checked)
         self.changed()
 
     def errorbarmodeChanged(self, mode):
@@ -425,7 +427,7 @@ class TabSpectrum(ui.tabs.Tab):
 
     def markReplotReady(self):
         """make the replot button red"""
-        self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.replot, True)
 
     def onNodeChanged(self):
         # this is done in replot - the user replots this node manually because it takes

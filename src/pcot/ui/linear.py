@@ -1,8 +1,8 @@
 from typing import List, Any, Set, Callable
 
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QColor, QFont, QBrush, QPen
+from PySide6 import QtWidgets, QtGui
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QFont, QBrush, QPen
 
 import numpy as np
 import pcot.ui as ui
@@ -21,11 +21,11 @@ def entityMarkerInitSetup(obj, ent):
     """Setups up some common stuff in item initialisation - the problem is that the base class of all these items
     is a QGraphicsItem, but we want common stuff to happen. We could do this with mixins and careful use of the MRO,
     but this is easier to understand (I think)."""
-    obj.setBrush(QBrush(Qt.blue))
-    obj.setPen(QPen(Qt.black))
-    obj.selCol = Qt.red
-    obj.unselCol = Qt.blue
-    obj.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
+    obj.setBrush(QBrush(Qt.GlobalColor.blue))
+    obj.setPen(QPen(Qt.GlobalColor.black))
+    obj.selCol = Qt.GlobalColor.red
+    obj.unselCol = Qt.GlobalColor.blue
+    obj.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
     obj.ent = ent
 
 
@@ -33,7 +33,7 @@ def entityMarkerPaintSetup(obj, option, unselCol, selCol):
     """Used to set up some common stuff for drawing items. We could potentially do this as a decorator,
     really - the decorator would provide paint(), wrapping a call to super.paint with code that does this."""
     # fake an unselected state so we don't get a border...
-    option.state = QtWidgets.QStyle.State_None
+    option.state = QtWidgets.QStyle.StateFlag.State_None
     # ...but show the selected state with a colour change #TODO colourblindness!!!
     if obj.isSelected():
         obj.setBrush(selCol)
@@ -259,10 +259,10 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         self.prevX = None
         self.scene = LinearSetScene(self)
         self.setScene(self.scene)
-        self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
+        self.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setDragMode(QtWidgets.QGraphicsView.DragMode.RubberBandDrag)
 
     def onSelChanged(self):
         self.selChanged.emit()
@@ -322,10 +322,10 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
     def wheelEvent(self, evt):
         """handle mouse wheel zooming"""
         # Remove possible Anchors
-        self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
-        self.setResizeAnchor(QtWidgets.QGraphicsView.NoAnchor)
+        self.setTransformationAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
+        self.setResizeAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
         # Get Scene Pos
-        target_viewport_pos = self.mapToScene(evt.pos())
+        target_viewport_pos = self.mapToScene(evt.position().toPoint())
         x = target_viewport_pos.x()
         # ZOOM
         if evt.angleDelta().y() < 0:
@@ -342,12 +342,12 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         system. We don't do it for other events so that we don't get the rubberbanding and we don't lose
         selections."""
 
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.MouseButton.RightButton:
             p = self.mapToScene(event.pos())
             x = self.scene.sceneToEntity(p.x())
             self.prevX = x
 
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             # superclass event call to handle selection box drag
             super().mousePressEvent(event)
 

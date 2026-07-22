@@ -1,7 +1,7 @@
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Signal, QSize, QRect
-from PySide2.QtGui import QPaintEvent, QPainter, QColor
-from PySide2.QtCore import Qt
+from PySide6 import QtWidgets, QtGui
+from PySide6.QtCore import Signal, QSize, QRect
+from PySide6.QtGui import QPaintEvent, QPainter, QColor
+from PySide6.QtCore import Qt
 
 
 class TextToggleButton(QtWidgets.QWidget):
@@ -19,8 +19,8 @@ class TextToggleButton(QtWidgets.QWidget):
         self.state = initState
 
         metrics = QtGui.QFontMetrics(self.font())
-        s1 = metrics.size(Qt.TextShowMnemonic, textOn)
-        s2 = metrics.size(Qt.TextShowMnemonic, textOff)
+        s1 = metrics.size(Qt.TextFlag.TextShowMnemonic, textOn)
+        s2 = metrics.size(Qt.TextFlag.TextShowMnemonic, textOff)
         s = s1 if s1.width() >= s2.width() else s2
         self.size = QSize(s.width() + self.hmargin * 2, s.height() + self.vmargin * 2)
 
@@ -48,7 +48,7 @@ class TextToggleButton(QtWidgets.QWidget):
             if self.state:
                 boxOutline = QColor(0, 200, 0)
                 boxFill = QColor(200, 255, 200)
-                textCol = Qt.black
+                textCol = Qt.GlobalColor.black
             else:
                 boxOutline = QColor(100, 100, 100)
                 boxFill = QColor(200, 200, 200)
@@ -70,7 +70,7 @@ class TextToggleButton(QtWidgets.QWidget):
 
         t = self.textOn if self.state else self.textOff
         p.setPen(textCol)
-        p.drawText(r, Qt.AlignCenter, t)
+        p.drawText(r, Qt.AlignmentFlag.AlignCenter, t)
 
         if not self.state:
             p.setPen(crossOutCol)

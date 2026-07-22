@@ -1,9 +1,9 @@
 import logging
 
 import numpy as np
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QKeyEvent, QPainter, QPen, QColor
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent, QPainter, QPen, QColor
+from PySide6.QtWidgets import QMessageBox
 
 from pcot import ui
 from pcot.datum import Datum
@@ -49,8 +49,8 @@ class CrossCalibPointAnnotation(Annotation):
         self.col = col
 
     def annotate(self, p: QPainter, img, alpha):
-        p.setBrush(Qt.NoBrush)
-        col = QColor(Qt.yellow)
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        col = QColor(Qt.GlobalColor.yellow)
         col.setAlpha(alpha * 255)
         pen = QPen(col)
         pen.setWidth(0)
@@ -133,12 +133,12 @@ class XFormCrossCalib(XFormType):
                     # unbelievably this will work because taggedlists are iterable, and so is the taggeddict
                     # inside it.
                     for i, (x, y) in enumerate(params.src):
-                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, sel == i, Qt.yellow,
+                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, sel == i, Qt.GlobalColor.yellow,
                                                                                radius=params.r))
                 if node.params.showDest:
                     sel = node.selIdx if node.selIsDest else None
                     for i, (x, y) in enumerate(params.dest):
-                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, sel == i, Qt.cyan,
+                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, sel == i, Qt.GlobalColor.cyan,
                                                                                radius=params.r))
             else:
                 node.canvimg = None
@@ -260,7 +260,7 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
 
     def clearClicked(self):
         if QMessageBox.question(self.window, "Clear all points", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.mark()
             self.node.params.dest = taggedPointListType.create()
             self.node.params.src = taggedPointListType.create()
@@ -299,20 +299,20 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()
-        if k == Qt.Key_M:
+        if k == Qt.Key.Key_M:
             self.mark()
             self.node.imagemode += 1
             self.node.imagemode %= IMAGEMODE_CT
             self.changed()
-        elif k == Qt.Key_S:
+        elif k == Qt.Key.Key_S:
             self.mark()
             self.node.params.showSrc = not self.node.params.showSrc
             self.changed()
-        elif k == Qt.Key_D:
+        elif k == Qt.Key.Key_D:
             self.mark()
             self.node.params.showDest = not self.node.params.showDest
             self.changed()
-        elif k == Qt.Key_Delete:
+        elif k == Qt.Key.Key_Delete:
             self.mark()
             self.node.type.delSelPoint(self.node)
             self.changed()
@@ -325,14 +325,14 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
         self.mark()
-        if e.modifiers() & (Qt.ShiftModifier | Qt.ControlModifier):
+        if e.modifiers() & (Qt.KeyboardModifier.ShiftModifier | Qt.KeyboardModifier.ControlModifier):
             # modifiers = we're adding
             if self.node.params.showSrc and self.node.params.showDest:
                 # if both are shown, distinguish with modifier
-                if e.modifiers() & Qt.ShiftModifier:  # shift = source
+                if e.modifiers() & Qt.KeyboardModifier.ShiftModifier:  # shift = source
                     logger.debug("Adding SOURCE")
                     self.node.type.addPoint(self.node, x, y, False)
-                elif e.modifiers() & Qt.ControlModifier:  # ctrl = dest
+                elif e.modifiers() & Qt.KeyboardModifier.ControlModifier:  # ctrl = dest
                     logger.debug("Adding DEST")
                     self.node.type.addPoint(self.node, x, y, True)
             else:

@@ -13,9 +13,9 @@ from os import path
 import cv2 as cv
 import numpy as np
 # QT imports for interfacing with the front-end
-from PySide2.QtCore import Qt, QSize
-from PySide2.QtGui import QImage, QPixmap
-from PySide2.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
 
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
@@ -935,7 +935,7 @@ class TabPCTPatchDetection(Tab):
         # setup parameter lock checkbox to spawn locked
         self.w.lockParametersCheckBox.setChecked(node.parametersLocked)
         # and connect it to function to toggle operability of all sliders
-        self.w.lockParametersCheckBox.stateChanged.connect(self.lockToggleClick)
+        self.w.lockParametersCheckBox.checkStateChanged.connect(self.lockToggleClick)
 
         # initialise parameter sliders
         self.initParamSliders()
@@ -1080,11 +1080,11 @@ class TabPCTPatchDetection(Tab):
         Spawns a popup window with descriptions of parameters if the user needs to alter them
         """
         descriptionsWindow = QMessageBox()
-        descriptionsWindow.setIcon(QMessageBox.Information)
-        descriptionsWindow.setStandardButtons(QMessageBox.Ok)
+        descriptionsWindow.setIcon(QMessageBox.Icon.Information)
+        descriptionsWindow.setStandardButtons(QMessageBox.StandardButton.Ok)
         descriptionsWindow.setTextInteractionFlags(
-            Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse | Qt.TextBrowserInteraction)
-        descriptionsWindow.setTextFormat(Qt.RichText)
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse | Qt.TextInteractionFlag.TextBrowserInteraction)
+        descriptionsWindow.setTextFormat(Qt.TextFormat.RichText)
         descriptionsWindow.setWindowTitle("Patch Detection Parameter Descriptions")
         descriptionsWindow.setText("""
 DP: The inverse ratio of the accumulator resolution for the hough detections \nto the image resolution. The higher the DP, the lower the resolution of \nthe detection accumulator.
@@ -1101,7 +1101,7 @@ Maximum Radius: The minimum radius in pixels of patch detections.
 <br><br>
 More information can be found under the HoughCircles() method documentation <a href='https://docs.opencv.org/4.x/dd/d1a/group__imgproc__feature.html#ga47849c3be0d0406ad3ca45db65a25d2d'>here</a>.
         """)
-        descriptionsWindow.exec_()
+        descriptionsWindow.exec()
 
     def onNodeChanged(self):
         """
@@ -1139,7 +1139,7 @@ More information can be found under the HoughCircles() method documentation <a h
             # convert image array to a usable QImage
             h, w, _ = self.node.detectionsImage.shape
             bytesPerLine = 3 * w
-            qImageDetectionsImage = QImage(self.node.detectionsImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
+            qImageDetectionsImage = QImage(self.node.detectionsImage.data, w, h, bytesPerLine, QImage.Format.Format_RGB888)
             # convert Qimage to pixmap graphics item for the scene, and scale to size for display
             detectionsPlotScene.addItem(QGraphicsPixmapItem(QPixmap.fromImage(qImageDetectionsImage)))
         self.w.detectionsPlot.setScene(detectionsPlotScene)

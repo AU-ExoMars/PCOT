@@ -208,8 +208,6 @@ def generate_node_documentation(nodeName: str):
 
 def test_tree():
     import pcot
-    from pcot.parameters.inputs import inputsDictType
-    from pcot.xforms.xformmultidot import XFormMultiDot
     pcot.setup()
     s = generate_node_documentation("multidot")
 

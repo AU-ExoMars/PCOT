@@ -1,13 +1,12 @@
 import dataclasses
 from typing import List, Any
 
-import PySide2
-from PySide2 import QtCore
-from PySide2.QtCore import QAbstractTableModel, Signal, QModelIndex, Qt
-from PySide2.QtGui import QKeyEvent, QBrush, QColor
-from PySide2.QtWidgets import QTableView, QStyledItemDelegate, QComboBox, QDialog, QGridLayout, QPushButton
+from PySide6 import QtCore
+from PySide6.QtCore import QAbstractTableModel, Signal, QModelIndex, Qt
+from PySide6.QtGui import QKeyEvent, QBrush, QColor
+from PySide6.QtWidgets import QTableView, QStyledItemDelegate, QComboBox, QDialog, QGridLayout, QPushButton
 
-from pcot.parameters.taggedaggregates import TaggedListType, TaggedList, TaggedDictType
+from pcot.parameters.taggedaggregates import TaggedList, TaggedDictType
 from pcot.ui.dqwidget import DQWidget
 
 
@@ -34,7 +33,7 @@ class ComboBoxDelegate(QStyledItemDelegate):
 
     def setEditorData(self, editor, index):
         """Set the ComboBox's current index."""
-        value = index.data(QtCore.Qt.DisplayRole)
+        value = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
         i = editor.findText(value)
         if i == -1:
             i = 0
@@ -43,7 +42,7 @@ class ComboBoxDelegate(QStyledItemDelegate):
     def setModelData(self, editor, model, index):
         """Set the table's model's data when finished editing."""
         value = editor.currentText()
-        model.setData(index, value, QtCore.Qt.EditRole)
+        model.setData(index, value, QtCore.Qt.ItemDataRole.EditRole)
 
 
 class DQDialog(QDialog):
@@ -83,12 +82,12 @@ class DQDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         i = index.column()
-        dialog = DQDialog(self.model.tags[i].dq, parent)
+        dialog = DQDialog(self.model.d[i].dq, parent)
         dialog.open()
         return dialog
 
     def setModelData(self, editor, model, index):
-        if editor is None or editor.result() == QDialog.Rejected:
+        if editor is None or editor.result() == QDialog.DialogCode.Rejected:
             print("Rejected")
         else:
             i = index.column()
@@ -114,7 +113,7 @@ class TableView(QTableView):
             self.selectRow(item)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        if event.key() == Qt.Key_Delete:
+        if event.key() == Qt.Key.Key_Delete:
             self.delete.emit()
         super().keyPressEvent(event)
 
@@ -145,12 +144,13 @@ class TableModel(QAbstractTableModel):
     # custom signal used when we change data
     changed = Signal()
 
-    def __init__(self, tab, columnItems: bool):
+    def __init__(self, tab, columnItems: bool, data):
         """Takes the containing tab and whether items are columns and rows are fields (as in pixtest)"""
         QAbstractTableModel.__init__(self)
         self.tab = tab  # the tab we're part of
         self.columnItems = columnItems
         self.header = None  # subclass must provide
+        self.d = data
 
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview
@@ -176,11 +176,11 @@ class TableModel(QAbstractTableModel):
         if not index.isValid():
             return None
         item, field = self.getItemAndField(index)
-        if role == QtCore.Qt.BackgroundRole:
+        if role == QtCore.Qt.ItemDataRole.BackgroundRole:
             if self.isFailed(item):
                 return QBrush(QColor(255, 150, 150))
 
-        if role != QtCore.Qt.DisplayRole:
+        if role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
         return self._get_data(item, field)
 
@@ -190,18 +190,18 @@ class TableModel(QAbstractTableModel):
         pass
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = ...) -> Any:
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             if self.columnItems:
                 # data labels down the side
-                if orientation == QtCore.Qt.Vertical:
+                if orientation == QtCore.Qt.Orientation.Vertical:
                     return self.header[section]
                 # channel indices along the top
-                elif orientation == QtCore.Qt.Horizontal:
+                elif orientation == QtCore.Qt.Orientation.Horizontal:
                     return str(section)
             else:
-                if orientation == QtCore.Qt.Vertical:
+                if orientation == QtCore.Qt.Orientation.Vertical:
                     return str(section)
-                elif orientation == QtCore.Qt.Horizontal:
+                elif orientation == QtCore.Qt.Orientation.Horizontal:
                     return self.header[section]
         return None
 
@@ -302,16 +302,14 @@ class TableModel(QAbstractTableModel):
             if emit:    # we can suppress emit if we're deleting lots of items
                 self.changed.emit()
 
-    def flags(self, index: QModelIndex) -> QtCore.Qt.ItemFlags:
-        return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled
+    def flags(self, index: QModelIndex) -> QtCore.Qt.ItemFlag:
+        return QtCore.Qt.ItemFlag.ItemIsSelectable | QtCore.Qt.ItemFlag.ItemIsEditable | QtCore.Qt.ItemFlag.ItemIsEnabled
 
 
 class TableModelDataClass(TableModel):
     def __init__(self, tab, dataClass, _data: List, columnItems: bool):
-        super().__init__(tab, columnItems)
+        super().__init__(tab, columnItems, _data)
         self.dataClass = dataClass
-        self.d = _data  # the list of data which is our model
-
         self.header = dataClass.getHeader()  # get headers from static method
 
     def _get_data(self, item, field):
@@ -336,9 +334,8 @@ class TableModelTaggedAggregate(TableModel):
     This is a table model that works with a TaggedList of ordered TaggedDicts - see xformgen.py for an example
     """
     def __init__(self, tab, _data: TaggedList, columnItems: bool):
-        super().__init__(tab, columnItems)
+        super().__init__(tab, columnItems,_data)
         self.listType = _data.type
-        self.d = _data  # the list of data which is our model
         # we have to check that the list is of TaggedDicts
         tt = self.listType.tag.type
         if not isinstance(tt, TaggedDictType):

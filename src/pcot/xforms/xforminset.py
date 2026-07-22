@@ -1,10 +1,11 @@
 import cv2 as cv
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 from pcot.datum import Datum
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
+from pcot.ui import theme
 from pcot.parameters.taggedaggregates import Maybe, taggedRectType, TaggedDictType, taggedColourType
 from pcot.sources import MultiBandSource
 from pcot.imagecube import ImageCube, ChannelMapping
@@ -176,7 +177,7 @@ class TabInset(pcot.ui.tabs.Tab):
 
     def clearRectPressed(self):
         if QMessageBox.question(self.window, "Clear rectangle", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.mark()
             self.node.params.insetrect.set(0, 0, -1, -1)
             self.changed()
@@ -198,7 +199,7 @@ class TabInset(pcot.ui.tabs.Tab):
         self.w.captionTop.setChecked(self.node.params.captiontop)
 
         r, g, b = [x * 255 for x in self.node.params.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
 
     def canvasMouseMoveEvent(self, x2, y2, e):
         if self.mouseDown:

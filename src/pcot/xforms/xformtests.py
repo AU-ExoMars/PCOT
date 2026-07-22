@@ -6,10 +6,10 @@ import random
 from typing import List, Any, Tuple
 
 import numpy as np
-from PySide2 import QtCore
-from PySide2.QtCore import QModelIndex, Signal, Qt
-from PySide2.QtGui import QColor, QIntValidator, QDoubleValidator
-from PySide2.QtWidgets import QMessageBox
+from PySide6 import QtCore
+from PySide6.QtCore import QModelIndex, Signal, Qt
+from PySide6.QtGui import QColor, QIntValidator, QDoubleValidator
+from PySide6.QtWidgets import QMessageBox
 
 import pcot
 from pcot import ui, dq
@@ -17,6 +17,7 @@ from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import nullSourceSet
 from pcot.ui.tablemodel import TableModelDataClass, ComboBoxDelegate, DQDelegate, DQDialog
+from pcot.ui import theme
 from pcot.utils.annotations import IndexedPointAnnotation
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
@@ -63,7 +64,7 @@ class Model(TableModelDataClass):
         self.failed = set()
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             r = index.row()
             c = index.column()
             if r == PixTest.getHeader().index('DQ'):
@@ -106,7 +107,7 @@ class Model(TableModelDataClass):
                     d.col = value
 
                 # tell the view we changed
-                self.dataChanged.emit(index, index, (QtCore.Qt.DisplayRole,))
+                self.dataChanged.emit(index, index, (QtCore.Qt.ItemDataRole.DisplayRole,))
                 # and tell any other things too (such as the tab!)
                 self.changed.emit()
             except ValueError:
@@ -121,7 +122,7 @@ class Model(TableModelDataClass):
         if 0 <= item < len(self.d):
             self.d[item].x = x
             self.d[item].y = y
-            self.dataChanged.emit(QModelIndex(), QModelIndex(), (QtCore.Qt.DisplayRole,))
+            self.dataChanged.emit(QModelIndex(), QModelIndex(), (QtCore.Qt.ItemDataRole.DisplayRole,))
             self.changed.emit()
 
     def add_random(self, chans, w, h):
@@ -130,7 +131,7 @@ class Model(TableModelDataClass):
         for i in range(0, chans):
             item = self.add_item()
             self.d[item] = PixTest(x, y, i, 0, 0, 0, random.choice(COLOURS))
-        self.dataChanged.emit(QModelIndex(), QModelIndex(), (QtCore.Qt.DisplayRole,))
+        self.dataChanged.emit(QModelIndex(), QModelIndex(), (QtCore.Qt.ItemDataRole.DisplayRole,))
         self.changed.emit()
 
 
@@ -255,7 +256,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
     def setFromPixelsClicked(self):
         if QMessageBox.question(self.parent(), "Set test from pixels",
                                 "This will overwrite all test data to force the tests to pass. Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             if self.node.img is None:
                 ui.error("No image to read data from")
             else:
@@ -307,7 +308,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
         # we build a list of bands to delete and then run through it in reverse, to avoid
         # changing the indices of the items we are deleting.
         if QMessageBox.question(self.window, "Delete test", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             to_delete = []
             for i in range(0, len(self.model.d)):
                 t = self.model.d[i]
@@ -323,7 +324,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
     def deleteClicked(self):
         if (col := self.w.tableView.get_selected_item()) is not None:
             if QMessageBox.question(self.window, "Delete test", "Are you sure?",
-                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
                 self.mark()
                 self.model.delete_item(col)
 
@@ -657,11 +658,11 @@ class TabStringTest(pcot.ui.tabs.Tab):
         self.nodeChanged()
 
     def textChanged(self):
-        self.w.finishedButton.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.finishedButton, True)
 
     def onNodeChanged(self):
         self.w.expected.setPlainText(self.node.params.string)
-        self.w.finishedButton.setStyleSheet("")
+        theme.setStaleStyle(self.w.finishedButton, False)
         self.w.actual.setPlainText(self.node.inp)
 
     def editFinished(self, t):

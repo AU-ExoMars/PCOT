@@ -4,7 +4,7 @@ import dataclasses
 from typing import List, Dict, Tuple
 
 import numpy as np
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 
 import pcot.ui.tabs
 from pcot import cameras, ui
@@ -13,6 +13,7 @@ from pcot.calib import SimpleValue
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
 from pcot.ui.tabledialog import TableDialog
+from pcot.ui import theme
 from pcot.utils import SignalBlocker, image
 from pcot.utils.maths import pooled_sd
 from pcot.utils.table import Table
@@ -313,8 +314,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.targetCombo.currentIndexChanged.connect(self.targetChanged)
         self.w.filterCombo.currentIndexChanged.connect(self.filterChanged)
         self.w.replot.clicked.connect(self.replot)
-        self.w.showPatchesBox.stateChanged.connect(self.showPatchesStateChanged)
-        self.w.sepPlotsBox.stateChanged.connect(self.sepPlotsBoxStateChanged)
+        self.w.showPatchesBox.checkStateChanged.connect(self.showPatchesStateChanged)
+        self.w.sepPlotsBox.checkStateChanged.connect(self.sepPlotsBoxStateChanged)
         self.w.saveButton.clicked.connect(self.save)
         self.w.showMCButton.clicked.connect(self.showMCClicked)
 
@@ -323,8 +324,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.filterAngleSpin.valueChanged.connect(self.filterAngleChanged)
         self.w.recalcButton.clicked.connect(self.recalcButtonClicked)
 
-        self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
-        self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
+        self.w.zeroFudgeBox.checkStateChanged.connect(self.zeroFudgeStateChanged)
+        self.w.simplifyFudgeBox.checkStateChanged.connect(self.simplifyFudgeStateChanged)
         self.nodeChanged()
 
     def save(self):
@@ -333,7 +334,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def changed(self):
         # when the node change is run, we need to clear the recalc button's style.
         super().changed()
-        self.w.recalcButton.setStyleSheet("")
+        theme.setStaleStyle(self.w.recalcButton, False)
 
     def recalcButtonClicked(self):
         # recalculate; call changed() so that the new values are copied into the node and the node runs,
@@ -344,7 +345,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def mustRecalc(self):
         # if an angle etc. changed we need to recalculate the node and all its children  - typically slow,
         # so we make it a user action, indicating that necessity by making the recalc button red.
-        self.w.recalcButton.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.recalcButton, True)
 
     def showMCClicked(self):
         # open a dialog containing a single text edit box with the gradient and intercept values
@@ -361,7 +362,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
                 table.add("Intercept", c[i])
 
             dialog = TableDialog("Gradients and intercepts", table)
-            dialog.exec_()
+            dialog.exec()
 
     def targetChanged(self, i):
         self.mark()
@@ -390,21 +391,21 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def showPatchesStateChanged(self, state):
         # data unchanged, no need to mark or call changed().
-        self.node.params.show_patches = state == Qt.Checked
+        self.node.params.show_patches = state == Qt.CheckState.Checked
         self.markReplotReady()
 
     def sepPlotsBoxStateChanged(self, state):
-        self.node.params.sep_plots = state == Qt.Checked
+        self.node.params.sep_plots = state == Qt.CheckState.Checked
         self.markReplotReady()
 
     def zeroFudgeStateChanged(self, state):
         self.mark()
-        self.node.params.zero_fudge = state == Qt.Checked
+        self.node.params.zero_fudge = state == Qt.CheckState.Checked
         self.changed()
 
     def simplifyFudgeStateChanged(self, state):
         self.mark()
-        self.node.params.simpler_data_fudge = state == Qt.Checked
+        self.node.params.simpler_data_fudge = state == Qt.CheckState.Checked
         self.changed()
 
     def onNodeChanged(self):
@@ -444,7 +445,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def markReplotReady(self):
         """make the replot button red"""
-        self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.replot, True)
 
     @staticmethod
     def set_axis_data(ax, sep_plots=False):
@@ -513,7 +514,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.mpl.draw()
 
     def replot(self):
-        self.w.replot.setStyleSheet("")
+        theme.setStaleStyle(self.w.replot, False)
         # the MPL widget creates a default subplot, let's clear it...
         self.w.mpl.fig.clf()
         if self.node.params.sep_plots:
@@ -574,4 +575,4 @@ class TabReflectance(pcot.ui.tabs.Tab):
             ax.legend(loc="lower right")
 
         self.w.mpl.draw()
-        self.w.replot.setStyleSheet("")
+        theme.setStaleStyle(self.w.replot, False)

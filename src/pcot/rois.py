@@ -4,8 +4,8 @@ from typing import Tuple, Optional
 
 import cv2 as cv
 import numpy as np
-from PySide2.QtCore import Qt, QPointF
-from PySide2.QtGui import QPainter, QImage, QPen
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QPainter, QImage, QPen
 from numpy import ndarray
 from scipy import ndimage
 
@@ -74,7 +74,7 @@ class ROI(SourcesObtainable, Annotation):
         super().__init_subclass__(**kwargs)
         ROI.roiTypes[cls.tpname] = cls
 
-    def __init__(self, bbrect: Rect = None, maskimg: np.array = None,
+    def __init__(self, bbrect: Rect = None, maskimg: np.ndarray = None,
                  sourceROI=None, isTemp=False, containingImageDimensions=None,
                  label=None):
         """Constructor. Takes an ROI type name, optional rect and mask (for 'base' ROIs consisting of just these)
@@ -163,7 +163,7 @@ class ROI(SourcesObtainable, Annotation):
         """Draw the BB onto a QPainter"""
         if (bb := self.bb()) is not None:
             x, y, w, h = bb.astuple()
-            p.setBrush(Qt.NoBrush)
+            p.setBrush(Qt.BrushStyle.NoBrush)
             self.setPen(p, alpha)
             p.drawRect(x, y, w, h)
 
@@ -196,7 +196,7 @@ class ROI(SourcesObtainable, Annotation):
             # discussed in canvas.img2qimage where memory is freed by accident in Qt
             # (https://bugreports.qt.io/browse/PYSIDE-1563)
             self.workaround = x
-            q = QImage(x.data, ww, hh, ww * 4, QImage.Format_RGBA8888)
+            q = QImage(x.data, ww, hh, ww * 4, QImage.Format.Format_RGBA8888)
             # now we have a QImage we can draw it onto the painter.
             p.drawImage(bb.x, bb.y, q)
 
@@ -245,8 +245,10 @@ class ROI(SourcesObtainable, Annotation):
         td.drawBox = self.drawBox
         td.drawEdge = self.drawEdge
 
-        # we also need to add the type
-        td.type = self.__class__.tpname
+        # we also need to add the type - we do it like this rather than "td.type = .." to avoid
+        # trying to set the "type" property!
+
+        td['type'] = self.__class__.tpname
         return td
 
     def from_tagged_dict_common(self, td: TaggedDict):
@@ -682,7 +684,7 @@ class ROICircle(ROI):
             self.annotateBB(p, alpha)
             self.annotateText(p, alpha)
             x, y, w, h = bb.astuple()
-            p.setBrush(Qt.NoBrush)
+            p.setBrush(Qt.BrushStyle.NoBrush)
             self.setPen(p, alpha)
             p.drawEllipse(x, y, w, h)
 
@@ -1026,7 +1028,7 @@ class ROIPoly(ROI):
         """draw the polygon as annotation onto a painter"""
 
         if len(self.points) > 0:
-            p.setBrush(Qt.NoBrush)
+            p.setBrush(Qt.BrushStyle.NoBrush)
             self.setPen(p, alpha=alpha)
 
             # first draw the points as little circles

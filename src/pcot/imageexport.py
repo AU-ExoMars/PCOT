@@ -1,9 +1,9 @@
 from math import ceil
 
 import numpy as np
-from PySide2.QtCore import QSizeF, QMarginsF, Qt, QSize, QRect, QRectF
-from PySide2.QtGui import QImage, QPainter, QPdfWriter, QColor
-from PySide2.QtSvg import QSvgGenerator
+from PySide6.QtCore import QSizeF, QMarginsF, Qt, QSize, QRect, QRectF
+from PySide6.QtGui import QImage, QPainter, QPdfWriter, QColor, QPageSize
+from PySide6.QtSvg import QSvgGenerator
 
 EXPORT_UNIT_WIDTH = 10000.0  # size of an image and its borders in internal units.
 
@@ -76,7 +76,7 @@ def export(imgcube, prepfunction, annotations=True, margin=0.2, gamma=1.0):
     assert channel == 3
     bytesPerLine = 3 * width
     qimg = QImage(imgcube.tmpimage.data, width, height,
-                  bytesPerLine, QImage.Format_RGB888)
+                  bytesPerLine, QImage.Format.Format_RGB888)
     p.drawImage(0, 0, qimg)
     imgcube.tmpimage = None
 
@@ -102,7 +102,7 @@ def exportPDF(imgcube, path, annotations=True, gamma=1.0):
         pdf.setPageMargins(QMarginsF(0, 0, 0, 0))
         # set the page size to win x hin inches. Having bother with overloading here,
         # so doing it in mm.
-        pdf.setPageSizeMM(QSizeF(win * 25.4, hin * 25.4))
+        pdf.setPageSize(QPageSize(QSizeF(win * 25.4, hin * 25.4), QPageSize.Unit.Millimeter))
         return QPainter(pdf)
 
     export(imgcube, prepfunc, annotations, gamma=gamma)
@@ -117,7 +117,7 @@ def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotat
         pixelWidth: the width in pixels
         transparentbackground: in the case of PNGs, will use an alpha=0 rather than white background"""
 
-    outputImage = None   # see note on exportPDF
+    outputImage = None   # see note on exportPDF; we need to declare this so it doesn't die when pepfunc writes it.
 
     if pixelWidth is None or pixelWidth < 0:
         pixelWidth = imgcube.w
@@ -131,10 +131,10 @@ def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotat
         # create an image in memory - 32bit ARGB if we need a transparent background, 24bit RGB if we don't
         nonlocal outputImage
         outputImage = QImage(pixelWidth, pixelHeight,
-                             QImage.Format_ARGB32 if transparentBackground else QImage.Format_RGB888)
+                             QImage.Format.Format_ARGB32 if transparentBackground else QImage.Format.Format_RGB888)
         # if we don't want a transparent background, fill with white
         if not transparentBackground:
-            outputImage.fill(Qt.white)
+            outputImage.fill(Qt.GlobalColor.white)
         # and now paint on it.
         return QPainter(outputImage)
 

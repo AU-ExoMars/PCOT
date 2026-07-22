@@ -3,14 +3,15 @@ import random
 from functools import partial
 
 import matplotlib
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QPainter, QColor, QKeyEvent, QDoubleValidator
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainter, QColor, QKeyEvent, QDoubleValidator
+from PySide6.QtWidgets import QMessageBox
 
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
+from pcot.ui import theme
 from pcot.datum import Datum
 from pcot.rois import ROICircle, ROIPainted, ROI
 from pcot.ui.variantwidget import VariantWidget
@@ -308,7 +309,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
-        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
+        self.w.drawbg.checkStateChanged.connect(self.drawbgChanged)
         self.w.caption.returnPressed.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.clearButton.pressed.connect(self.clearPressed)
@@ -371,7 +372,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.drawbg = (val != 0)
+        self.node.drawbg = (val == Qt.CheckState.Checked)
         self.changed()
 
     def modeChanged(self, i):
@@ -411,7 +412,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
 
     def clearPressed(self):
         if QMessageBox.question(self.window, "Clear regions", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.mark()
             self.node.rois = []
             self.node.selected = None
@@ -423,7 +424,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if self.node.selected is not None:
             self.node.selected.label = t  # except for this special case!
             self.changed()
-        self.w.canvas.setFocus(Qt.OtherFocusReason)
+        self.w.canvas.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def thicknessChanged(self, i):
         self.mark()
@@ -499,13 +500,13 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.tolerance.setValidator(QDoubleValidator(0, 1000, 4, self.w.tolerance))
 
         r, g, b = [x * 255 for x in self.node.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        theme.setSwatchColour(self.w.colourButton, r, g, b)
 
     def canvasPaintHook(self, p: QPainter):
         """Called after the canvas has painted the image, but before it has painted the ROIs. We use
         this to preview the circular brush we are using"""
         if self.mousePos is not None and self.node.previewRadius is not None:
-            p.setBrush(Qt.NoBrush)
+            p.setBrush(Qt.BrushStyle.NoBrush)
             p.setPen(QColor(*[v * 255 for v in self.node.colour]))
             if self.node.createMode == ModeWidget.FILL and self.getPage() == self.PAINTED:
                 # draw a diagonal cross if we're in painted mode and using fill.
@@ -585,11 +586,11 @@ class TabMultiDot(pcot.ui.tabs.Tab):
     def canvasMousePressEvent(self, x, y, e):
         """Mouse button has gone down"""
         node = self.node
-        alt = e.modifiers() & Qt.AltModifier
-        shift = e.modifiers() & Qt.ShiftModifier
+        alt = e.modifiers() & Qt.KeyboardModifier.AltModifier
+        shift = e.modifiers() & Qt.KeyboardModifier.ShiftModifier
 
         # we store the state of the control key so we can use it in dragging
-        self.ctrl = e.modifiers() & Qt.ControlModifier
+        self.ctrl = e.modifiers() & Qt.KeyboardModifier.ControlModifier
 
         if shift:
             # shift key is down, so we are going to create a new ROI. What kind of ROI depends on
@@ -659,7 +660,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()
-        if k == Qt.Key_Delete:
+        if k == Qt.Key.Key_Delete:
             # delete key - delete the selected ROI
             n = self.node
             if n.selected is not None and n.selected in n.rois:

@@ -1,10 +1,11 @@
 from typing import Tuple
 
-from PySide2 import QtGui, QtWidgets, QtCore
-from PySide2.QtGui import QColor, QFont, QPen
+from PySide6 import QtGui, QtWidgets, QtCore
+from PySide6.QtGui import QColor, QFont, QPen
 
 from pcot import ui
 from pcot.parameters.taggedaggregates import TaggedDictType, taggedColourType
+from pcot.ui import theme
 from pcot.ui.tabs import Tab
 from pcot.utils.colour import colDialog
 from pcot.xform import xformtype, XFormType
@@ -13,7 +14,7 @@ from pcot.xform import xformtype, XFormType
 class GStringText(QtWidgets.QGraphicsTextItem):
     def __init__(self, parent, node):
         super().__init__(node.params.string, parent=parent)
-        self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+        self.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextEditorInteraction)
         self.setTextWidth(50)
         self.setTabChangesFocus(True)
         self.rect = parent
@@ -112,12 +113,8 @@ class XFormComment(XFormType):
 
 
 def setButtonColour(b, col):
-    b.setAutoFillBackground(True)
     r1, g1, b1 = [x*255 for x in col.get()]
-
-    t = 255 if r1 + g1 + b1 < (128 * 3) else 0
-    s = f"background-color: rgb({r1},{g1},{b1}); color: rgb({t},{t},{t})"
-    b.setStyleSheet(s)
+    theme.setSwatchColour(b, r1, g1, b1)
 
 
 

@@ -13,7 +13,7 @@ from typing import List, Optional, Tuple, Sequence, Union
 
 import cv2 as cv
 import numpy as np
-from PySide2.QtGui import QPainter
+from PySide6.QtGui import QPainter
 
 import pcot
 from pcot import dq, ui

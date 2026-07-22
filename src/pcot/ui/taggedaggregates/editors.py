@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Tuple, Optional
 import logging
 
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Qt, QObject
-from PySide2.QtWidgets import QListWidgetItem, QSizePolicy, QListWidget
+from PySide6 import QtWidgets, QtGui
+from PySide6.QtCore import QObject
+from PySide6.QtWidgets import QListWidgetItem, QSizePolicy, QListWidget
 
 from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType, TaggedDictType, \
     TaggedVariantDictType, TaggedVariantDict
@@ -141,7 +141,7 @@ class BoolEditor(Editor):
         if container[key_or_index] is not None:
             self.widget.setChecked(container[key_or_index])
         # can't connect to the method directly, because the class is not a QObject
-        self.widget.stateChanged.connect(lambda t: self.changed(t))
+        self.widget.checkStateChanged.connect(lambda t: self.changed(t))
 
     def changed(self, _):
         self.notifyBefore()
@@ -161,20 +161,20 @@ class MaybeEditor(Editor):
         self.oldvalue = self.editor.aggregate[self.editor.key_or_index]
 
         self.nullCheck = QtWidgets.QCheckBox("has no value")
-        self.nullCheck.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.nullCheck.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
         self.layout.addWidget(self.nullCheck)
         self.layout.addWidget(self.editor.widget)
         self.setStateFromInnerEditor()
-        self.nullCheck.stateChanged.connect(lambda: self.nullChanged())
+        self.nullCheck.checkStateChanged.connect(lambda: self.nullChanged())
 
     def setStateFromInnerEditor(self):
         val = self.editor.aggregate[self.key_or_index]
         if val is None:
             self.editor.widget.setEnabled(False)
-            self.nullCheck.setChecked(Qt.Checked)
+            self.nullCheck.setChecked(True)
         else:
             self.editor.widget.setEnabled(True)
-            self.nullCheck.setChecked(Qt.Unchecked)
+            self.nullCheck.setChecked(False)
 
     def nullChanged(self):
         self.notifyBefore()
@@ -194,7 +194,7 @@ class TallListWidget(QListWidget):
     def __init__(self, min_rows=1, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.min_rows = min_rows
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         # Recompute geometry when items change
         m = self.model()
@@ -345,7 +345,7 @@ class WrapperWidget(QtWidgets.QWidget):
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.widget = None
 
     def setWidget(self, new_widget):

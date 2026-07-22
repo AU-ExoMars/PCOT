@@ -1,8 +1,8 @@
 """A colour gradient widget, adapted from https://www.learnpyqt.com/widgets/gradient/"""
 
-from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtCore import Qt
-from PySide2.QtCore import Signal
+from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtCore import Signal
 
 from pcot.utils.colour import qcol2rgb, rgb2qcol
 
@@ -15,8 +15,8 @@ class Gradient(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
 
         self.setSizePolicy(
-            QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding
+            QtWidgets.QSizePolicy.Policy.MinimumExpanding,
+            QtWidgets.QSizePolicy.Policy.MinimumExpanding
         )
 
         self._gradient = [
@@ -129,7 +129,7 @@ class Gradient(QtWidgets.QWidget):
         if current_color:
             dlg.setCurrentColor(rgb2qcol(current_color))
 
-        if dlg.exec_():
+        if dlg.exec():
             col = qcol2rgb(dlg.currentColor())
             self.setColorAtPosition(n, col)
 
@@ -154,13 +154,13 @@ class Gradient(QtWidgets.QWidget):
 
     def mousePressEvent(self, e):
         # We're in this stop point.
-        if e.button() == Qt.RightButton:
+        if e.button() == Qt.MouseButton.RightButton:
             n = self._find_stop_handle_for_event(e)
             if n is not None:
                 _, color = self._gradient[n]
                 self.chooseColorAtPosition(n, color)
 
-        elif e.button() == Qt.LeftButton:
+        elif e.button() == Qt.MouseButton.LeftButton:
             n = self._find_stop_handle_for_event(e, to_exclude=self._end_stops)
             if n is not None:
                 # Activate drag mode.

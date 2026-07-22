@@ -3,7 +3,7 @@ import logging
 from collections import Counter
 from typing import List, OrderedDict, Optional
 
-from PySide2.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout
 
 import pcot.ui.mainwindow
 import pcot.xform as xform

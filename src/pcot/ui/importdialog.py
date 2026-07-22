@@ -1,9 +1,9 @@
 """
 Dialog for importing favourites and macros
 """
-from PySide2 import QtGui
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QDialog, QDialogButtonBox
+from PySide6 import QtGui
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QDialogButtonBox
 
 from pcot.ui import uiloader
 
@@ -21,7 +21,7 @@ class ImportDialog(QDialog):
         # helper function for checking the box on all items in a model
         def selectAll(model):
             for i in range(model.rowCount()):
-                model.item(i).setCheckState(Qt.Checked)
+                model.item(i).setCheckState(Qt.CheckState.Checked)
 
         # buttons for select all
         self.allMacros.clicked.connect(lambda: selectAll(self.macrosList.model()))
@@ -51,7 +51,7 @@ class ImportDialog(QDialog):
             out = []
             for i in range(mod.rowCount()):
                 item = mod.item(i)
-                if item.checkState() == Qt.Checked:
+                if item.checkState() == Qt.CheckState.Checked:
                     out.append(item.text())
             return out
 

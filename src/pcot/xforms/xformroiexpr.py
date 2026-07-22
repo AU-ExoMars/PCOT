@@ -3,13 +3,14 @@ than using multiple ROI and expr nodes with an importroi node."""
 from copy import copy
 from functools import partial
 
-from PySide2.QtCore import QModelIndex, Signal, QAbstractTableModel, Qt
-from PySide2.QtGui import QPainter
-from PySide2.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtCore import QModelIndex, Signal, QAbstractTableModel, Qt
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from pcot.rois import ROICircle, ROIPainted, ROIPoly, ROIRect, ROI
 import pcot.ui
 from pcot import ui
+from pcot.ui import theme
 from pcot.datum import Datum
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ImageCube
@@ -260,10 +261,10 @@ class Model(QAbstractTableModel):
         for i, r in enumerate(self.tab.node.rois):
             self.editors[i] = r.createEditor(tab)
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
             return COLNAMES[section]
-        if role == Qt.DisplayRole and orientation == Qt.Vertical:
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Vertical:
             return getROIName(section)  # index number to a,b,c,d...
         return super().headerData(section, orientation, role)
 
@@ -274,7 +275,7 @@ class Model(QAbstractTableModel):
         return len(COLNAMES)
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             item = index.row()
             field = index.column()
             roi = self.tab.node.rois[item]
@@ -321,7 +322,7 @@ class Model(QAbstractTableModel):
 
 def setColourButton(but, col):
     r, g, b = [x * 255 for x in col]
-    but.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
+    theme.setSwatchColour(but, r, g, b)
 
 
 class TabROIExpr(Tab):
@@ -333,7 +334,7 @@ class TabROIExpr(Tab):
         self.w.tableView.delete.connect(self.deleteClicked)
         self.w.tableView.selChanged.connect(self.selectionChanged)
         self.w.exprEdit.editingFinished.connect(self.exprChanged)
-        self.w.hideCheck.stateChanged.connect(self.hideCheckChanged)
+        self.w.hideCheck.checkStateChanged.connect(self.hideCheckChanged)
         self.w.outColButton.clicked.connect(self.outColButtonChanged)
         self.w.selColButton.clicked.connect(self.selColButtonChanged)
         self.w.unselColButton.clicked.connect(self.unselColButtonChanged)
@@ -423,7 +424,7 @@ class TabROIExpr(Tab):
         self.changed()
 
     def hideCheckChanged(self, t):
-        self.node.hideROIs = t != 0
+        self.node.hideROIs = (t == Qt.CheckState.Checked)
         self.changed()
 
     def selectionChanged(self, idx):
@@ -454,7 +455,7 @@ class TabROIExpr(Tab):
     def deleteClicked(self):
         if (item := self.get_selected_item()) is not None:
             if QMessageBox.question(None, "Delete item", "Are you sure?",
-                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
                 self.model.delete_item(item)
 
     def getEditor(self):

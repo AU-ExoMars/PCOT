@@ -1,8 +1,8 @@
 import cv2 as cv
 import numpy as np
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QKeyEvent
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QMessageBox
 from skimage import transform
 from skimage.transform import warp, AffineTransform
 
@@ -392,7 +392,7 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
     def clearClicked(self):
         if QMessageBox.question(self.window, "Clear all points", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.mark()
             self.node.fixed = []
             self.node.moving = []
@@ -443,20 +443,20 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()
-        if k == Qt.Key_D:   # image display mode change
+        if k == Qt.Key.Key_D:   # image display mode change
             self.mark()
             self.node.imagemode += 1
             self.node.imagemode %= IMAGEMODE_CT
             self.changed()
-        elif k == Qt.Key_M:  # show moving points toggle
+        elif k == Qt.Key.Key_M:  # show moving points toggle
             self.mark()
             self.node.params.showMoving = not self.node.params.showMoving
             self.changed()
-        elif k == Qt.Key_F:  # show fixed points toggle
+        elif k == Qt.Key.Key_F:  # show fixed points toggle
             self.mark()
             self.node.params.showFixed = not self.node.params.showFixed
             self.changed()
-        elif k == Qt.Key_Delete:    # delete point
+        elif k == Qt.Key.Key_Delete:    # delete point
             self.mark()
             self.node.type.delSelPoint(self.node)
             self.changed()
@@ -469,13 +469,13 @@ class TabManualReg(pcot.ui.tabs.Tab):
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
         self.mark()
-        if e.modifiers() & (Qt.ShiftModifier | Qt.ControlModifier):
+        if e.modifiers() & (Qt.KeyboardModifier.ShiftModifier | Qt.KeyboardModifier.ControlModifier):
             # modifiers = we're adding
             if self.node.params.showMoving and self.node.params.showFixed:
                 # if both are shown, distinguish with modifier
-                if e.modifiers() & Qt.ControlModifier:  # ctrl = moving
+                if e.modifiers() & Qt.KeyboardModifier.ControlModifier:  # ctrl = moving
                     self.node.type.addPoint(self.node, x, y, False)
-                elif e.modifiers() & Qt.ShiftModifier:  # shift = fixed
+                elif e.modifiers() & Qt.KeyboardModifier.ShiftModifier:  # shift = fixed
                     self.node.type.addPoint(self.node, x, y, True)
             else:
                 # otherwise which sort we are adding can be determined from which sort

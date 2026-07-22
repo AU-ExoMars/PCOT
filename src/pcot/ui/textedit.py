@@ -1,5 +1,5 @@
-from PySide2.QtGui import QTextCursor
-from PySide2.QtWidgets import QPlainTextEdit, QTextEdit
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QPlainTextEdit, QTextEdit
 
 from pcot import ui, dq
 from pcot.ui.help import markdownWrapper
@@ -9,7 +9,7 @@ from pcot.xform import allTypes
 def handleMenuEvent(self, ev):
     # get work under mouse cursor
     tc = self.cursorForPosition(ev.pos())
-    tc.select(QTextCursor.WordUnderCursor)
+    tc.select(QTextCursor.SelectionType.WordUnderCursor)
     funcname = tc.selectedText()
     menu = self.createStandardContextMenu()
 
@@ -27,7 +27,7 @@ def handleMenuEvent(self, ev):
 
     parser = allTypes['expr'].parser  # the eval node type owns the parser, which knows about funcs.
 
-    a = menu.exec_(ev.globalPos())
+    a = menu.exec(ev.globalPos())
     if a == fhact:
         txt = "<h1>Help on {}</h1>".format(funcname)
         txt += markdownWrapper(parser.helpOnWord(funcname))
@@ -44,7 +44,7 @@ def handleMenuEvent(self, ev):
         tc.document().clear()
         return
     else:
-        menu.exec_(ev.globalPos())
+        menu.exec(ev.globalPos())
         return
 
     if txt is not None:

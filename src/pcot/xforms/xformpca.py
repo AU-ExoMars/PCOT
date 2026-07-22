@@ -1,5 +1,5 @@
 import numpy as np
-from PySide2 import QtCore
+from PySide6 import QtCore
 from poetry.console.commands import self
 
 from pcot import ui
@@ -378,7 +378,7 @@ class TabPCA(Tab):
         else:
             self.w.radioPCA.setChecked(True)
 
-        idx = self.w.stretch.findText(params.stretch, QtCore.Qt.MatchStartsWith)
+        idx = self.w.stretch.findText(params.stretch, QtCore.Qt.MatchFlag.MatchStartsWith)
         self.w.stretch.setCurrentIndex(idx)
 
         self.w.norm.setChecked(params.normalize)

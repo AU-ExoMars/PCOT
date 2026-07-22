@@ -5,7 +5,7 @@ the controls programmatically rather than loading them from a .ui file created i
 other nodes for examples of how to do that - you'll have to add the .ui file to the assets directory.
 """
 import numpy as np
-from PySide2.QtWidgets import QWidget, QGridLayout, QLabel, QSlider, QDoubleSpinBox, QComboBox, QSizePolicy
+from PySide6.QtWidgets import QWidget, QGridLayout, QLabel, QSlider, QDoubleSpinBox, QComboBox, QSizePolicy
 
 import pcot.ui.tabs
 from pcot.datum import Datum
@@ -154,9 +154,9 @@ class TabExample(pcot.ui.tabs.Tab):
         # because we're going to create the UI programatically.
         super().__init__(window, node, None)
 
-        # now we create a UI - look at documentation and tutorials for PySide2, PySide6 (the new
-        # version) or PyQt5 for how to create UIs programatically. This is a very simple example.
-        # Here's one tutorial: https://www.pythonguis.com/pyside2-tutorial/
+        # now we create a UI - look at documentation and tutorials for PySide6 or PyQt6
+        # for how to create UIs programatically. This is a very simple example.
+        # Here's one tutorial: https://www.pythonguis.com/pyside6-tutorial/
 
         # The constructor will already have created a QWidget for us
         # to add things to, called self.w. We'll create a grid layout

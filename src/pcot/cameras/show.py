@@ -2,15 +2,30 @@
 Code for showing filters, reflectances and their products.
 """
 import numpy as np
-from PySide2 import QtWidgets
-from poetry.console.commands import self
+from PySide6 import QtWidgets
 
 from pcot.cameras.filters import Filter
 from pcot.ui import uiloader
+from pcot.ui.mplwidget import MplWidget
 from pcot import cameras
 
 
 class Dialog(QtWidgets.QDialog):
+    # widgets loaded from showcamsrefls.ui - added to avoid warnings.
+    cameraBox: QtWidgets.QComboBox
+    reflBox: QtWidgets.QComboBox
+    filterBox: QtWidgets.QComboBox
+    patchBox: QtWidgets.QComboBox
+    filterAngleSpin: QtWidgets.QDoubleSpinBox
+    thetaSpin: QtWidgets.QDoubleSpinBox
+    phiSpin: QtWidgets.QDoubleSpinBox
+    y01Box: QtWidgets.QCheckBox
+    filterPlotButton: QtWidgets.QPushButton
+    reflPlotButton: QtWidgets.QPushButton
+    filtReflPlotButton: QtWidgets.QPushButton
+    errorText: QtWidgets.QLabel
+    mpl_widget: MplWidget
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -20,7 +35,7 @@ class Dialog(QtWidgets.QDialog):
         self.filterAngleSpin.valueChanged.connect(self._replot)
         self.thetaSpin.valueChanged.connect(self._replot)
         self.phiSpin.valueChanged.connect(self._replot)
-        self.y01Box.stateChanged.connect(self._replot)
+        self.y01Box.checkStateChanged.connect(self._replot)
 
         self.filterPlotButton.clicked.connect(self._filter_plot)
         self.reflPlotButton.clicked.connect(self._refl_plot)
@@ -84,6 +99,7 @@ class Dialog(QtWidgets.QDialog):
         mpl, ax = self._init_plot("response")
 
         not_filter = []
+        cwls = []
         wavelengths = np.linspace(300, 1200, 400)
         angle = self.filterAngleSpin.value()
         for n in filter_names:
@@ -92,9 +108,11 @@ class Dialog(QtWidgets.QDialog):
                 not_filter.append(n)
                 continue
             if n == selected or selected == "ALL":
+                if not f.hasMissingData():
+                    cwls.append(f.cwl)
                 # get the response for a range of wavelengths
                 resp = f.getResponse(wavelengths, angle)
-                label = f.name
+                label = f"{f.name}[{f.position}]"
                 if f.response.is_simulated:
                     label += " (sim)"
                 if f.response.clipped_to:
@@ -109,6 +127,10 @@ class Dialog(QtWidgets.QDialog):
 
         if len(not_filter) > 0:
             self.errorText.setText(f"Not true filters: {', '.join(not_filter)}")
+        if len(cwls) > 0:
+            # label the x axis with the centre wavelength of each plotted filter
+            ax.set_xticks(sorted(cwls))
+            ax.set_xticklabels([f"{w:g}" for w in sorted(cwls)], rotation=90, fontsize=8)
         ax.legend()
         if self.y01Box.isChecked():
             ax.set_ylim([0, 1])

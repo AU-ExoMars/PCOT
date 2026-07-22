@@ -3,12 +3,13 @@ import os
 from pathlib import Path
 from typing import List
 
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QFileSystemModel
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFileSystemModel
 
 import pcot
 from pcot.ui import uiloader
+from pcot.ui import theme
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +23,8 @@ class MethodSelectButton(QtWidgets.QPushButton):
         self.window = w
         self.method = m
         self.setText(m.getName())
-        self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
-                                                 QtWidgets.QSizePolicy.Maximum))
+        self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred,
+                                                 QtWidgets.QSizePolicy.Policy.Maximum))
         self.clicked.connect(self.onClick)
 
     def onClick(self):
@@ -37,18 +38,13 @@ class MethodSelectButton(QtWidgets.QPushButton):
            value sometimes doesn't work."""
         size = super().sizeHint()
         metrics = QtGui.QFontMetrics(self.font())
-        textSize = metrics.size(Qt.TextShowMnemonic, self.text())
+        textSize = metrics.size(Qt.TextFlag.TextShowMnemonic, self.text())
         size.setHeight(textSize.height() + 15)
         return size
 
     def showActive(self):
         """Colour the button to show that this method is active"""
-        if self.method.isActive():
-            r, g, b = 200, 200, 255
-        else:
-            r, g, b = 200, 200, 200
-        self.setStyleSheet(
-            f"border-style: outset; padding: 40px; border-width:1px; border-color:black; background-color:rgb({r},{g},{b})")
+        self.setStyleSheet(theme.methodButtonStyle(self.method.isActive()))
 
 
 class InputWindow(QtWidgets.QMainWindow):
@@ -65,8 +61,8 @@ class InputWindow(QtWidgets.QMainWindow):
         self.buttons = []
 
         central = QtWidgets.QWidget()
-        central.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                                    QtWidgets.QSizePolicy.Expanding))
+        central.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                    QtWidgets.QSizePolicy.Policy.Expanding))
         self.setCentralWidget(central)
         self.setMinimumSize(1000, 700)
 
@@ -75,8 +71,8 @@ class InputWindow(QtWidgets.QMainWindow):
         central.setLayout(layout)
 
         topBox = QtWidgets.QWidget()
-        topBox.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
-                                                   QtWidgets.QSizePolicy.Maximum))
+        topBox.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred,
+                                                   QtWidgets.QSizePolicy.Policy.Maximum))
         topBoxLayout = QtWidgets.QHBoxLayout()
         topBox.setLayout(topBoxLayout)
         layout.addWidget(topBox)
@@ -105,12 +101,12 @@ class InputWindow(QtWidgets.QMainWindow):
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         m = self.input.getActive()
-        if event.modifiers() & Qt.ControlModifier:
-            if event.key() == Qt.Key_Z:
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            if event.key() == Qt.Key.Key_Z:
                 if m.canUndo():
                     m.undo()
                     self.onUndoRedo()
-            elif event.key() == Qt.Key_Y:
+            elif event.key() == Qt.Key.Key_Y:
                 if m.canRedo():
                     m.redo()
                     self.onUndoRedo()
@@ -157,11 +153,11 @@ class MethodWidget(QtWidgets.QWidget):
             self.method.input.window.methodChanged()
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
-        if event.modifiers() & Qt.ControlModifier:
-            if event.key() == Qt.Key_Z:
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            if event.key() == Qt.Key.Key_Z:
                 self.method.undo()
                 self.onUndoRedo()
-            elif event.key() == Qt.Key_Y:
+            elif event.key() == Qt.Key.Key_Y:
                 self.method.redo()
                 self.onUndoRedo()
 
@@ -243,7 +239,7 @@ class TreeMethodWidget(MethodWidget):
 
         if filename is not None and os.path.isfile(filename):
             idx = self.dirModel.index(filename)
-            self.treeView.selectionModel().select(idx, QtCore.QItemSelectionModel.Select)
+            self.treeView.selectionModel().select(idx, QtCore.QItemSelectionModel.SelectionFlag.Select)
             self.treeView.scrollTo(idx)
 
     def lineToTree(self):

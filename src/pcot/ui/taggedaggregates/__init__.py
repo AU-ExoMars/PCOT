@@ -5,8 +5,8 @@ User interface for editing tagged aggregates
 import itertools
 from typing import List
 
-from PySide2.QtCore import QEvent, Qt, QSize
-from PySide2.QtWidgets import QGridLayout, QVBoxLayout, \
+from PySide6.QtCore import QEvent, Qt, QSize
+from PySide6.QtWidgets import QGridLayout, QVBoxLayout, \
     QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy, QSpacerItem, QScrollBar, QAbstractScrollArea, QLayout, \
     QDialog, QDialogButtonBox, QMessageBox
 
@@ -52,7 +52,7 @@ class ScrollContent(QWidget):
         return hint
 
     def event(self, e):
-        if e.type() == QEvent.LayoutRequest:
+        if e.type() == QEvent.Type.LayoutRequest:
             self.updateGeometry()
         return super().event(e)
 
@@ -92,13 +92,13 @@ class AggregateEditorWidget(QWidget):
         # Scroll area
         scrollarea = QScrollArea()
         scrollarea.setWidgetResizable(True)
-        scrollarea.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        scrollarea.setAlignment(Qt.AlignTop)  # keep content pinned to top
+        scrollarea.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        scrollarea.setAlignment(Qt.AlignmentFlag.AlignTop)  # keep content pinned to top
         layout.addWidget(scrollarea)
 
         # Content inside scroll area
         self.content = ScrollContent()
-        self.content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         scrollarea.setWidget(self.content)
 
         self.contentLayout = QGridLayout()
@@ -131,14 +131,14 @@ class AggregateEditorWidget(QWidget):
                 # Sub-dictionary builds a CollapserSection, or GroupBox at top level
                 if len(path) == 0 and not self.internal_editor:
                     group = CollapserSection(desc)
-                    group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
                     layout = QGridLayout()
                     layout.setContentsMargins(20, 0, 0, 0)
                     self.layoutDict(layout, path + [k], v)
                     group.setContentLayout(layout, stretch=True)
                 else:
                     group = QGroupBox(desc)
-                    group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
                     group.setMinimumWidth(MINWIDTH-100)
                     layout = QGridLayout()
                     self.layoutDict(layout, path + [k], v)
@@ -176,7 +176,7 @@ class AggregateEditorDialog(QDialog):
         layout.addWidget(self.widget)
 
         # OK/Cancel buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.validate_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

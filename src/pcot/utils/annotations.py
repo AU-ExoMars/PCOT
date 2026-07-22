@@ -1,7 +1,7 @@
 import logging
 
-from PySide2.QtCore import Qt, QRect, QPoint, QPointF
-from PySide2.QtGui import QPainter, QFont, QFontMetrics, QPen, QColor
+from PySide6.QtCore import Qt, QRect, QPoint, QPointF
+from PySide6.QtGui import QPainter, QFont, QFontMetrics, QPen, QColor
 from typing import Callable, Tuple, Optional
 
 # use this font for annotations
@@ -42,7 +42,7 @@ def annotDrawText(p: QPainter,
     hmargin = metrics.height() * 0.1  # left-right margin as factor of height (not width)
 
     h = metrics.height() + vmargin * 2
-    w = metrics.width(s) + hmargin * 2
+    w = metrics.horizontalAdvance(s) + hmargin * 2
 
     if not basetop:
         y = y + h

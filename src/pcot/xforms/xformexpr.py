@@ -4,6 +4,7 @@ import logging
 from pcot import ui
 from pcot.datum import Datum
 import pcot.ui.tabs
+from pcot.ui import theme
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ChannelMapping
 from pcot.parameters.taggedaggregates import TaggedDictType
@@ -50,13 +51,15 @@ class XFormExpr(XFormType):
     |A ^ B| exponentiate A to the power B (can act on ROIs)| 30
     |-A            |element-wise negation of A (can act on ROIs)|70
     |A.B           |property B of entity A (e.g. a.h is height of image a)|80
-    |A$546         |extract single band image of wavelength 546|100
-    |A$_2          |extract single band image from band 2 explicitly|100
+    |A$546         |extract single band image of wavelength 546 (number is >=20 so treated as a wavelength)|100
+    |A$2          |extract single band image from band index 2 (number is <20 so treated as a band index)|100
+    |A$_2          |extract single band image from band index 2 (legacy notation, same as A$2)|100
+    |A$RED          |extract single band image from filter named RED|100
     |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|20
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
     |!A            |element-wise 1-A (Zadeh's NOT operator)|80
-    |A < B|returns 1 if A is less than B (pixel-wise test if one argument is an image))|60
-    |A < B|returns 1 if A is greater than B (pixel-wise test if one argument is an image))|60
+    |A < B|returns 1 if A is less than B (pixel-wise test if one argument is an image)|60
+    |A > B|returns 1 if A is greater than B (pixel-wise test if one argument is an image)|60
 
     All operators can act on images, 1D vectors and scalars
     with the exception of **.** and **$** which have images on the left-hand side and identifiers
@@ -122,16 +125,21 @@ class XFormExpr(XFormType):
 
     ### Band extraction
 
-    The notation **$name** or **$wavelength** takes an image on the left-hand
+    The notation **$name** or **$number** takes an image on the left-hand
     side and extracts a single band, generating a new monochrome image.
 
     The right-hand side is either a filter name, a filter position, a
-    wavelength or a band index preceded by "_". Depending on the camera, all these could be valid:
+    wavelength or a band index. A number less than 20 is treated as a band index,
+    while 20 or greater is treated as a wavelength (real wavelengths are always much
+    greater than 20nm). A band index N can also be written **$_N** - this older
+    notation is retained for compatibility.
+
+    Depending on the camera, all these could be valid:
 
     | expression | meaning |
     |------------|---------|
     | **a$780**  | the 780nm band in image *a* |
-    | **a$_2**  | band 2 in the image *a* |
+    | **a$2**  | band 2 in the image *a* |
     | **(a+b)$G0** | the band named G0 in the image formed by adding images *a* and *b* |
     | **((a+b)/2)$780** | the average of the 780nm bands of images *a* and *b* |
     
@@ -148,8 +156,14 @@ class XFormExpr(XFormType):
     ```
     a[640,550]
     ```
-    will generate a single image from the 640nm and 550nm bands of the input. Names of filters can also be used, or
-    RGB names for images loaded by the RGB input:
+    will generate a single image from the 640nm and 550nm bands of the input. As noted above, numbers less
+    than 20 are assumed to be band indices, so
+    ```
+    a[5,6]
+    ```
+    will make a single image out of bands 5 and 6.
+
+    Names of filters can also be used, or RGB names for images loaded by the RGB input:
     ```
     a[R,G]
     ```
@@ -296,7 +310,7 @@ class TabExpr(pcot.ui.tabs.Tab):
 
     def exprChanged(self):
         # set a red background to show the user that they have to click run
-        self.w.run.setStyleSheet("background-color:rgb(255,100,100)")
+        theme.setStaleStyle(self.w.run, True)
         # we don't call changed() or we'll run the expr on every key press!
 
     def run(self):
@@ -304,7 +318,7 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.node.params.expr = self.w.expr.toPlainText()
         self.node.rect.setSizeToText()
         # clear the RUN button's red background
-        self.w.run.setStyleSheet("")
+        theme.setStaleStyle(self.w.run, False)
         self.changed()
         # rebuild the tab titles.
         ui.mainwindow.MainUI.rebuildAll(scene=False)

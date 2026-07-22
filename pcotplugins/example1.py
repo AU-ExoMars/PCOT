@@ -14,7 +14,7 @@ from pcot.imagecube import ImageCube
 from pcot.datum import Datum
 from pcot.value import Value
 from pcot.datumtypes import Type
-from PySide2.QtGui import QColor
+from PySide6.QtGui import QColor
 from pcot.expressions.register import datumfunc
 
 import pcot.config

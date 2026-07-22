@@ -1,7 +1,7 @@
 """A simple dialog for renaming things: use do(oldname)"""
 
-from PySide2 import QtWidgets
-from PySide2.QtWidgets import QDialog, QDialogButtonBox
+from PySide6 import QtWidgets
+from PySide6.QtWidgets import QDialog, QDialogButtonBox
 
 
 class NameDialog(QDialog):
@@ -18,7 +18,7 @@ class NameDialog(QDialog):
         self.edit.setText(name)
         textlayout.addWidget(label)
         textlayout.addWidget(self.edit)
-        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
         layout.addWidget(textwidget)
@@ -36,7 +36,7 @@ class NameDialog(QDialog):
 
 def do(name, title='Rename', newNameLabel='New Name:'):
     d = NameDialog(name, title, newNameLabel)
-    if d.exec_():
+    if d.exec():
         return True, d.name()
     else:
         return False, name

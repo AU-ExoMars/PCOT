@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, List
 
 import yaml
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedDict, TaggedListType
 from pcot.utils.demosaicing import VALID_BAYER_PATTERNS
@@ -44,6 +44,9 @@ CONFIG_DICT_TYPE = TaggedDictType(
 
     testpds4data=("Location of testpds4data files (testing only)",Maybe(Path),None, True),
     nativefiledialog=("Use the native file dialog (best not)", bool, False),
+    # "auto" forces XWayland on GNOME/Wayland to work around a dialog decoration bug there;
+    # "native" always uses Qt's own platform choice; "xcb" always forces XWayland.
+    qt_platform=("Qt platform plugin selection on Linux", str, "auto", ["auto", "native", "xcb"]),
 
 ).setOrdered()
 
@@ -164,9 +167,9 @@ def getFileDialogOptions():
     on some systems. For that reason, I'm defaulting to the Qt implementations.
     """
     if data.nativefiledialog:
-        return QtWidgets.QFileDialog.Options()
+        return QtWidgets.QFileDialog.Option(0)
     else:
-        return QtWidgets.QFileDialog.DontUseNativeDialog
+        return QtWidgets.QFileDialog.Option.DontUseNativeDialog
 
 
 def loadCameras():

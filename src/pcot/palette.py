@@ -3,14 +3,15 @@ nodes on the right hand side."""
 
 import logging
 
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QMessageBox, QSizePolicy, QAction, QLabel
-from poetry.console.commands import self
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox, QSizePolicy, QLabel
+from PySide6.QtGui import QAction
 
 import pcot.assets
 import pcot.macros as macros
 import pcot.ui as ui
+from pcot.ui import theme
 from pcot.ui.collapser import Collapser
 from pcot.xform import XFormType, XFormException
 from pcot.xforms.favourite import Favourite
@@ -27,14 +28,18 @@ groups = ["source", "maths", "processing", "calibration", "data", "regions", "RO
 class PaletteButtonBase(QtWidgets.QPushButton):
     """Base class for palette buttons, including both XFormType (inc. macros) and favourites."""
 
-    helpAct = QAction("Help")
+    # QAction can't be constructed before a QApplication exists (PySide6 will crash), so these
+    # are created lazily on first instantiation rather than at class-definition (import) time.
+    helpAct = None
 
     def __init__(self, name, view, parent):
         super().__init__(name, parent=parent)
+        if PaletteButtonBase.helpAct is None:
+            PaletteButtonBase.helpAct = QAction("Help")
         self.name = name
         self.view = view
-        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         self.customContextMenuRequested.connect(self.contextMenu)
 
     # drag handling: nabbed from
@@ -44,19 +49,19 @@ class PaletteButtonBase(QtWidgets.QPushButton):
     def mousePressEvent(self, event):
         """handle a mouse down event"""
         super().mousePressEvent(event)
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.mousePos = event.pos()  # save click position for dragging
 
     def mouseMoveEvent(self, event):
         """handle mouse move for dragging with LMB.
         Note that the node is actually created when the box is dropped in GraphView.dropEvent.
         """
-        if event.buttons() != QtCore.Qt.LeftButton:
+        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
             return
         mimeData = QtCore.QMimeData()
         # create a byte array and a stream that is used to write into
         byteArray = QtCore.QByteArray()
-        stream = QtCore.QDataStream(byteArray, QtCore.QIODevice.WriteOnly)
+        stream = QtCore.QDataStream(byteArray, QtCore.QIODevice.OpenModeFlag.WriteOnly)
         stream.writeQString(self.name)
         mimeData.setData('data/palette', byteArray)
         drag = QtGui.QDrag(self)
@@ -65,24 +70,21 @@ class PaletteButtonBase(QtWidgets.QPushButton):
         drag.setMimeData(mimeData)
         # set the hotspot according to the mouse press position
         drag.setHotSpot(self.mousePos - self.rect().topLeft())
-        drag.exec_(Qt.MoveAction)
-
-    def click(self):
-        # create node and rebuild the scene
-        # CURRENTLY DOES NOTHING; it seems I never get the signal.
-        self.createNode()
-        self.view.scene().rebuild()
+        drag.exec(Qt.DropAction.MoveAction)
 
 
 class PaletteButton(PaletteButtonBase):
     """The palette items, which are buttons which can be either clicked or dragged (with RMB)"""
 
-    openProtoAct = QAction("Open prototype")
-    deleteMacroAct = QAction("Delete macro")
+    openProtoAct = None
+    deleteMacroAct = None
 
     def __init__(self, name, xformtype, view, parent=None):
         """constructor, taking button name, xformtype, and view into which they should be inserted."""
         super().__init__(name, view, parent=parent)
+        if PaletteButton.openProtoAct is None:
+            PaletteButton.openProtoAct = QAction("Open prototype")
+            PaletteButton.deleteMacroAct = QAction("Delete macro")
         self.xformtype = xformtype
 
     def contextMenu(self, e):
@@ -95,7 +97,7 @@ class PaletteButton(PaletteButtonBase):
         else:
             menu.addAction(self.helpAct)
 
-        act = menu.exec_(self.mapToGlobal(e))
+        act = menu.exec(self.mapToGlobal(e))
         if act == self.helpAct:
             self.view.window.openHelp(self.xformtype)
         elif act == self.openProtoAct:
@@ -104,7 +106,7 @@ class PaletteButton(PaletteButtonBase):
                                  doAutoLayout=False)
         elif act == self.deleteMacroAct:
             if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
-                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
                 macros.XFormMacro.deleteMacro(self.xformtype)
                 ui.mainwindow.MainUI.rebuildPalettes()
 
@@ -124,12 +126,14 @@ class PaletteButton(PaletteButtonBase):
 
 class PaletteButtonFavourite(PaletteButtonBase):
 
-    removeAct = QAction("Remove from favourites")
+    removeAct = None
 
     def __init__(self, name, fav: Favourite, palette, view, parent=None):
         """constructor, taking button name, xformtype, and view into which they should be inserted."""
         super().__init__(name, view, parent=parent)
-        self.setStyleSheet("background-color:rgb(220,220,140)")
+        if PaletteButtonFavourite.removeAct is None:
+            PaletteButtonFavourite.removeAct = QAction("Remove from favourites")
+        self.setStyleSheet(theme.macroTagStyle())
         self.fav = fav
         self.name = name
         self.palette = palette
@@ -137,7 +141,7 @@ class PaletteButtonFavourite(PaletteButtonBase):
     def contextMenu(self, e):
         menu = QtWidgets.QMenu()
         menu.addAction(self.removeAct)
-        act = menu.exec_(self.mapToGlobal(e))
+        act = menu.exec(self.mapToGlobal(e))
         if act == self.removeAct:
             self.palette.removeFavourite(self.name)
         elif act == self.helpAct:
@@ -168,6 +172,7 @@ class Palette:
         self.collapseButton = collapseButton
         self.namesByGroup = None
         self.widgetsByName = None
+        self.preSearchOpenState = None
         self.populate()
 
     def hideMacrosAndFavouritesIfNone(self):
@@ -211,7 +216,7 @@ class Palette:
                 b = PaletteButton(k, alltypes[k], self.view)
                 self.widgetsByName[k] = b
                 if g == 'macros':
-                    b.setStyleSheet("background-color:rgb(220,220,140)")
+                    b.setStyleSheet(theme.macroTagStyle())
                 layout.addWidget(b)
             self.collapser.addSection(g, layout)
         self.collapser.end()
@@ -243,6 +248,12 @@ class Palette:
             ui.error(f"name '{name}' does not exist!")
 
     def paletteSearchChanged(self, text):
+        if text and self.preSearchOpenState is None:
+            # a search is starting - remember which sections were open so we can put them
+            # back the way they were once the search text is cleared again.
+            self.preSearchOpenState = {k: sec.isNowOpen for k, sec in self.collapser.sectionsByName.items()
+                                       if not sec.isAlwaysOpen}
+
         # hide widgets which don't have the text, if there is one
         is_vis = {}
         for k,v in self.widgetsByName.items():
@@ -250,14 +261,30 @@ class Palette:
             is_vis[k] = visible
             v.setVisible(visible)
 
-        # if a group has no widgets, hide the group. If it does, expand the group.
-        for k,v in self.namesByGroup.items():
-            visible = any(is_vis[v] for v in v)
-            self.collapser.setSectionVisible(k, visible)
-            if visible:
-                self.collapser.forceOpen(k)
+        if text:
+            # if a group has no widgets, hide the group. If it does, expand the group.
+            for k,v in self.namesByGroup.items():
+                visible = any(is_vis[v] for v in v)
+                self.collapser.setSectionVisible(k, visible)
+                if visible:
+                    self.collapser.forceOpen(k)
+        elif self.preSearchOpenState is not None:
+            # search cleared - restore section visibility and open/closed state to how they
+            # were before the search started, rather than leaving everything forced open.
+            for k in self.namesByGroup:
+                self.collapser.setSectionVisible(k, True)
+            for k, wasOpen in self.preSearchOpenState.items():
+                if wasOpen:
+                    self.collapser.forceOpen(k)
+                else:
+                    self.collapser.forceClose(k)
+            self.preSearchOpenState = None
+            self.hideMacrosAndFavouritesIfNone()
 
         self.collapser.update()
+        # search-driven expand/collapse can change which sections are open, so the
+        # collapse/expand-all button's icon needs to be kept in sync with that.
+        self.setCollapseButton()
 
     def paletteCollapseExpandAll(self):
         self.collapser.collapseExpandAll()

@@ -2,8 +2,8 @@ import copy
 from typing import Tuple, List, Optional
 
 import numpy as np
-from PySide2.QtCore import QPointF
-from PySide2.QtGui import QImage, QLinearGradient, QGradient
+from PySide6.QtCore import QPointF
+from PySide6.QtGui import QImage, QLinearGradient, QGradient
 
 from pcot.utils.colour import rgb2qcol
 
@@ -78,7 +78,7 @@ class Gradient:
             grad = QLinearGradient(QPointF(0, 1), QPointF(0, 0))
         else:
             grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
-        grad.setCoordinateMode(QGradient.ObjectMode)
+        grad.setCoordinateMode(QGradient.CoordinateMode.ObjectMode)
         dat = self.data.copy()
         if dat[0][0] != 0.0:
             dat.insert(0, (0, dat[0][1]))

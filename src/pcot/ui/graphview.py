@@ -1,10 +1,12 @@
 """This module deals with the widget which displays the graphical scene which
 represents a graph (graphscene).
 """
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QMenu
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMenu
 import logging
+
+from pcot.ui import theme
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +23,15 @@ class GraphView(QtWidgets.QGraphicsView):
         if it is showing a macro."""
         self.window = win
         if macroWindow:
-            self.setStyleSheet("background-color:rgb(255,255,220)")
+            self.setStyleSheet(theme.macroWindowStyle())
 
     def wheelEvent(self, evt):
         """handle mouse wheel zooming"""
         # Remove possible Anchors
-        self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
-        self.setResizeAnchor(QtWidgets.QGraphicsView.NoAnchor)
+        self.setTransformationAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
+        self.setResizeAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
         # Get Scene Pos
-        target_viewport_pos = self.mapToScene(evt.pos())
+        target_viewport_pos = self.mapToScene(evt.position().toPoint())
         # Translate Scene
         self.translate(target_viewport_pos.x(), target_viewport_pos.y())
         # ZOOM
@@ -46,14 +48,14 @@ class GraphView(QtWidgets.QGraphicsView):
         """handle right mouse button panning (when zoomed). This works by
         looking at the delta from right mouse button events and applying it
         to the scroll bar."""
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.MouseButton.RightButton:
             self._prevMousePos = event.pos()
         else:
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         """handle the mouse move event, doing panning if RMB down."""
-        if event.buttons() == Qt.RightButton:
+        if event.buttons() == Qt.MouseButton.RightButton:
             offset = self._prevMousePos - event.pos()
             self._prevMousePos = event.pos()
 
@@ -105,7 +107,7 @@ class GraphView(QtWidgets.QGraphicsView):
         """handle key presses"""
         scene = self.scene()#
         # we ignore these keys sometimes, typically when text item inside a box is being edited.
-        if not scene.lockDeleteKeys and (event.key() == Qt.Key_Delete or event.key() == Qt.Key.Key_Backspace):
+        if not scene.lockDeleteKeys and (event.key() == Qt.Key.Key_Delete or event.key() == Qt.Key.Key_Backspace):
             scene.mark()
             for n in scene.selection:
                 # remove the nodes
@@ -123,13 +125,13 @@ class GraphView(QtWidgets.QGraphicsView):
         if not ev.isAccepted():        # if the event wasn't accepted, run our menu
             menu = QMenu()
             reset = menu.addAction("Reset view")
-            a = menu.exec_(ev.globalPos())
+            a = menu.exec(ev.globalPos())
             if a == reset:
                 self.fitAll()
 
     def fitAll(self):
         """Reset the view to fit the entire scene"""
-        self.fitInView(self.scene().itemsBoundingRect(), Qt.KeepAspectRatio)
+        self.fitInView(self.scene().itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     def repaint(self, *args, **kwargs):
         logger.debug("Repaint forced")
