@@ -22,9 +22,24 @@ the first major version bump. Most of the migration is invisible to users - it's
 but there's a long tail of small Qt6-shaped fixes alongside it, and a couple of unrelated fixes
 that were sitting on `dev` at the same time.
 
-**Because this is a major version change (PySide2 to PySide6), you'll need to run `poetry
-install` again to pick up the new dependencies - your existing environment won't do it
-automatically.**
+### Important: Python/Pyside version change
+
+**This major version change (PySide2 to PySide6) also requires a more recent Python version (3.11),
+so you will need to rebuild any existing Conda environment completely.**
+
+Follow these instructions while inside the PCOT directory:
+
+* `git pull` to pull the latest version (if you haven't done so already)
+* `conda deactivate` to deactivate any existing environment
+* `conda env remove -n pcot` to delete the old environment
+* `conda create -n pcot python=3.11 poetry` to create a new environment with Poetry and the right Python version
+* `conda activate pcot` to switch to the new environment
+* `poetry install` to install PCOT
+
+Aside from pulling the update and deleting the old environment, this is very similar to the install process given
+in the [README](README.md).
+
+Changes
 
 * **Migrated to PySide6/Qt6** throughout the application (was PySide2/Qt5).
 * Dark mode support (follows the OS theme).
@@ -45,9 +60,8 @@ single implementation (fixes a bug where presets could be double-applied).
 
 Site
 
-* TODO: Google maps link
-* TODO: NLS map link
-* [Megalithic Portal entry](https://www.megalithic.co.uk/article.php?sid=29324)
+* [Google maps](https://maps.app.goo.gl/shgZTDwdUYhsvo3s9)
+* [NLS Map](https://maps.nls.uk/geo/explore/#zoom=17.0&lat=50.09010&lon=-5.09618&layers=168&b=osm&o=100&marker=50.089616,-5.094837)
 * A promontory fort (cliff castle), probably Iron Age, on a headland at St Anthony-in-Meneage
 on the Lizard - the earthworks cutting off the headland show up well on LIDAR, though on the
 ground it's mostly reduced to crop marks and a bank on the sloping southern side.
