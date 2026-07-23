@@ -10,7 +10,7 @@ from pcot.utils import image
 from pcot.utils.table import Table
 from pcot.xform import xformtype, XFormType
 
-from matplotlib import cm
+import matplotlib
 
 
 def gethistogram(chan, weights, bincount, range):
@@ -101,7 +101,7 @@ class TabHistogram(Tab):
         if self.node.hists is not None:
             # self.w.mpl.fig.suptitle("TODO")  # TODO? Do we need a title?
             self.w.mpl.ax.cla()  # clear any previous plot
-            cols = cm.get_cmap('Dark2').colors
+            cols = matplotlib.colormaps['Dark2'].colors
             colct = 0
             for xx in self.node.hists:
                 lab, h, bins = xx

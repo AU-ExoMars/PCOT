@@ -1,2 +1,2 @@
-1.0.0-beta DATE TBD LITTLE DENNIS1
+1.0.0-beta DATE TBD LITTLE DENNIS
 0.10.0   # version number of oldest legible document

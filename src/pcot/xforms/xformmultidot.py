@@ -403,7 +403,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
     def recolourPressed(self):
         """recolour all dots randomly, and do it differently each time pressed"""
         self.mark()
-        cols = matplotlib.cm.get_cmap('Dark2').colors
+        cols = matplotlib.colormaps['Dark2'].colors
         base = random.randint(0, 1000)
         for idx, r in enumerate(self.node.rois):
             xx = idx + base

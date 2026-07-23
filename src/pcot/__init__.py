@@ -114,11 +114,34 @@ __version__ = __fullversion__.split(maxsplit=1)[0]
 if "-" in  __version__:
     __version__ = __version__.split("-")[0]
 
-oldest_valid_version = lines[1].strip()
+oldest_valid_version = lines[1].split(maxsplit=1)[0]
 
 def compatible_version_check(version):
     """This checks to see if this version of PCOT can load data created by the version passed in"""
+
+    # remove any trailing stuff from the document version
+    version = version.split()[0]
+
     doc_maj,doc_min,doc_patch = version.split(".")
     app_maj, app_min, app_patch = oldest_valid_version.split(".")
 
-    return doc_maj >= app_maj and doc_min >= app_min and doc_patch >= app_patch
+    # and any "-beta" or similar from the patch
+    doc_patch = doc_patch.split("-")[0]
+    app_patch = app_patch.split("-")[0]
+
+    doc_maj, doc_min, doc_patch = int(doc_maj), int(doc_min), int(doc_patch)
+    app_maj, app_min, app_patch = int(app_maj), int(app_min), int(app_patch)
+
+    if doc_maj > app_maj:
+        return True
+    if doc_maj < app_maj:
+        return False
+
+    # major versions the same; check minor
+    if doc_min > app_min:
+        return True
+    if doc_min < app_min:
+        return False
+
+    # major and minor the same, check patch
+    return doc_patch >= app_patch

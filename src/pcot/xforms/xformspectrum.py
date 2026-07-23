@@ -265,9 +265,9 @@ class TabSpectrum(ui.tabs.Tab):
         # pick a colour scheme for multiple plots if we're not getting the colour
         # from the ROIs
         if self.node.params.colourmode == "scheme2":
-            cols = matplotlib.cm.get_cmap('tab10').colors
+            cols = matplotlib.colormaps['tab10'].colors
         else:
-            cols = matplotlib.cm.get_cmap('Dark2').colors
+            cols = matplotlib.colormaps['Dark2'].colors
 
         # the dict consists of a list of channel data tuples for each image/roi.
         colidx = 0
