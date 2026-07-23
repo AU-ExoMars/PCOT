@@ -35,9 +35,9 @@ logger = logging.getLogger(__name__)
 NUMDQS = 3
 
 
-class SpectrumCircleOverlay(QtWidgets.QWidget):
+class SpectrumOverlay(QtWidgets.QWidget):
     """This widget overlays the inner canvas, and is forced to be
-    the same geometry. We use it to draw an overlay for the spectrum circle,
+    the same geometry. We use it to draw an overlay for the spectrum region,
     potentially we could use it for other stuff"""
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -172,8 +172,8 @@ class InnerCanvas(QtWidgets.QWidget):
         self.timer.timeout.connect(self.tick)
         self.timer.start(300)  # flash rate
 
-        # create the circle overlay for spectrum area
-        self.specOverlay = SpectrumCircleOverlay(self)
+        # create the rectangular overlay for spectrum area
+        self.specOverlay = SpectrumOverlay(self)
         self.specOverlay.setGeometry(self.rect())
         self.specOverlay.setHidden(True)
 
@@ -346,7 +346,7 @@ class InnerCanvas(QtWidgets.QWidget):
         # here self.img is a numpy image
         tt = Timer("paint", enabled=False)
         if self.rgb is not None:
-            imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
+            imgh, imgw = self.imgCube.h, self.imgCube.w
 
             # work out the "base scale" so that a zoomscale of 1 fits the entire
             # image
@@ -608,10 +608,73 @@ class InnerCanvas(QtWidgets.QWidget):
         y = (y - int(self.y)) / sy
         return x, y
 
+    # fraction of the viewport panned per arrow-key press, and the fine/coarse
+    # modifier multipliers - mirrors the Shift=finer/Ctrl=coarser convention
+    # XFormStitch already uses for its own arrow-key handling.
+    PAN_STEP = 0.1
+    PAN_STEP_FINE = 0.02
+    PAN_STEP_COARSE = 0.5
+
     def keyPressEvent(self, e: QKeyEvent):
-        if self.canv.keyHook is not None:
-            self.canv.keyHook.canvasKeyPressEvent(e)
+        # a keyHook (e.g. XFormStitch's arrow-key stitch-offset nudging) gets first
+        # refusal; only if it doesn't claim the key do we run the canvas's own
+        # generic pan/zoom, so the two can't both fire on the same keypress.
+        if self.canv.keyHook is not None and self.canv.keyHook.canvasKeyPressEvent(e):
+            return
+        if self.panZoomKeyEvent(e):
+            return
         return super().keyPressEvent(e)
+
+    def panZoomKeyEvent(self, e: QKeyEvent) -> bool:
+        """Generic keyboard pan (arrows) and zoom (+/-/0) for the canvas, mainly intended
+        for laptop users without a mouse wheel or middle button. Returns True if the key
+        was handled."""
+        if self.rgb is None:
+            return False
+
+        arrowDeltas = {
+            Qt.Key.Key_Left: (-1, 0),
+            Qt.Key.Key_Right: (1, 0),
+            Qt.Key.Key_Up: (0, -1),
+            Qt.Key.Key_Down: (0, 1),
+        }
+        key = e.key()
+        if key in arrowDeltas:
+            dx, dy = arrowDeltas[key]
+            mods = e.modifiers()
+            if mods & Qt.KeyboardModifier.ShiftModifier:
+                step = self.PAN_STEP_FINE
+            elif mods & Qt.KeyboardModifier.ControlModifier:
+                step = self.PAN_STEP_COARSE
+            else:
+                step = self.PAN_STEP
+            self.panBy(dx * step, dy * step)
+            return True
+        elif key in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
+            self.zoomAtPoint(QPointF(self.width() / 2, self.height() / 2), -1)
+            return True
+        elif key == Qt.Key.Key_Minus:
+            self.zoomAtPoint(QPointF(self.width() / 2, self.height() / 2), 1)
+            return True
+        elif key == Qt.Key.Key_0:
+            self.reset()
+            self.canv.setScrollBarsFromCanvas()
+            self.update()
+            return True
+        return False
+
+    def panBy(self, fracX: float, fracY: float):
+        """Pan the view by a signed fraction of the current viewport size (fracX/fracY are
+        multiples of cutw/cuth), clamped to the image bounds - same clamping as the
+        middle-button drag pan in mouseMoveEvent."""
+        if self.rgb is None:
+            return
+        self.x += fracX * self.cutw
+        self.y += fracY * self.cuth
+        self.x = max(0.0, min(self.x, float(self.imgCube.w - self.cutw)))
+        self.y = max(0.0, min(self.y, float(self.imgCube.h - self.cuth)))
+        self.canv.setScrollBarsFromCanvas()
+        self.update()
 
     ## mouse press handler, can delegate to a hook
     def mousePressEvent(self, e):
@@ -644,8 +707,8 @@ class InnerCanvas(QtWidgets.QWidget):
             dy = (pos.y() - self.panPos.y()) * sy
             self.x -= dx
             self.y -= dy
-            self.x = max(0, min(self.x, self.rgb.shape[1] - self.cutw))
-            self.y = max(0, min(self.y, self.rgb.shape[0] - self.cuth))
+            self.x = max(0.0, min(self.x, float(self.imgCube.w - self.cutw)))
+            self.y = max(0.0, min(self.y, float(self.imgCube.h - self.cuth)))
             self.panPos = pos
         else:
             self.canv.mouseMove(x, y, e)
@@ -661,16 +724,17 @@ class InnerCanvas(QtWidgets.QWidget):
             self.canv.mouseHook.canvasMouseReleaseEvent(x, y, e)
         return super().mouseReleaseEvent(e)
 
-    ## mouse wheel handler, changes zoom
-    def wheelEvent(self, e):
-        # can't zoom when there's no image
+    def zoomAtPoint(self, pos: QPointF, wheel: int):
+        """Zoom in/out by one step, keeping the image point under `pos` (in widget
+        coordinates) fixed. `wheel` is +1 to zoom out, -1 to zoom in. Shared by the
+        mouse wheel (anchored on the cursor) and the keyboard zoom keys (anchored on
+        the viewport centre, since there's no cursor position for a keypress)."""
         if self.rgb is None:
             return
 
-        wheel = 1 if e.angleDelta().y() < 0 else -1
         newzoom = self.zoomscale * math.exp(wheel * 0.2)
 
-        imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
+        imgh, imgw = self.imgCube.h, self.imgCube.w
         # work out the new image size
         cutw = int(imgw * newzoom)
         cuth = int(imgh * newzoom)
@@ -678,20 +742,18 @@ class InnerCanvas(QtWidgets.QWidget):
         if cutw == 0 or cuth == 0 or newzoom > 1:
             return
 
-        # x,y is the image point currently under the cursor (at the OLD zoom level).
-        # We want that same image point to stay under the cursor at the new zoom
-        # level, so recompute self.x/self.y from scratch at the new scale rather than
-        # nudging them by a delta - the old delta-based approach only happened to work
-        # while the cursor stayed at the same widget position across zoom events (or
-        # from a fresh reset), and drifted as soon as the cursor moved or the view
-        # had been panned.
+        # x,y is the image point currently under pos (at the OLD zoom level). We want
+        # that same image point to stay under pos at the new zoom level, so recompute
+        # self.x/self.y from scratch at the new scale rather than nudging them by a
+        # delta - the old delta-based approach only happened to work while pos stayed
+        # at the same widget position across zoom events (or from a fresh reset), and
+        # drifted as soon as it moved or the view had been panned.
         # NB: we compute x,y here directly rather than via getImgCoords(), which
         # truncates to int - going through that would throw away sub-pixel precision
-        # on every wheel tick and make repeated zooming drift. We use the displayed
-        # (per-axis) scale for the old point, matching how getImgCoords maps the
-        # cursor onto the pixels actually on screen, and the continuous scale for the
-        # new point since the new displayed scale isn't known until the next paint.
-        pos = e.position()
+        # on every step and make repeated zooming drift. We use the displayed
+        # (per-axis) scale for the old point, matching how getImgCoords maps pos onto
+        # the pixels actually on screen, and the continuous scale for the new point
+        # since the new displayed scale isn't known until the next paint.
         sx, sy = self.getDisplayedScale()
         x = pos.x() * sx + self.x
         y = pos.y() * sy + self.y
@@ -712,8 +774,17 @@ class InnerCanvas(QtWidgets.QWidget):
             self.y = imgh - cuth
         # update scrollbars and image
         self.canv.setScrollBarsFromCanvas()
-        self.cursorX, self.cursorY = self.getImgCoords(e.position())
         self.update()
+
+    ## mouse wheel handler, changes zoom
+    def wheelEvent(self, e):
+        # can't zoom when there's no image
+        if self.rgb is None:
+            return
+        wheel = 1 if e.angleDelta().y() < 0 else -1
+        pos = e.position()
+        self.zoomAtPoint(pos, wheel)
+        self.cursorX, self.cursorY = self.getImgCoords(pos)
 
     def __del__(self):
         logger.debug(f"Cleaning up {self}")
@@ -768,7 +839,9 @@ class Canvas(QtWidgets.QWidget):
     mouseHook: Optional[object]
 
     ## @var keyHook
-    # an object with an event for key handling
+    # an object with a canvasKeyPressEvent(e) method for key handling (or None). Should
+    # return True if it handled the key, so the canvas's own generic pan/zoom keys don't
+    # also act on it (see InnerCanvas.keyPressEvent) - False/None if it didn't.
     keyHook: Optional[object]
 
     ## @var graph

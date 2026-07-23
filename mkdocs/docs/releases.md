@@ -57,6 +57,7 @@ single implementation (fixes a bug where presets could be double-applied).
 * New `pix()` datumfunc to get a pixel value directly.
 * Fixed `Value.out` to correctly use `config.data.sigfigs` (was a mutable default argument bug).
 * PDS4 directory scan now skips invalid files instead of aborting the whole scan.
+* Pan/zoom with keyboard in canvas
 
 Site
 

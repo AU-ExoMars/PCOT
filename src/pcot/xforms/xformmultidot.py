@@ -670,6 +670,8 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 self.dragging = False  # just in case
                 self.updateSelected()
                 self.changed()
+            return True
+        return False
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.dragging = False

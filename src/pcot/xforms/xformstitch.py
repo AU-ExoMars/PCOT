@@ -303,3 +303,6 @@ class TabStitch(Tab):
             self.moveSel(e, 0, -1)
         elif k == Qt.Key.Key_Down:
             self.moveSel(e, 0, 1)
+        else:
+            return False
+        return True

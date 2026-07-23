@@ -161,4 +161,4 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.editor.canvasMouseReleaseEvent(x, y, e)
 
     def canvasKeyPressEvent(self, e):
-        self.editor.canvasKeyPressEvent(e)
+        return self.editor.canvasKeyPressEvent(e)

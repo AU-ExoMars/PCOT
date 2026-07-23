@@ -80,7 +80,9 @@ class ROIEditor:
         pass
 
     def canvasKeyPressEvent(self, e):
-        pass
+        """Return True if the key was handled (stops the canvas's own generic pan/zoom
+        keys from also acting on it), False/None otherwise."""
+        return False
 
     def canvasPaintHook(self, p: QPainter):
         pass
@@ -227,6 +229,8 @@ class PolyEditor(ROIEditor):
             self.tab.mark()
             self.roi().delSelPoint()
             self.tab.changed()
+            return True
+        return False
 
 
 class PaintedEditor(ROIEditor):

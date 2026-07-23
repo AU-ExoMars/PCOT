@@ -316,6 +316,9 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
             self.mark()
             self.node.type.delSelPoint(self.node)
             self.changed()
+        else:
+            return False
+        return True
 
     def canvasMouseMoveEvent(self, x, y, e):
         if self.mouseDown:

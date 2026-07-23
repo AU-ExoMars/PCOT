@@ -9,9 +9,23 @@ inputs into the graph.
 ![!An open *input 0* node|inputnode](inputnode.png)
 
 
-You can pan the canvas using the scroll bars at the edge, and zoom with
-the mouse wheel. The button at bottom right will reset to show the entire
-image.
+You can pan the canvas using the scroll bars at the edge, by holding down the middle
+mouse button and dragging, or with the keyboard (see below). You can zoom with the mouse
+wheel or the keyboard. The button at bottom right will reset to show the entire image.
+
+### Keyboard control
+
+If the canvas has focus (click on it first), you can also pan and zoom using the keyboard -
+handy if you're on a laptop without a scroll wheel or middle mouse button:
+
+* **Arrow keys** pan the view. Hold **Shift** for a finer pan, or **Ctrl** for a coarser one.
+* **+**/**=** and **-** zoom in and out.
+* **0** resets the zoom and pan to show the entire image (the same as the reset button).
+
+Some nodes use the arrow keys for their own purposes when their tab is showing the canvas -
+for example, *stitch* uses plain/Shift/Ctrl + arrow keys to fine-tune the position of the
+selected input image - so keyboard panning isn't available on those particular tabs. Zoom
+keys (`+`/`-`/`0`) are unaffected and still work everywhere.
 
 To the left of the canvas image itself is the canvas control area. This has quite a lot
 in it, so is scrollable with collapsible sections, rather like the palette.
