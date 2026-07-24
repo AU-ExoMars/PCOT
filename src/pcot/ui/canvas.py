@@ -1022,6 +1022,13 @@ class Canvas(QtWidgets.QWidget):
         self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
         hideable.addWidget(self.blueChanCombo, 2, 1)
 
+        # these boxes are repopulated whenever the image changes, so use AdjustToContents rather than
+        # AdjustToContentsOnFirstShow (the default) - otherwise a box which was empty (or short) when
+        # first shown never widens to fit later, longer, item text (seen as truncated text on Linux).
+        for combo in (self.redChanCombo, self.greenChanCombo, self.blueChanCombo):
+            combo.setSizeAdjustPolicy(QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToContents)
+            combo.setMinimumWidth(160)
+
         self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
         hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
         self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
@@ -1044,7 +1051,6 @@ class Canvas(QtWidgets.QWidget):
         self.gammaSlider.valueChanged.connect(self.gammaChanged)
 
         self.hideablebuttons.setLayout(hideable)  # add layout to widget
-        self.blueChanCombo.setMinimumWidth(100)
         hideableLayout = QtWidgets.QVBoxLayout()  # make a single-widget layout
         hideableLayout.setContentsMargins(0, 0, 0, 0)
         hideableLayout.addWidget(self.hideablebuttons)  # add the widget to it
