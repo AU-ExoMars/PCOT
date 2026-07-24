@@ -4,8 +4,7 @@
 
 **More documentation can be found [here](https://au-exomars.github.io/PCOT/)**
 
-PCOT is
-a Python application and library primarily intended for 
+PCOT is a Python application and library primarily intended for 
 processing data from the Pancam
 instrument on the Rosalind Franklin rover, although it lends itself
 to any task involving processing multispectral image data.
@@ -87,7 +86,7 @@ This will create an environment called **pcot** which uses Python 3.11 and
 the Poetry dependency and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
 * Now run **poetry install**. This will set up all the packages PCOT is
-dependent on and install PCOT.
+dependent on and install PCOT. See [below](#problems-with-pre-existing-python-packages) if you see errors here.
 * You should now be able to run **pcot** to start the application.
 
 PCOT now uses PySide6, which ships native wheels for Apple Silicon, so the Rosetta/osx-64
@@ -103,8 +102,18 @@ This will create an environment called **pcot** which uses Python 3.11 and the P
 and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
 * Now run **poetry install**. This will set up all the packages PCOT is dependent on and install
-PCOT.
+PCOT. See [below](#problems-with-pre-existing-python-packages) if you see errors here.
 * You should now be able to run **pcot** to start the application.
+
+### Problems with pre-existing Python packages
+You may have pre-existing packages in your system level Python installation which conflict
+with those in Anaconda. Typically, this manifests as lots of errors when you run
+`poetry install`. To fix this, tell Anaconda not to look at your system install at all:
+```
+conda env config vars set PYTHONNOUSERSITE=1 -n pcot
+conda deactivate
+conda activate pcot
+```
 
 ## Updating PCOT
 
@@ -118,14 +127,15 @@ has changed.
 
 Finally, **if the Python version has changed** you will need to rebuild the 
 Conda environment from scratch. The following instructions assume you 
-are using a shall of some sort:
+are using a shell of some sort:
 * **conda deactivate pcot** will make sure you are not actively using the 
 environment
 * **conda env remove -n pcot** will delete the old environment
 * **conda create -n pcot python=3.11 poetry** will create a new environment -
 replace "3.11" with the correct new version
 * **poetry install** will reinstall all the packages.
-* You will probably need to refer to the instructions below on **Running PCOT inside Pycharm**
+
+If you are using Pycharm you will probably need to refer to the instructions below on **Running PCOT inside Pycharm**
 to update the interpreter to the new version.
     
 

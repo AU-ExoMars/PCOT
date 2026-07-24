@@ -39,6 +39,16 @@ Follow these instructions while inside the PCOT directory:
 Aside from pulling the update and deleting the old environment, this is very similar to the install process given
 in the [README](README.md).
 
+You may find you get a lot of errors when you run `poetry install`. What they look like very much depends
+on your system. This can be caused by Python picking up bits of your system's Python installation instead of your
+Anaconda "sandbox." To fix this, make sure conda doesn't look at your system install at all:
+```
+conda env config vars set PYTHONNOUSERSITE=1 -n pcot
+conda deactivate
+conda activate pcot
+```
+and try running `poetry install` again.
+
 Changes
 
 * **Migrated to PySide6/Qt6** throughout the application (was PySide2/Qt5).
