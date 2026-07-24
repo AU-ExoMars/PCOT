@@ -154,7 +154,30 @@ def test_extract_by_band():
     img = expr.getOutputDatum(0)
     assert img is Datum.null
     assert isinstance(expr.error, XFormException)
-    assert expr.error.message == "unable to get this wavelength from an image: <DATUM-ident, value _4>"
+    assert expr.error.message == "unable to get this band from an image: <DATUM-ident, value _4>"
+
+
+def test_extract_by_wavelength(envi_image_1):
+    pcot.setup()
+    doc = Document()
+    assert doc.setInputENVI(0, envi_image_1) is None
+    inp = doc.graph.create("input 0")
+    expr = doc.graph.create("expr")
+    expr.params.expr = "a$60"
+    expr.connect(0,inp,0)
+    doc.run()
+
+    img = expr.getOutputDatum(0)
+    assert img is Datum.null
+    assert isinstance(expr.error, XFormException)
+    assert expr.error.message == "unable to get this band from an image: <DATUM-number, value 60±0>"
+
+    expr.params.expr = "a$640"
+    doc.run()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
+    assert np.allclose(img.img[0][0], 0)
+    assert np.allclose(img.img[45][55], 0.2)
 
 
 def test_binop_2images(envi_image_1, envi_image_2):

@@ -258,10 +258,10 @@ def extractChannel(a: Datum, b: Datum) -> Datum:
     elif b.tp == Datum.IDENT:
         img = img.getChannelImageByFilter(b.val)
     else:
-        raise OperatorException("band extract operator '$' requires ident or numeric wavelength RHS")
+        raise OperatorException("band extract operator '$' requires ident or numeric right hand side")
 
     if img is None:
-        raise OperatorException("unable to get this wavelength from an image: " + str(b))
+        raise OperatorException("unable to get this band from an image: " + str(b))
 
     if img.channels > 1 and is_scalar:
         raise OperatorException("'$' has multiple bands in result from a single requested band - does the image have more than one band with the same wavelength/name?")

@@ -171,7 +171,7 @@ def envi_image_1(tmp_path):
     img = np.zeros((60, 80, len(freqs)), dtype=np.float32)
     # fill the rectangle x=50, y=40, w=20, h=10
     # with (1,0,1,1)
-    fillrect(img, 50, 40, 20, 10, (1, 0, 1, 1))
+    fillrect(img, 50, 40, 20, 10, (1, 0.2, 1, 1))
 
     # write the data
     gen_envi(fn, freqs, img)

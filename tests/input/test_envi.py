@@ -47,7 +47,7 @@ def test_envi_load(envi_image_1):
     for x in range(80):
         for y in range(60):
             if (50 <= x < 70) and (40 <= y < 50):
-                if not np.array_equal(img.img[y][x], (1, 0, 1, 1)):
+                if not np.allclose(img.img[y][x], (1, 0.2, 1, 1)):
                     pytest.fail(f"rectangle not filled at {x} {y}")
             else:
                 if not np.array_equal(img.img[y][x], (0, 0, 0, 0)):
