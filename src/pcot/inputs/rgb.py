@@ -29,9 +29,14 @@ class RGBInputMethod(InputMethod):
         self.debayer_pattern = pcot.config.data.defaultbayerpattern
         self.camera = "NONE"
         self.neg_method = "Leave"
+        # whether readData() has actually run this session - False for a document just loaded from
+        # a .pcot file, where the image data is cached and the file hasn't really been re-read. Used
+        # to distinguish "(cached)" from "(failed)" in the widget when dnRange isn't available.
+        self.dnRangeAttempted = False
 
     def readData(self):
         logger.debug(f"RGB readData fname={self.fname}")
+        self.dnRangeAttempted = True
         if self.debayer_pattern is None:
             print("no debayer pat")
         if self.fname is not None:
@@ -131,7 +136,20 @@ class RGBMethodWidget(TreeMethodWidget):
         if not self.method.openingWindow:
             self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
-        self.canvas.display(self.method.get())
+
+        datum = self.method.get()
+        self.canvas.display(datum)
+
+        cube = datum.get(Datum.IMG)
+        if cube is not None and cube.dnRange is not None:
+            mn, mx = cube.dnRange
+            self.dnRangeLabel.setText(f"DN range in file: [{mn:g}, {mx:g}]")
+        elif self.method.fname is None:
+            self.dnRangeLabel.setText("DN range in file: n/a")
+        elif not self.method.dnRangeAttempted:
+            self.dnRangeLabel.setText("DN range in file: (cached)")
+        else:
+            self.dnRangeLabel.setText("DN range in file: (failed)")
 
     def patternChanged(self, i):
         self.method.debayer_pattern = self.patternCombo.currentText()

@@ -329,7 +329,7 @@ class CannotLoadImageBadFormatException(CannotLoadImageException):
 
 
 def load_rgb_image(fname:str|Path, bitdepth=None, leftjustified=False, debayer_algo=None, debayer_pattern=None,
-                   neg_method="Leave") -> np.ndarray:
+                   neg_method="Leave") -> Tuple[np.ndarray, float, float]:
     """This is used by ImageCube to load its image data. It's a function because it's
     also used by the multifile loader. Can also debayer given an algorithm and pattern. In this case only
     the first band will be used (see pcot.utils.demosaicing). See pcot.dataformats.load.rgb()
@@ -338,6 +338,9 @@ def load_rgb_image(fname:str|Path, bitdepth=None, leftjustified=False, debayer_a
       bits depending on the image's own data type).
     - leftjustified: if True, the significant bits are assumed to occupy the top of the container (i.e. the
       low bits are always zero) rather than the bottom - see pcot.utils.image.bitdepth_max.
+
+    Returns (img, dn_min, dn_max) - dn_min/dn_max are the raw pixel value range found in the file,
+    before any scaling to 0..1.
     """
     fname = str(fname)  # fname could potentially be some kind of Path object.
     debayer_pattern = pcot.config.data.defaultbayerpattern if not debayer_pattern else debayer_pattern
@@ -353,6 +356,10 @@ def load_rgb_image(fname:str|Path, bitdepth=None, leftjustified=False, debayer_a
         raise CannotLoadImageException(fname)
     if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
         img = image.imgmerge((img, img, img))
+
+    dn_min = float(img.min())
+    dn_max = float(img.max())
+    ui.log(f"File loaded - DN range in file is [{dn_min}, {dn_max}]")
     # get the scaling factor, which depends on the bitdepth if one is provided, or will be the full bitdepth of
     # the image if not.
     if img.dtype == np.uint8:
@@ -382,7 +389,7 @@ def load_rgb_image(fname:str|Path, bitdepth=None, leftjustified=False, debayer_a
         img = debayering.debayer(img, debayer_algo, debayer_pattern)
 
 
-    return img
+    return img, dn_min, dn_max
 
 
 class ImageCube(SourcesObtainable):
@@ -417,6 +424,11 @@ class ImageCube(SourcesObtainable):
 
     # The RGB mapping to convert this image into RGB. May be None
     mapping: Optional[ChannelMapping]
+
+    # the raw pixel value range (DN min, DN max) found in the file this image was loaded from, before
+    # any scaling. Only set by ImageCube.load(); None for any image that isn't a fresh, unmodified file
+    # load (computed images, ROI edits, copies, etc). Not serialised.
+    dnRange: Optional[Tuple[float, float]]
 
     def __init__(self, img: np.ndarray,
                  rgbMapping: ChannelMapping = None,
@@ -462,6 +474,7 @@ class ImageCube(SourcesObtainable):
         else:
             self.rois = rois
         self.annotations = []  # and no annotations
+        self.dnRange = None
         self.shape = img.shape
         # set the image type
         if len(img.shape) == 2:
@@ -539,7 +552,7 @@ class ImageCube(SourcesObtainable):
         Sources must be provided.
         """
         logger.info(f"ImageCube load: {str(fname)}")
-        img = load_rgb_image(fname, bitdepth=bitdepth, leftjustified=leftjustified, debayer_algo=debayer_algo,
+        img, dn_min, dn_max = load_rgb_image(fname, bitdepth=bitdepth, leftjustified=leftjustified, debayer_algo=debayer_algo,
                              debayer_pattern=debayer_pattern, neg_method=neg_method)
         # create sources if none given
         if sources is None:
@@ -548,6 +561,7 @@ class ImageCube(SourcesObtainable):
                                        Source().setBand('B')])
         # construct the image
         img = cls(img, mapping, sources)
+        img.dnRange = (dn_min, dn_max)
         # process debayering problems
         img.process_negatives_for_demosaic(neg_method=neg_method)
         return img

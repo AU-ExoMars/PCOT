@@ -64,6 +64,8 @@ moving at half speed.
 export, and a DQDelegate crash - all regressions found during the Qt6 migration.
 * Multifile loader: left-justified bit-depth handling, and preset handling consolidated into a
 single implementation (fixes a bug where presets could be double-applied).
+* RGB and Multifile inputs now show the raw DN (digital number) range found in each loaded file,
+before scaling; the Multifile file list is now a resizable/reorderable table.
 * New `pix()` datumfunc to get a pixel value directly.
 * Fixed `Value.out` to correctly use `config.data.sigfigs` (was a mutable default argument bug).
 * PDS4 directory scan now skips invalid files instead of aborting the whole scan.

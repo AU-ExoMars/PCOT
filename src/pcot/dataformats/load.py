@@ -104,7 +104,8 @@ def multifile(directory: Path|str,
               inpidx: int = None,
               mapping: ChannelMapping = None,
               cache: Dict[str, Tuple[np.ndarray, float]] = None,
-              really_no_camera: bool = False) -> Datum:
+              really_no_camera: bool = False,
+              dn_ranges: Optional[Dict[str, Tuple[float, float]]] = None) -> Datum:
     """Load an imagecube from multiple files (e.g. a directory of .png files),
     where each file is a monochrome image of a different band. The names of
     the filters for each band are derived from the filenames using the filterpat
@@ -133,6 +134,10 @@ def multifile(directory: Path|str,
     - cache: a dictionary of cached data to avoid loading the same file multiple times.
       The key is the filename and the value is a tuple of the image data and the time it was loaded.
     - really_no_camera: really set the camera to None! This is used when we are just loading images with no regard to band etc.
+    - dn_ranges: optional dict; if supplied it will be populated (keyed by the entries of fnames) with a
+      (dn_min, dn_max) tuple per successfully-loaded file, recording its raw pixel value range before
+      scaling. Purely a side-channel for UI display - doesn't affect the returned Datum, and files that
+      raise before loading simply get no entry.
 
     The regular expression works thus:
         - If the filterpat contains ?P<lens> and ?P<n>, then lens+n is used to look up the filter by position.
@@ -263,7 +268,7 @@ def multifile(directory: Path|str,
                 if not path.exists():
                         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
-            def load(path: Path) -> np.ndarray:
+            def load(path: Path) -> Tuple[np.ndarray, float, float]:
                 logger.debug(f"Loading {path} at bitdepth {bitdepth}, leftjustified={leftjustified}")
                 if rawloader is not None and rawloader.is_raw_file(path):
                     return rawloader.load(path, bitdepth=bitdepth, leftjustified=leftjustified)
@@ -271,19 +276,22 @@ def multifile(directory: Path|str,
                     return load_rgb_image(path, bitdepth=bitdepth, leftjustified=leftjustified)
 
             if cache is None:
-                img = load(path)
+                img, dn_min, dn_max = load(path)
             else:
                 date = os.path.getmtime(path)
                 # if the file is in the cache and the date is the same, use the cached data
                 if path in cache and cache[path][1] == date:
                     # use the cached data
-                    img = cache[path][0]
+                    img, dn_min, dn_max = cache[path][0], *cache[path][2]
                     ui.log(f"Using cached image for {path}")
                 else:
                     # update the cache
                     ui.log(f"Loading image for {path} into cache")
-                    img = load(path)
-                    cache[path] = (img, date)
+                    img, dn_min, dn_max = load(path)
+                    cache[path] = (img, date, (dn_min, dn_max))
+
+            if dn_ranges is not None:
+                dn_ranges[str(fname)] = (dn_min, dn_max)
 
             # convert to greyscale if required. But we don't use the
             # cvtColor function because it will use a more complex formula

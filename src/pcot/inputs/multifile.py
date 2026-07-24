@@ -3,7 +3,7 @@
 import logging
 import os
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 from pathlib import Path
 
 import PySide6
@@ -71,6 +71,14 @@ class MultifileInputMethod(InputMethod, PresetOwner):
 
         self.mapping = ChannelMapping()
 
+        # per-file DN range from the most recent successful load, keyed by filename
+        # (matches entries in self.files). Transient, not serialised - repopulated by readData().
+        self.dnRanges: Dict[str, Tuple[float, float]] = {}
+        # whether readData() has actually run this session - False for a document just loaded from
+        # a .pcot file, where the image data is cached and the files haven't really been re-read. Used
+        # to distinguish "(cached)" from "(failed)" in the file listing for files with no dnRanges entry.
+        self.dnRangesAttempted = False
+
     def compileRegex(self):
         # compile the regexp that gets the filter ID out.
         logger.debug(f"Compiling RE: {self.filterpat}")
@@ -87,11 +95,14 @@ class MultifileInputMethod(InputMethod, PresetOwner):
     def invalidate(self):
         """Invalidates the internal cache for this method as well as clearing the output"""
         self.cachedFiles = {}
+        self.dnRanges = {}
         super().invalidate()
 
     def readData(self):
         # we force the mapping to have to be "reguessed"
         self.mapping.red = -1
+        self.dnRanges = {}
+        self.dnRangesAttempted = True
 
         img = load.multifile(self.dir, self.files,
                              filterpat=self.filterpat,
@@ -101,7 +112,8 @@ class MultifileInputMethod(InputMethod, PresetOwner):
                              mapping=self.mapping,
                              cache={},     # TODO put the cache back!!!! Not being invalidated making debug hard
                              rawloader=self.rawLoader,
-                             camera=self.camera)
+                             camera=self.camera,
+                             dn_ranges=self.dnRanges)
         logger.debug(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
         return img
 
@@ -286,6 +298,9 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.setMinimumSize(1000, 500)
         pcot.ui.decorateSplitter(self.splitter, 1)
 
+        self.outputFiles.horizontalHeader().setSectionsMovable(True)
+        self.outputFiles.horizontalHeader().setStretchLastSection(True)
+
         with SignalBlocker(self.cameraCombo):
             self.cameraCombo.addItems(getCameraNames())
 
@@ -333,11 +348,6 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         # This will only clear the selected files if we changed the dir.
         self.loaderSettingsText.setText(str(self.method.rawLoader))
         self.selectDir(self.method.dir)
-        s = ""
-        for i in range(len(self.method.files)):
-            s += "{}:\t{}\n".format(i, self.method.files[i])
-        #        s+="\n".join([str(x) for x in self.node.imgpaths])
-        self.outputFiles.setPlainText(s)
         if self.method.bitdepth is not None:
             i = self.bitdepth.findText(str(int(self.method.bitdepth)) + ' ', Qt.MatchFlag.MatchStartsWith)
         else:
@@ -353,7 +363,23 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
         self.method.compileRegex()
-        self.canvas.display(self.method.get())
+
+        datum = self.method.get()  # (re)loads if needed - populates self.method.dnRanges
+        self.canvas.display(datum)
+
+        # build the per-file listing after the load, so DN ranges (if any) are current
+        self.outputFiles.setRowCount(len(self.method.files))
+        for i, fname in enumerate(self.method.files):
+            rng = self.method.dnRanges.get(fname)
+            if rng is not None:
+                rngText = "[{:g}, {:g}]".format(*rng)
+            elif not self.method.dnRangesAttempted:
+                rngText = "(cached)"
+            else:
+                rngText = "(failed)"
+            self.outputFiles.setItem(i, 0, QtWidgets.QTableWidgetItem(fname))
+            self.outputFiles.setItem(i, 1, QtWidgets.QTableWidgetItem(rngText))
+        self.outputFiles.resizeColumnToContents(0)
 
     def fileClickedAction(self, idx):
         if not self.dirModel.isDir(idx):
@@ -443,9 +469,10 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.method.compileRegex()
         if RawLoader.is_raw_file(path):
             # if it's a raw file, load it with the raw loader and create an ImageCube
-            arr = self.method.rawLoader.load(path, bitdepth=self.method.bitdepth,
+            arr, dn_min, dn_max = self.method.rawLoader.load(path, bitdepth=self.method.bitdepth,
                                              leftjustified=self.method.leftjustified)
             img = ImageCube(arr, self.method.mapping)
+            img.dnRange = (dn_min, dn_max)
         else:
             # otherwise load it with the ImageCube RGB loader
             img = ImageCube.load(path, self.method.mapping, None,

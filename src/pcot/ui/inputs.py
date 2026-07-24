@@ -64,7 +64,7 @@ class InputWindow(QtWidgets.QMainWindow):
         central.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                                                     QtWidgets.QSizePolicy.Policy.Expanding))
         self.setCentralWidget(central)
-        self.setMinimumSize(1000, 700)
+        self.setMinimumSize(1000, 780)
 
         # top box contains the buttons determining what sort of input this is
         layout = QtWidgets.QVBoxLayout()

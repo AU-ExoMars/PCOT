@@ -1,5 +1,6 @@
 """Loading 'raw' files into an ImageCube object."""
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 import os
@@ -78,8 +79,9 @@ class RawLoader:
                f"bigendian={self.bigendian}, offset={self.offset}, " \
                f"rot={self.rot}, horzflip={self.horzflip}, vertflip={self.vertflip}"
 
-    def load(self, filename: str|Path, bitdepth=None, leftjustified=False) -> np.ndarray:
-        """Loads the raw file and returns an array object.
+    def load(self, filename: str|Path, bitdepth=None, leftjustified=False) -> Tuple[np.ndarray, float, float]:
+        """Loads the raw file and returns (data, dn_min, dn_max) - dn_min/dn_max are the raw
+        pixel value range found in the file, before any scaling to 0..1.
 
         - bitdepth: how many bits are actually significant (None means use the full container width).
         - leftjustified: if True, the significant bits are assumed to occupy the top of the container
@@ -122,13 +124,16 @@ class RawLoader:
         if self.vertflip:
             data = np.flipud(data)
 
+        dn_min = float(data.min())
+        dn_max = float(data.max())
+
         # convert to float32 if necessary, dividing down to the range 0-1
         if dtype != np.float32:
             logger.debug(f"Loading data, currently the range is {data.min()} to {data.max()}, format is {dtype}")
             data = data.astype(np.float32) * scale
             logger.debug(f"Loaded as F32. Range is now {data.min()} to {data.max()}")
         logger.info(f"Image loaded into multifile - size is {data.shape}")
-        return data
+        return data, dn_min, dn_max
 
     @staticmethod
     def is_raw_file(path):
