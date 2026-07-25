@@ -742,16 +742,21 @@ def norm(img, splitchans=0):
 
 
 @datumfunc
-def clamp(img):
+def clamp(img,minimum=0,maximum=1):
     """
-    clamp all channels of an image to 0-1
+    clamp all channels of an image to a range (default 0-1).
     @param img:img:the image to process
+    @param minimum:number:minimum value
+    @param maximum:number:maximum value
     """
     img = img.get(Datum.IMG)
     if img is None:
         return None
     subimage = img.subimage()
-    nom, unc, dq = operations.norm.norm(subimage, 1)
+    # get these as plain numbers; we don't want to pass datum objects into norm because that would be slow
+    minimum = minimum.get(Datum.NUMBER).n
+    maximum = maximum.get(Datum.NUMBER).n
+    nom, unc, dq = operations.norm.norm(subimage, 1, maxval=maximum,minval=minimum)
     img = img.modifyWithSub(subimage, nom, uncertainty=unc, dqv=dq)
     return Datum(Datum.IMG, img)
 

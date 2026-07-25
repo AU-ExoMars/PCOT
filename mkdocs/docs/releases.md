@@ -70,6 +70,8 @@ before scaling; the Multifile file list is now a resizable/reorderable table.
 * Fixed `Value.out` to correctly use `config.data.sigfigs` (was a mutable default argument bug).
 * PDS4 directory scan now skips invalid files instead of aborting the whole scan.
 * Pan/zoom with keyboard in canvas
+* `clamp()` datumfunc now takes optional min/max arguments (was fixed to 0-1).
+* Canvas right-click menu can store and load a view's centre/zoom, to sync the view between canvases.
 
 Site
 

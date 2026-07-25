@@ -119,3 +119,21 @@ intersection of those bits across all bands is used for both *max* and *sum*.
 * **thresh** is the threshold for the threshold DATA modes
 * **additive** indicates that the data quality layers should be added to the RGB image rather than blended.
 
+## The right-click menu
+
+There are several useful functions available in this menu, which pops up when you click the right mouse button.
+
+### Saving an image
+
+Canvas images can be saved in several formats by selecting **Save as image, PDF, SVG or PARC**
+
+### Store/load view location
+
+It is often useful to be able to view the same small area in different nodes. You can capture a canvas
+view's centre point and zoom and then load it in another node using the right-click context menu:
+
+* **Store canvas view location** will store the centre point and zoom
+* **Load canvas view location** when run in another canvas will load it, so you have the same view as the canvas
+in which you stored. 
+
+The loaded view may be slightly different because different nodes often have different canvas sizes.

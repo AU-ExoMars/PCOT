@@ -888,6 +888,9 @@ class Canvas(QtWidgets.QWidget):
     # bad pixels warning
     badPixelsLabel: QtWidgets.QLabel
 
+    # canvas view rectangle "clipboard"; class variable
+    canvasRect: Tuple[float,float,float] = None
+
     ## constructor
     def __init__(self, parent):
         super().__init__(parent)
@@ -1239,9 +1242,19 @@ class Canvas(QtWidgets.QWidget):
         if not ev.isAccepted():  # if the event wasn't accepted, run our menu
             menu = QMenu()
             save = menu.addAction("Save as image, PDF, SVG or PARC")
+            saveRect = menu.addAction("Store canvas view location")
+            loadRect = menu.addAction("Load canvas view location")
+            if Canvas.canvasRect is None:
+                loadRect.setDisabled(True)
+
             a = menu.exec(ev.globalPos())
             if a == save:
                 self.saveAction()
+            elif a == saveRect:
+                Canvas.canvasRect = (self.canvas.x,self.canvas.y,self.canvas.zoomscale)
+            elif a == loadRect:
+                self.canvas.x, self.canvas.y, self.canvas.zoomscale = Canvas.canvasRect
+                self.redisplay()
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""

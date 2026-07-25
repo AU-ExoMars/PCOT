@@ -25,8 +25,14 @@ def _norm(masked: np.ma.masked_array) -> Tuple[np.array, float]:
     return res, scale
 
 
-def norm(subimg: SubImageCube, clamp: int, splitchans=False) -> Tuple[np.array, np.array, np.array]:
-    """Does both normalisation and clamping depending on the clamp value (integer boolean because it's used in expr nodes)"""
+def norm(subimg: SubImageCube, clamp: int, splitchans=False, minval=0, maxval=1) -> Tuple[np.array, np.array, np.array]:
+    """Does both normalisation and clamping depending on the clamp value (integer boolean because it's used in expr nodes
+    - subimg : subimage to normalise or clamp
+    - splitchans : (normalise only) normalise each channel separately
+    - clamp : non-zero if we are clamping, otherwise we normalise
+    - minval : (clamp only) min value
+    - maxval : (clamp only) max value
+    """
     mask = subimg.fullmask()  # get mask with same shape as below image
     img = subimg.img  # get imagecube bounded by ROIs as np array
 
@@ -67,10 +73,10 @@ def norm(subimg: SubImageCube, clamp: int, splitchans=False) -> Tuple[np.array, 
         # do the thing, only using the masked region
 
         # work out which pixels should be clamped, top and bottom
-        top = masked > 1
-        bottom = masked < 0
-        masked[top] = 1         # do the top clamping
-        masked[bottom] = 0      # do the bottom clamping
+        top = masked > maxval
+        bottom = masked < minval
+        masked[top] = maxval         # do the top clamping
+        masked[bottom] = minval      # do the bottom clamping
         res = masked            # and that will be the result
 
         # we need to clear uncertainty and set NOUNC on clipped data.
