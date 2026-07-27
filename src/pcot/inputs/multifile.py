@@ -308,7 +308,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
 
         if self.method.dir is None:
             self.method.dir = pcot.config.getDefaultDir('images')
-        self.onInputChanged()
+        self.syncIfActive()
 
     def onClose(self):
         super().onClose()
@@ -397,6 +397,12 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         if res != '':
             self.selectDir(res, True)
 
+    @staticmethod
+    def _listImageFiles(dr):
+        """List image files in a directory; propagates any exception (e.g. dir doesn't exist)."""
+        return sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
+                       and IMAGETYPERE.match(f) is not None])
+
     def selectDir(self, dr, setDefaultDir=False):
         # called when we want to load a new directory, or when the node has changed (on loading)
         if self.method.dir != dr:  # if the directory has changed reset the selected file list
@@ -405,8 +411,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.dir.setText(str(dr))
         # get all the files in dir which are images
         try:
-            self.allFiles = sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
-                                    and IMAGETYPERE.match(f) is not None])
+            self.allFiles = self._listImageFiles(dr)
             # using the absolute, real path
             self.method.dir = Path(os.path.realpath(dr))
             # only set the default directory for images when this is called "manually" - typically in response
@@ -414,12 +419,27 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             if setDefaultDir:
                 pcot.config.setDefaultDir('images', self.method.dir)
         except Exception as e:
-            # some kind of file system error
-            e = str(e)
-            self.method.input.exception = str(e)
-            ui.error(e)
-            self.method.files= []
-            self.method.dir = str(Path.home())
+            # some kind of file system error - most commonly, the directory this input was last
+            # pointed at doesn't exist on this machine (e.g. the document was created elsewhere).
+            # Fall back to the configured default images directory rather than jumping straight
+            # to the home directory, and tell the user clearly what happened - silently
+            # switching directories here is very confusing otherwise.
+            origErr = str(e)
+            self.method.input.exception = origErr
+
+            fallback = pcot.config.getDefaultDir('images')
+            newDir = fallback if fallback and os.path.isdir(fallback) else str(Path.home())
+
+            ui.warn(f"Cannot read directory '{dr}':\n{origErr}\n\nReverting to '{newDir}'.")
+
+            self.method.files = []
+            self.method.dir = newDir
+            self.dir.setText(str(newDir))
+            try:
+                self.allFiles = self._listImageFiles(newDir)
+            except Exception as e2:
+                ui.error(str(e2))
+                self.allFiles = []
 
         # rebuild the model
         self.buildModel()

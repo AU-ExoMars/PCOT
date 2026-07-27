@@ -221,11 +221,10 @@ class PDS4ImageMethodWidget(MethodWidget):
         uiloader.loadUi('inputpdsfile.ui', self)
 
         # set widget states from method data
-        if self.method.dir is None or not os.path.isdir(self.method.dir):
-            # if the method hasn't set up the directory yet, or that directory doesn't exist, use the default/
+        if self.method.dir is None:
+            # fresh input, not yet configured - just use the default images directory
             d = pcot.config.getDefaultDir('images')
-            d = '.' if d is None or d == '' else d
-            self.method.dir = d
+            self.method.dir = d if d and os.path.isdir(d) else str(Path.home())
         self.fileEdit.setText(str(self.method.dir))
 
         self.recurseBox.setCheckState(Qt.CheckState.Checked if self.method.recurse else Qt.CheckState.Unchecked)
@@ -264,7 +263,19 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.initTable()
         self.populateTableAndTimeline()
         self.showSelectedItems()
-        self.updateDisplay()
+        self.syncIfActive()
+
+    def validateDirectory(self):
+        """Check self.method.dir still exists on this machine; if it doesn't (e.g. the document
+        was created elsewhere), fall back to the configured default images directory (or home, if
+        that isn't usable either) and tell the user clearly rather than silently switching directories."""
+        if self.method.dir is not None and not os.path.isdir(self.method.dir):
+            origDir = self.method.dir
+            d = pcot.config.getDefaultDir('images')
+            newDir = d if d and os.path.isdir(d) else str(Path.home())
+            ui.warn(f"Directory '{origDir}' does not exist on this machine.\n\nReverting to '{newDir}'.")
+            self.method.dir = newDir
+            self.fileEdit.setText(str(self.method.dir))
 
     def onClose(self):
         super().onClose()
@@ -455,6 +466,7 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.canvas.display(img)
 
     def onInputChanged(self):
+        self.validateDirectory()
         # ensure image is also using my mapping.
         if self.method.out is not None and self.method.out.tp == Datum.IMG:
             self.method.out.val.setMapping(self.method.mapping)

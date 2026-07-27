@@ -71,6 +71,7 @@ class ENVIInputMethod(InputMethod):
 class ENVIMethodWidget(TreeMethodWidget):
     def __init__(self, m):
         super().__init__(m, 'inputfiletree.ui', ["*.hdr"])
+        self.syncIfActive()
 
     def onInputChanged(self):
         # ensure image is also using my mapping, if it's an image

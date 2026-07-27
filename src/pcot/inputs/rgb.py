@@ -124,7 +124,7 @@ class RGBMethodWidget(TreeMethodWidget):
         self.negCombo.currentTextChanged.connect(self.negChanged)
 
 
-        self.onInputChanged()
+        self.syncIfActive()
 
     def onInputChanged(self):
         self.patternCombo.setCurrentText(self.method.debayer_pattern)

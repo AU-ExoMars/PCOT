@@ -128,7 +128,10 @@ class InputWindow(QtWidgets.QMainWindow):
 
     def methodChanged(self):
         for w in self.widgets:
-            w.setVisible(w.method.isActive())
+            active = w.method.isActive()
+            w.setVisible(active)
+            if active:
+                w.syncIfNeeded()
 
 
 # Widgets for viewing/controlling the Methods (i.e. input types within the Input)
@@ -141,14 +144,35 @@ class MethodWidget(QtWidgets.QWidget):
     def __init__(self, m):
         self.method = m
         self.openingWindow = False  # true if the window is opening
+        self._synced = False  # has a real onInputChanged() sync ever happened for this widget?
         super().__init__()
 
     def onInputChanged(self):
         """implemented in subclasses, can be called when data changed from outside (deserialise, undo, redo)"""
         pass
 
-    def onUndoRedo(self):
+    def _sync(self):
+        """Actually perform a sync: run onInputChanged() (which may do disk I/O, pop dialogs,
+        invalidate()+performGraph()) and remember that we've done so."""
         self.onInputChanged()
+        self._synced = True
+
+    def syncIfActive(self):
+        """Call at the end of a widget's __init__, in place of an unconditional onInputChanged().
+        Only syncs if this method is the active one when the window is opening - inactive methods'
+        widgets are left unsynced until the user actually switches to them (see syncIfNeeded())."""
+        if self.method.isActive():
+            self._sync()
+
+    def syncIfNeeded(self):
+        """Call when this widget's method has just become the active one (button clicked).
+        Performs the real sync only the first time; a widget that's already been synced is left
+        alone so re-switching to it is instant and doesn't repeat disk I/O or dialogs."""
+        if not self._synced:
+            self._sync()
+
+    def onUndoRedo(self):
+        self._sync()
         if self.method.input.window is not None:
             self.method.input.window.methodChanged()
 
@@ -213,8 +237,6 @@ class TreeMethodWidget(MethodWidget):
         # Indirection, eh?
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
-
-        self.onInputChanged()
 
     def onClose(self):
         super().onClose()

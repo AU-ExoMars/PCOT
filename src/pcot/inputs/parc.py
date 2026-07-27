@@ -134,7 +134,7 @@ class PARCMethodWidget(MethodWidget):
         self.data.canvas.setGraph(m.input.mgr.doc.graph)
         self.data.canvas.setPersister(m)
 
-        self.onInputChanged()
+        self.syncIfActive()
 
     def onClose(self):
         super().onClose()
