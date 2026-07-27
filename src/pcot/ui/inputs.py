@@ -43,8 +43,11 @@ class MethodSelectButton(QtWidgets.QPushButton):
         return size
 
     def showActive(self):
-        """Colour the button to show that this method is active"""
-        self.setStyleSheet(theme.methodButtonStyle(self.method.isActive()))
+        """Colour the button to show that this method is active, and flag (border + tooltip)
+        if its configured file/directory can't currently be found on this machine."""
+        missing = self.method.missingPathReason()
+        self.setStyleSheet(theme.methodButtonStyle(self.method.isActive(), missing is not None))
+        self.setToolTip(missing or "")
 
 
 class InputWindow(QtWidgets.QMainWindow):
@@ -155,7 +158,55 @@ class MethodWidget(QtWidgets.QWidget):
         """Actually perform a sync: run onInputChanged() (which may do disk I/O, pop dialogs,
         invalidate()+performGraph()) and remember that we've done so."""
         self.onInputChanged()
+        self.refreshMissingIndicator()
         self._synced = True
+
+    def _missingSourceLabel(self):
+        """Lazily create a warning banner and place it above this widget's existing content.
+        Shows missingPathReason() text inline in the tab, not just on the method's button -
+        the button marker alone is easy to miss, and opening a document without its original
+        files is common, not an error."""
+        if getattr(self, '_missingLabel', None) is None:
+            label = QtWidgets.QLabel()
+            label.setStyleSheet(theme.warningLabelStyle())
+            label.setWordWrap(True)
+            label.setVisible(False)
+            # pin the label to its natural (one-line-unless-wrapped) height - without this,
+            # any leftover vertical space in the layout below can end up going to the label
+            # rather than the actual widget content, leaving it a mostly-blank oversized bar.
+            label.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+            oldLayout = self.layout()
+            if oldLayout is not None:
+                # wrap whatever the existing layout was (QHBoxLayout, QGridLayout, ...) in a
+                # container widget, so the banner can sit above it, spanning the full width
+                # as a proper landscape strip, regardless of the original layout's shape -
+                # inserting directly into e.g. a QHBoxLayout would instead add the label as
+                # another side-by-side column, stretched tall and narrow.
+                container = QtWidgets.QWidget()
+                container.setLayout(oldLayout)
+                newLayout = QtWidgets.QVBoxLayout()
+                newLayout.setContentsMargins(0, 0, 0, 0)
+                newLayout.addWidget(label, 0)
+                newLayout.addWidget(container, 1)
+                self.setLayout(newLayout)
+            self._missingLabel = label
+        return self._missingLabel
+
+    def refreshMissingIndicator(self):
+        """Update this widget's in-tab warning banner and the input window's button marker to
+        reflect the method's current missingPathReason() (cheap, side-effect-free - a stat call
+        at most). Safe to call any time: at sync, or after the user manually fixes/changes a
+        path via a file dialog."""
+        info = self.method.missingPathReason()
+        label = self._missingSourceLabel()
+        if info:
+            label.setText(info)
+            label.setVisible(True)
+        else:
+            label.setVisible(False)
+        window = self.method.input.window
+        if window is not None:
+            window.showActiveMethod()
 
     def syncIfActive(self):
         """Call at the end of a widget's __init__, in place of an unconditional onInputChanged().
@@ -290,7 +341,7 @@ class TreeMethodWidget(MethodWidget):
             self.method.fname = os.path.realpath(self.dirModel.filePath(idx))
             self.method.get()
             pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
-            self.onInputChanged()
+            self._sync()
 
 
 class NullMethodWidget(MethodWidget):

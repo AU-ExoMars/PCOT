@@ -8,7 +8,7 @@ from typing import Optional, List
 
 from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPen
+from PySide6.QtGui import QBrush, QColor, QPen
 from PySide6.QtWidgets import QMessageBox, QTableWidgetItem
 from proctools.products import DataProduct
 
@@ -145,6 +145,19 @@ class PDS4InputMethod(InputMethod):
     def createWidget(self):
         return PDS4ImageMethodWidget(self)
 
+    def missingPathReason(self) -> Optional[str]:
+        if self.dir is not None and not os.path.isdir(str(self.dir)):
+            return f"Directory not found: {self.dir}{self._cachedDataSuffix()}"
+        # the directory itself is fine, but one or more scanned products' individual source
+        # files might have been deleted since - check those too (a stat call per product).
+        if self.products is not None:
+            missing = [p for p in self.products.lst if getattr(p, 'path', None) and not os.path.isfile(p.path)]
+            if missing:
+                if len(missing) == 1:
+                    return f"File not found: {missing[0].path}{self._cachedDataSuffix()}"
+                return f"{len(missing)} product files not found{self._cachedDataSuffix()}"
+        return None
+
     def serialise(self, internal):
         # serialise the parameters
         x = {'recurse': self.recurse,
@@ -265,18 +278,6 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.showSelectedItems()
         self.syncIfActive()
 
-    def validateDirectory(self):
-        """Check self.method.dir still exists on this machine; if it doesn't (e.g. the document
-        was created elsewhere), fall back to the configured default images directory (or home, if
-        that isn't usable either) and tell the user clearly rather than silently switching directories."""
-        if self.method.dir is not None and not os.path.isdir(self.method.dir):
-            origDir = self.method.dir
-            d = pcot.config.getDefaultDir('images')
-            newDir = d if d and os.path.isdir(d) else str(Path.home())
-            ui.warn(f"Directory '{origDir}' does not exist on this machine.\n\nReverting to '{newDir}'.")
-            self.method.dir = newDir
-            self.fileEdit.setText(str(self.method.dir))
-
     def onClose(self):
         super().onClose()
         self.canvas.onClose()
@@ -296,9 +297,15 @@ class PDS4ImageMethodWidget(MethodWidget):
     def addTableRow(self, strs, data):
         self.table.insertRow(self.table.rowCount())
         n = self.table.rowCount() - 1
+        # mark the whole row red if this product's source file is no longer present
+        # (e.g. the document was opened without the original data) - cheap stat check
+        missing = getattr(data, 'path', None) is not None and not os.path.isfile(data.path)
         for i, x in enumerate(strs):
             w = QTableWidgetItem(x)
             w.setData(PRIVATEDATAROLE, data)
+            if missing:
+                w.setForeground(QBrush(QColor(200, 0, 0)))
+                w.setToolTip(f"File not found:\n{data.path}")
             self.table.setItem(n, i, w)
 
     def initTimeline(self):
@@ -455,6 +462,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         if res != '':
             self.fileEdit.setText(res)
             self.method.dir = res
+            self.refreshMissingIndicator()
 
     def helpClicked(self):
         HelpWindow(self, md=helpText, node=self)
@@ -466,7 +474,6 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.canvas.display(img)
 
     def onInputChanged(self):
-        self.validateDirectory()
         # ensure image is also using my mapping.
         if self.method.out is not None and self.method.out.tp == Datum.IMG:
             self.method.out.val.setMapping(self.method.mapping)

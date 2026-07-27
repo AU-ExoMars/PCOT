@@ -37,6 +37,24 @@ class InputMethod(ABC):
         """Is this method active?"""
         return self.input.isActive(self)
 
+    def missingPathReason(self) -> Optional[str]:
+        """Cheap, side-effect-free check (a stat call at most - no directory listing, no file
+        read, never raises): returns a short description if this method's configured file or
+        directory doesn't exist on this machine, or None if there's nothing to report. Used to
+        mark the method's tab button so the user can tell, without switching to that tab, that
+        the original data source isn't present - common when opening a document without the
+        original images, and deliberately not treated as an error (no dialog)."""
+        return None
+
+    def _cachedDataSuffix(self) -> str:
+        """A short suffix for missingPathReason() messages, noting whether this method still
+        has valid cached data to fall back on (in which case the missing source isn't
+        actually a problem right now) or not (in which case there's genuinely nothing to
+        show). Subclasses' missingPathReason() implementations should append this."""
+        if self.data is not None and not self.data.isNone():
+            return " - using cached data, everything is fine"
+        return " - no cached data available"
+
     @abstractmethod
     def readData(self) -> Datum:
         """to override - actually runs the input and returns data. Do not call from anywhere but get().
@@ -73,8 +91,18 @@ class InputMethod(ABC):
             return False
         return self.input.mgr.doc.cando()
 
-    def invalidate(self):
-        """invalidates the method's cached data"""
+    def invalidate(self, force=False):
+        """Invalidates the method's cached data - normally called whenever something about
+        the input changed and the graph needs to see fresh data next time it reads this
+        input. If the source is confirmed missing (missingPathReason() is not None) and
+        force is False, this is a no-op: there is nothing to reload from, so clearing the
+        cache would just destroy the last known-good, self-contained result (e.g. from a
+        document opened without its original files) for no benefit - the next read would
+        just fail. Pass force=True (e.g. an explicit user-triggered retry) to clear it
+        anyway and force a fresh read attempt regardless."""
+        if not force and self.missingPathReason() is not None:
+            logger.debug(f"{self.getName()} invalidate skipped - source missing, keeping cached data")
+            return
         logger.debug(f"{self.getName()} invalidate")
         self.data = Datum.null
 

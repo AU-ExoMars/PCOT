@@ -59,6 +59,11 @@ class PARCInputMethod(InputMethod):
     def getName(self):
         return "PARC"
 
+    def missingPathReason(self) -> Optional[str]:
+        if self.fname is not None and not os.path.isfile(self.fname):
+            return f"File not found: {self.fname}{self._cachedDataSuffix()}"
+        return None
+
     def serialise(self, internal):
         x = {'fname': self.fname, 'itemname': self.itemname}
         if internal:
@@ -159,6 +164,7 @@ class PARCMethodWidget(MethodWidget):
             self.method.loadManifest()
             self.tableView.setModel(Model(self, self.method.manifest))
             pcot.config.setDefaultDir('images', os.path.dirname(res[0]))
+            self.refreshMissingIndicator()
 
     def itemSelected(self):
         self.method.mark()
@@ -168,4 +174,4 @@ class PARCMethodWidget(MethodWidget):
         self.method.itemname = keys[self.tableView.currentIndex().row()]
         self.method.get()
         pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
-        self.onInputChanged()
+        self._sync()
