@@ -72,6 +72,10 @@ before scaling; the Multifile file list is now a resizable/reorderable table.
 * Pan/zoom with keyboard in canvas
 * `clamp()` datumfunc now takes optional min/max arguments (was fixed to 0-1).
 * Canvas right-click menu can store and load a view's centre/zoom, to sync the view between canvases.
+* Input methods (Multifile, RGB, ENVI, PDS4, PARC) no longer read files or pop up warning dialogs
+for inactive/unvisited tabs; missing source files/directories are now shown as a quiet in-tab
+marker and banner instead, cached data is preserved rather than silently discarded, and a "Retry
+missing inputs" button lets you re-check without reopening the document.
 
 Site
 

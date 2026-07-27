@@ -171,6 +171,33 @@ For images from AUPE, the settings are:
 * Big-endian data
 @@@
 
+## Missing files and directories
+
+PCOT documents are often shared without the original source images, so it's
+common to open a `.pcot` file on a machine where the directory (or some of the
+files) the Multifile input was reading from no longer exists. This is not
+treated as an error - the document's cached image data is kept, and the graph
+carries on working with it.
+
+If this happens, you'll see:
+
+* The Multifile tab button gets a red border, and hovering over it shows a
+tooltip explaining what couldn't be found.
+* A banner at the top of the Multifile tab itself describes the problem (a
+missing directory, or one or more missing files within it), and reassures you
+that cached data is still being used, so nothing is actually broken.
+* In the file list, any files that couldn't be found are shown in red and
+moved to the top of the list, so they're easy to spot among a long list of
+otherwise-normal files.
+
+The original directory/file path is never silently overwritten or reset to
+some other directory - it's left as configured, so you can fix the underlying
+problem (e.g. mount the drive, copy the files back) and try again.
+
+Once the files are back in place, use the **Retry missing inputs** button in
+the main window to re-check all inputs and reload any that were previously
+missing, without needing to close and reopen the document.
+
 ## Presets
 You can save
 and load these values - and most other settings for multifile input, such
