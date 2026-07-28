@@ -51,6 +51,15 @@ def registerBuiltinProperties(p):
                        "return a vector of the centre wavelengths of each band in the image",
                        lambda d: Datum(Datum.NUMBER, Value(d.get(Datum.IMG).bands()), SourceSet(d.getSources())))
 
+    def _roi_all(d):
+        from rois import ROIRect
+        img = d.get(Datum.IMG)
+        r = ROIRect(rect=(0,0,img.w,img.h))
+        return Datum(Datum.ROI, r, nullSourceSet)
+    p.registerProperty('all', Datum.IMG,
+                       "return an ROI covering the entire image",
+                       _roi_all)
+
 
 class datumfunc:
     """
