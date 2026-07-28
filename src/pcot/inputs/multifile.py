@@ -287,6 +287,9 @@ IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif|raw|bin)")
 
 
 class MultifileMethodWidget(MethodWidget, PresetOwner):
+
+    dir: QtWidgets.QLineEdit
+
     def __init__(self, m):
         super().__init__(m)
         uiloader.loadUi('inputmultifile.ui', self)
@@ -311,6 +314,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.loaderSettingsButton.clicked.connect(self.loaderSettings)
         self.loaderSettingsText.setText(str(self.method.rawLoader))
         self.presetButton.pressed.connect(self.presetPressed)
+        self.dir.editingFinished.connect(self.dirChanged)
+
         # self.canvas.hideMapping()  # because we're showing greyscale for each image
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
@@ -357,6 +362,15 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         w = PresetDialog(self, "Multifile presets", presetModel, self)
         w.exec()
         self.onInputChanged()
+
+    def dirChanged(self):
+        # directory text changed manually - if the dir exists, go there,
+        # otherwise reset this text to what it was before (the method's dir)
+        newdir = Path(self.dir.text())
+        if newdir.is_dir():
+            self.selectDir(newdir)
+        else:
+            self.dir.setText(str(self.method.dir))
 
     def loaderSettings(self):
         self.method.rawLoader.edit(self)
