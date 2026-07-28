@@ -228,6 +228,14 @@ class MainUI(ui.tabs.DockableTabWindow):
             for x in range(0, len(self.doc.inputMgr.inputs)):
                 self.isfLayout.addWidget(InputSelectButton(x, self.doc.inputMgr.inputs[x]))
 
+            retryButton = QtWidgets.QPushButton("Retry missing inputs")
+            retryButton.setToolTip("Attempt to reread any input whose source file/directory\n"
+                                   "couldn't be found (e.g. this document was opened without\n"
+                                   "its original data, or a removable/network drive has since\n"
+                                   "become available again).")
+            retryButton.clicked.connect(self.retryInputsAction)
+            self.isfLayout.addWidget(retryButton)
+
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
         self.view.setWindow(self, macro is not None)
@@ -508,6 +516,17 @@ class MainUI(ui.tabs.DockableTabWindow):
     # perhaps)
     def runAllAction(self):
         self.runAll()
+
+    ## attempt to reread any input whose source is currently marked missing (see
+    # InputMethod.missingPathReason()) - e.g. a document opened without its original data,
+    # or a removable/network drive that has since become available again.
+    def retryInputsAction(self):
+        n = self.doc.inputMgr.retryMissingInputs()
+        if n == 0:
+            ui.msg("No inputs are currently marked as missing their source.")
+        else:
+            ui.msg(f"Retried {n} input(s) with a missing source.")
+            self.runAll()
 
     ## "new" menu/keypress, will create a new top-level "patch"
     def newAction(self):

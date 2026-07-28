@@ -74,6 +74,24 @@ class Input:
         """return the active method"""
         return self.methods[self.activeMethod]
 
+    def retryIfMissing(self) -> bool:
+        """If the active method's source is currently marked missing (missingPathReason()),
+        force a real re-read attempt - bypassing invalidate()'s normal "leave cached data
+        alone" behaviour for a confirmed-missing source - and refresh this input's window
+        (if open), so its file listing/table and tab marker/banner reflect the outcome.
+        Returns True if a retry was actually attempted (there was something missing to
+        retry), False otherwise."""
+        m = self.getActive()
+        if m.missingPathReason() is None:
+            return False
+        m.invalidate(force=True)
+        m.get()  # attempt the real read now, so any failure is caught immediately
+        if self._window is not None:
+            for w in self._window.widgets:
+                if w.method.isActive():
+                    w._sync()  # refresh the widget's own display too, not just the marker
+        return True
+
     def setActiveMethod(self, idx):
         """Set the active method: use the method index, see above - NULL, ENVI, etc..."""
         self.activeMethod = idx
@@ -83,6 +101,11 @@ class Input:
     def selectMethod(self, method: InputMethod):
         """Given a method object, set the active method to that method"""
         self.setActiveMethod(self.methods.index(method))
+
+    @property
+    def window(self) -> Optional['InputWindow']:
+        """The currently open InputWindow for this input, or None if it isn't open."""
+        return self._window
 
     def openWindow(self):
         """Open the input window"""
@@ -197,6 +220,13 @@ class InputManager:
         """Close all windows"""
         for x in self.inputs:
             x.closeWindow()
+
+    def retryMissingInputs(self) -> int:
+        """Attempt to reread every input whose active method's source is currently marked
+        missing (e.g. the document was opened without its original files, or a network/USB
+        source has since become available again). Returns the number of inputs actually
+        retried, so the caller can report back to the user."""
+        return sum(1 for inp in self.inputs if inp.retryIfMissing())
 
     def get(self, idx):
         """return the data for a given input."""

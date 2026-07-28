@@ -1,5 +1,6 @@
 """the ENVI file input method, only supports 32 bit float, non-interleaved"""
 import logging
+import os
 from typing import Optional
 
 from pcot.dataformats import load
@@ -46,6 +47,11 @@ class ENVIInputMethod(InputMethod):
     def createWidget(self):
         return ENVIMethodWidget(self)
 
+    def missingPathReason(self) -> Optional[str]:
+        if self.fname is not None and not os.path.isfile(self.fname):
+            return f"File not found: {self.fname}{self._cachedDataSuffix()}"
+        return None
+
     def serialise(self, internal):
         x = {'fname': self.fname}
         if internal:
@@ -71,6 +77,7 @@ class ENVIInputMethod(InputMethod):
 class ENVIMethodWidget(TreeMethodWidget):
     def __init__(self, m):
         super().__init__(m, 'inputfiletree.ui', ["*.hdr"])
+        self.syncIfActive()
 
     def onInputChanged(self):
         # ensure image is also using my mapping, if it's an image

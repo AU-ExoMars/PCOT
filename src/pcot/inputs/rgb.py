@@ -1,5 +1,6 @@
 ## the RGB file input method
 import logging
+import os
 from typing import Optional
 
 import pcot.config
@@ -60,6 +61,11 @@ class RGBInputMethod(InputMethod):
 
     def createWidget(self):
         return RGBMethodWidget(self)
+
+    def missingPathReason(self) -> Optional[str]:
+        if self.fname is not None and not os.path.isfile(self.fname):
+            return f"File not found: {self.fname}{self._cachedDataSuffix()}"
+        return None
 
     # We actually serialise and deserialise the imagecube, not the containing datum.
 
@@ -124,7 +130,7 @@ class RGBMethodWidget(TreeMethodWidget):
         self.negCombo.currentTextChanged.connect(self.negChanged)
 
 
-        self.onInputChanged()
+        self.syncIfActive()
 
     def onInputChanged(self):
         self.patternCombo.setCurrentText(self.method.debayer_pattern)

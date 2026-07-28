@@ -43,8 +43,11 @@ class MethodSelectButton(QtWidgets.QPushButton):
         return size
 
     def showActive(self):
-        """Colour the button to show that this method is active"""
-        self.setStyleSheet(theme.methodButtonStyle(self.method.isActive()))
+        """Colour the button to show that this method is active, and flag (border + tooltip)
+        if its configured file/directory can't currently be found on this machine."""
+        missing = self.method.missingPathReason()
+        self.setStyleSheet(theme.methodButtonStyle(self.method.isActive(), missing is not None))
+        self.setToolTip(missing or "")
 
 
 class InputWindow(QtWidgets.QMainWindow):
@@ -128,7 +131,10 @@ class InputWindow(QtWidgets.QMainWindow):
 
     def methodChanged(self):
         for w in self.widgets:
-            w.setVisible(w.method.isActive())
+            active = w.method.isActive()
+            w.setVisible(active)
+            if active:
+                w.syncIfNeeded()
 
 
 # Widgets for viewing/controlling the Methods (i.e. input types within the Input)
@@ -141,14 +147,83 @@ class MethodWidget(QtWidgets.QWidget):
     def __init__(self, m):
         self.method = m
         self.openingWindow = False  # true if the window is opening
+        self._synced = False  # has a real onInputChanged() sync ever happened for this widget?
         super().__init__()
 
     def onInputChanged(self):
         """implemented in subclasses, can be called when data changed from outside (deserialise, undo, redo)"""
         pass
 
-    def onUndoRedo(self):
+    def _sync(self):
+        """Actually perform a sync: run onInputChanged() (which may do disk I/O, pop dialogs,
+        invalidate()+performGraph()) and remember that we've done so."""
         self.onInputChanged()
+        self.refreshMissingIndicator()
+        self._synced = True
+
+    def _missingSourceLabel(self):
+        """Lazily create a warning banner and place it above this widget's existing content.
+        Shows missingPathReason() text inline in the tab, not just on the method's button -
+        the button marker alone is easy to miss, and opening a document without its original
+        files is common, not an error."""
+        if getattr(self, '_missingLabel', None) is None:
+            label = QtWidgets.QLabel()
+            label.setStyleSheet(theme.warningLabelStyle())
+            label.setWordWrap(True)
+            label.setVisible(False)
+            # pin the label to its natural (one-line-unless-wrapped) height - without this,
+            # any leftover vertical space in the layout below can end up going to the label
+            # rather than the actual widget content, leaving it a mostly-blank oversized bar.
+            label.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+            oldLayout = self.layout()
+            if oldLayout is not None:
+                # wrap whatever the existing layout was (QHBoxLayout, QGridLayout, ...) in a
+                # container widget, so the banner can sit above it, spanning the full width
+                # as a proper landscape strip, regardless of the original layout's shape -
+                # inserting directly into e.g. a QHBoxLayout would instead add the label as
+                # another side-by-side column, stretched tall and narrow.
+                container = QtWidgets.QWidget()
+                container.setLayout(oldLayout)
+                newLayout = QtWidgets.QVBoxLayout()
+                newLayout.setContentsMargins(0, 0, 0, 0)
+                newLayout.addWidget(label, 0)
+                newLayout.addWidget(container, 1)
+                self.setLayout(newLayout)
+            self._missingLabel = label
+        return self._missingLabel
+
+    def refreshMissingIndicator(self):
+        """Update this widget's in-tab warning banner and the input window's button marker to
+        reflect the method's current missingPathReason() (cheap, side-effect-free - a stat call
+        at most). Safe to call any time: at sync, or after the user manually fixes/changes a
+        path via a file dialog."""
+        info = self.method.missingPathReason()
+        label = self._missingSourceLabel()
+        if info:
+            label.setText(info)
+            label.setVisible(True)
+        else:
+            label.setVisible(False)
+        window = self.method.input.window
+        if window is not None:
+            window.showActiveMethod()
+
+    def syncIfActive(self):
+        """Call at the end of a widget's __init__, in place of an unconditional onInputChanged().
+        Only syncs if this method is the active one when the window is opening - inactive methods'
+        widgets are left unsynced until the user actually switches to them (see syncIfNeeded())."""
+        if self.method.isActive():
+            self._sync()
+
+    def syncIfNeeded(self):
+        """Call when this widget's method has just become the active one (button clicked).
+        Performs the real sync only the first time; a widget that's already been synced is left
+        alone so re-switching to it is instant and doesn't repeat disk I/O or dialogs."""
+        if not self._synced:
+            self._sync()
+
+    def onUndoRedo(self):
+        self._sync()
         if self.method.input.window is not None:
             self.method.input.window.methodChanged()
 
@@ -214,8 +289,6 @@ class TreeMethodWidget(MethodWidget):
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
 
-        self.onInputChanged()
-
     def onClose(self):
         super().onClose()
         self.canvas.onClose()
@@ -268,7 +341,7 @@ class TreeMethodWidget(MethodWidget):
             self.method.fname = os.path.realpath(self.dirModel.filePath(idx))
             self.method.get()
             pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
-            self.onInputChanged()
+            self._sync()
 
 
 class NullMethodWidget(MethodWidget):

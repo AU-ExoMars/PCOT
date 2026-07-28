@@ -75,6 +75,10 @@ before scaling; the Multifile file list is now a resizable/reorderable table.
 * `expr` node: subtracting an ROI from an image (`A - B`) now "cuts a hole", producing an image whose
 ROI is everything *outside* the given ROI (e.g. to exclude a calibration target from an operation).
 * New `.all` property on images, giving an ROI covering the entire image.
+* Input methods (Multifile, RGB, ENVI, PDS4, PARC) no longer read files or pop up warning dialogs
+for inactive/unvisited tabs; missing source files/directories are now shown as a quiet in-tab
+marker and banner instead, cached data is preserved rather than silently discarded, and a "Retry
+missing inputs" button lets you re-check without reopening the document.
 
 Site
 

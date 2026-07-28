@@ -65,14 +65,23 @@ def macroWindowStyle() -> str:
     return f"background-color: {_pick('rgb(255,255,220)', 'rgb(60,58,30)')};"
 
 
-def methodButtonStyle(active: bool) -> str:
-    """Input window's method-select buttons (RGB/Multifile/...): highlight the active one."""
+def methodButtonStyle(active: bool, missing: bool = False) -> str:
+    """Input window's method-select buttons (RGB/Multifile/...): highlight the active one,
+    and give a warning border to any whose configured file/directory can't currently be found
+    on this machine (common when opening a document without the original images - not
+    necessarily an error, so this is a quiet marker rather than a popup)."""
     if active:
         bg = _pick('rgb(200,200,255)', 'rgb(70,70,130)')
     else:
         bg = _pick('rgb(200,200,200)', 'rgb(80,80,80)')
-    return (f"border-style: outset; padding: 4px; border-width: 1px; "
-            f"border-color: palette(mid); background-color: {bg};")
+    if missing:
+        border_color = _pick('rgb(200,0,0)', 'rgb(255,120,120)')
+        border_width = '2px'
+    else:
+        border_color = 'palette(mid)'
+        border_width = '1px'
+    return (f"border-style: outset; padding: 4px; border-width: {border_width}; "
+            f"border-color: {border_color}; background-color: {bg};")
 
 
 def graphLineColor() -> QColor:

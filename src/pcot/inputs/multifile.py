@@ -3,7 +3,7 @@
 import logging
 import os
 import re
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 from pathlib import Path
 
 import PySide6
@@ -92,11 +92,32 @@ class MultifileInputMethod(InputMethod, PresetOwner):
         if loader:
             self.rawLoader = loader
 
-    def invalidate(self):
-        """Invalidates the internal cache for this method as well as clearing the output"""
+    def invalidate(self, force=False):
+        """Invalidates the internal cache for this method as well as clearing the output.
+        See InputMethod.invalidate() - a no-op if the source directory is confirmed missing,
+        unless force is set (the per-file caches are only cleared in that case too, so a
+        missing directory doesn't lose its last successfully assembled image)."""
+        if not force and self.missingPathReason() is not None:
+            logger.debug("Multifile invalidate skipped - source missing, keeping cached data")
+            return
         self.cachedFiles = {}
         self.dnRanges = {}
-        super().invalidate()
+        super().invalidate(force=force)
+
+    def missingPathReason(self) -> Optional[str]:
+        if self.dir is None:
+            return None
+        if not os.path.isdir(str(self.dir)):
+            return f"Directory not found: {self.dir}{self._cachedDataSuffix()}"
+        # the directory itself is fine, but one or more of the individually-selected files
+        # within it might have been deleted since - check those too (still a cheap check:
+        # a handful of stat calls, one per selected file).
+        missing = [f for f in self.files if not os.path.isfile(os.path.join(str(self.dir), f))]
+        if missing:
+            if len(missing) == 1:
+                return f"File not found: {os.path.join(str(self.dir), missing[0])}{self._cachedDataSuffix()}"
+            return f"{len(missing)} input files not found in directory: {self.dir}{self._cachedDataSuffix()}"
+        return None
 
     def readData(self):
         # we force the mapping to have to be "reguessed"
@@ -308,7 +329,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
 
         if self.method.dir is None:
             self.method.dir = pcot.config.getDefaultDir('images')
-        self.onInputChanged()
+        self.syncIfActive()
 
     def onClose(self):
         super().onClose()
@@ -344,10 +365,11 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.loaderSettingsText.setText(str(self.method.rawLoader))
 
     def onInputChanged(self):
-        # the method has changed - set the filters text widget and reselect the dir.
-        # This will only clear the selected files if we changed the dir.
+        # the method has changed - set the filters text widget and refresh the file list
+        # from the method's directory (without ever changing that directory - see
+        # refreshFileList()).
         self.loaderSettingsText.setText(str(self.method.rawLoader))
-        self.selectDir(self.method.dir)
+        self.refreshFileList()
         if self.method.bitdepth is not None:
             i = self.bitdepth.findText(str(int(self.method.bitdepth)) + ' ', Qt.MatchFlag.MatchStartsWith)
         else:
@@ -397,32 +419,49 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         if res != '':
             self.selectDir(res, True)
 
+    @staticmethod
+    def _listImageFiles(dr):
+        """List image files in a directory; propagates any exception (e.g. dir doesn't exist)."""
+        return sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
+                       and IMAGETYPERE.match(f) is not None])
+
+    def refreshFileList(self):
+        """Populate the file list from self.method.dir, without ever mutating that directory.
+        If it can't be read (most commonly because the document was created on a different
+        machine and the original directory isn't present here), just show an empty list -
+        the method's tab button carries a marker/tooltip explaining why, rather than us
+        guessing at some unrelated fallback directory to browse instead."""
+        dr = self.method.dir
+        self.dir.setText(str(dr) if dr is not None else "")
+        try:
+            self.allFiles = self._listImageFiles(dr) if dr is not None else []
+        except Exception as e:
+            logger.info(f"Multifile: configured directory not available ({dr}): {e}")
+            self.allFiles = []
+        self.buildModel()
+        self.refreshMissingIndicator()
+
     def selectDir(self, dr, setDefaultDir=False):
-        # called when we want to load a new directory, or when the node has changed (on loading)
+        """Called when the user explicitly picks a new directory (via the 'get directory'
+        button) - dr becomes the new, real value of self.method.dir."""
         if self.method.dir != dr:  # if the directory has changed reset the selected file list
             self.method.files = []
             ## TODO self.method.type.clearImages(self.node)
-        self.dir.setText(str(dr))
-        # get all the files in dir which are images
         try:
-            self.allFiles = sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
-                                    and IMAGETYPERE.match(f) is not None])
-            # using the absolute, real path
-            self.method.dir = Path(os.path.realpath(dr))
-            # only set the default directory for images when this is called "manually" - typically in response
-            # to the "get directory" button.
-            if setDefaultDir:
-                pcot.config.setDefaultDir('images', self.method.dir)
+            allFiles = self._listImageFiles(dr)
         except Exception as e:
-            # some kind of file system error
-            e = str(e)
-            self.method.input.exception = str(e)
-            ui.error(e)
-            self.method.files= []
-            self.method.dir = str(Path.home())
-
-        # rebuild the model
+            # a directory picked via the file dialog should always exist, but be defensive
+            ui.error(str(e))
+            return
+        self.allFiles = allFiles
+        self.method.dir = Path(os.path.realpath(dr))
+        self.dir.setText(str(self.method.dir))
+        # only set the default directory for images when this is called "manually" - typically in response
+        # to the "get directory" button.
+        if setDefaultDir:
+            pcot.config.setDefaultDir('images', self.method.dir)
         self.buildModel()
+        self.refreshMissingIndicator()
 
     def patChanged(self):
         self.method.filterpat = self.filterpat.text()
@@ -449,6 +488,21 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
     def buildModel(self):
         # build the model that the list view uses
         self.model = QtGui.QStandardItemModel(self.filelist)
+
+        # any previously-selected files that aren't in the current listing (individually
+        # deleted, or the whole directory couldn't be read) are shown first, in red, so
+        # they're immediately visible rather than buried at the bottom of a long list -
+        # the selection doesn't just silently vanish, the user can see exactly what's missing.
+        redBrush = QtGui.QBrush(QtGui.QColor(200, 0, 0))
+        for x in self.method.files:
+            if x not in self.allFiles:
+                item = QtGui.QStandardItem(x)
+                item.setCheckable(True)
+                item.setCheckState(PySide6.QtCore.Qt.CheckState.Checked)
+                item.setForeground(redBrush)
+                item.setToolTip("This file could not be found")
+                self.model.appendRow(item)
+
         for x in self.allFiles:
             # create a checkable item for each file, and check the checkbox
             # if it is in the files list
