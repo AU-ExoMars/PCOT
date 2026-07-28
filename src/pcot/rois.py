@@ -524,7 +524,10 @@ class ROI(SourcesObtainable, Annotation):
             return f"{s}:{lab} (no data)"
         else:
             x, y, w, h = self.bb()
-            return f"{s}:{lab} {x} {y} {w}x{h}"
+            pixs = self.mask().sum()
+            allpixs = w*h
+            ratio = pixs/allpixs
+            return f"{s}:{lab} {x} {y} {w}x{h}, {int(ratio*100)}% pixels are in ROI"
 
     def __str__(self):
         return self._str(False)

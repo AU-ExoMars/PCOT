@@ -52,7 +52,7 @@ def registerBuiltinProperties(p):
                        lambda d: Datum(Datum.NUMBER, Value(d.get(Datum.IMG).bands()), SourceSet(d.getSources())))
 
     def _roi_all(d):
-        from rois import ROIRect
+        from pcot.rois import ROIRect
         img = d.get(Datum.IMG)
         r = ROIRect(rect=(0,0,img.w,img.h))
         return Datum(Datum.ROI, r, nullSourceSet)

@@ -8,7 +8,7 @@ from pcot.datum import Datum
 
 from pcot.datumtypes import Type
 from pcot.imagecube import ImageCube
-from pcot.rois import BadOpException, ROI
+from pcot.rois import BadOpException, ROI, ROIRect
 from pcot.sources import MultiBandSource, SourceSet, nullSourceSet, SourcesObtainable
 from pcot.value import Value
 
@@ -270,6 +270,25 @@ def extractChannel(a: Datum, b: Datum) -> Datum:
     return Datum(Datum.IMG, img)
 
 
+def cutROI(img: Datum, roi: Datum) -> Datum:
+    """Cut an ROI out of an image, so we get an image with an ROI consisting of the whole image
+    except the passed in ROI.
+
+    * generate an ROI for the whole image
+    * subtract the ROI passed in from that ROI
+    * apply that ROI (and only that ROI to the image)
+    """
+
+    img:ImageCube = img.val
+    roi:ROI = roi.val
+
+    allROI = ROIRect(rect=(0,0,img.w,img.h))
+    newROI = allROI - roi
+    newImg = img.copy()
+    newImg.rois = [newROI]
+    return Datum(Datum.IMG, newImg)
+
+
 def initOps():
     """Initialise functions. Would be in the top-level, but I get
     some spurious warnings."""
@@ -317,6 +336,8 @@ def initOps():
 
     registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.NUMBER, extractChannel)
     registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.IDENT, extractChannel)
+
+    registerBinopSemantics(Operator.SUB, Datum.IMG, Datum.ROI, cutROI)
 
 
 initOps()

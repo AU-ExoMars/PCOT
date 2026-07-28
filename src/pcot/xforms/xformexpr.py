@@ -45,7 +45,7 @@ class XFormExpr(XFormType):
     |operator    |description| precedence (higher binds tighter)
     |-------|-----------|----------------
     |A + B| add A to B (can act on ROIs)| 10
-    |A - B| subtract A from B (can act on ROIs)| 10
+    |A - B| subtract A from B (can act on ROIs and Image and ROI (see "making a hole" below)| 10
     |A / B| divide A by B (can act on ROIs)| 20
     |A * B| multiply A by B (can act on ROIs)| 20
     |A ^ B| exponentiate A to the power B (can act on ROIs)| 30
@@ -95,7 +95,17 @@ class XFormExpr(XFormType):
     is a mistake on the user's part, and doing something more "intelligent" might conceal this. The desired result
     can be achieved using expr nodes on ROIs and an importroi node.
 
+    ### Making a "hole" with ROIs
+
+    Sometimes you may need to operate on part of an image which is NOT covered by an ROI - for example,
+    you might want to omit the calibration target. To do this, you can subtract an ROI from the image.
+    For example, if you have an image on input "a" and an ROI on input "b" and your expression is
+    "a-b", the result will be the image "a" with an ROI covering all pixels NOT inside the ROI "b".
+
+    For more complex operations you can use the `.all` property, which is an ROI covering the entire image.
+
     ### Boolean values (true or false)
+
     Some functions and operators work on boolean values, such as
 
     * The \| (or), & (and) and ! (not) operators

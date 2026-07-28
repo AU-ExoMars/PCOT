@@ -72,6 +72,9 @@ before scaling; the Multifile file list is now a resizable/reorderable table.
 * Pan/zoom with keyboard in canvas
 * `clamp()` datumfunc now takes optional min/max arguments (was fixed to 0-1).
 * Canvas right-click menu can store and load a view's centre/zoom, to sync the view between canvases.
+* `expr` node: subtracting an ROI from an image (`A - B`) now "cuts a hole", producing an image whose
+ROI is everything *outside* the given ROI (e.g. to exclude a calibration target from an operation).
+* New `.all` property on images, giving an ROI covering the entire image.
 
 Site
 
