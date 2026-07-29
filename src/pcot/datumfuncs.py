@@ -1297,5 +1297,15 @@ def pix(img,x,y):
     return Datum(Datum.NUMBER,r,sources=img.sources)
 
 
+@datumfunc
+def eval(img, expr):
+    """
+    Evaluate an expression on an image, which is passed into the expression as "a".
 
-
+    @param img:img:the image
+    @param expr:string:the expression
+    """
+    from pcot.expressions.eval import evaluateOnImage
+    img = img.get(Datum.IMG)
+    expr = expr.get(Datum.STRING)
+    return evaluateOnImage(img,expr)

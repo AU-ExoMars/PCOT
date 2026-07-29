@@ -704,7 +704,6 @@ class Parser:
                     self.out(InstNumber(float(t.string)))
                     wantOperand = False
                 elif t.type == STRING:
-
                     self.out(InstString(dequote(t.string)))
                     wantOperand = False
                 elif t.type == NAME:

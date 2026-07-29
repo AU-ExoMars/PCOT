@@ -7,6 +7,7 @@ from functools import partial
 from typing import Dict, Callable, Union
 
 import pcot.config
+from imagecube import ImageCube
 from pcot.config import parserhook
 from pcot.expressions.ops import binop, unop, Operator
 from .parse import Parser, execute
@@ -95,3 +96,12 @@ class ExpressionEvaluator(Parser):
         self.parse(s)
         stack = []
         return execute(self.output, stack)
+
+
+def evaluateOnImage(img: ImageCube, expr: str) -> Datum:
+    """Function for running a simple expression on an image; the image is passed in as variable "a"
+    """
+    e = ExpressionEvaluator()
+    dat = Datum(Datum.IMG, img)
+    r = e.run(expr, {"a": dat})
+    return r
