@@ -13,8 +13,8 @@ from pcot.expressions.ops import binop, unop, Operator
 from pcot.expressions.parse import Parser, execute
 
 # TODO: keep expression guide in help updated
-from ..datum import Datum
-from ..xform import XFormException
+from pcot.datum import Datum
+from pcot.xform import XFormException
 
 logger = logging.getLogger(__name__)
 

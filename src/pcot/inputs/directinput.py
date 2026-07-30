@@ -1,9 +1,9 @@
 from typing import Optional
 
-from .inputmethod import InputMethod
-from ..datum import Datum
-from ..imagecube import ImageCube
-from ..parameters.taggedaggregates import TaggedDict
+from pcot.inputs.inputmethod import InputMethod
+from pcot.datum import Datum
+from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDict
 
 
 class DirectInputMethod(InputMethod):

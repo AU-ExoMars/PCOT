@@ -7,11 +7,11 @@ import pcot.config
 from pcot.imagecube import ChannelMapping, VALID_RASTER_FORMATS
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
-from .inputmethod import InputMethod
-from ..dataformats import load
-from ..datum import Datum
-from ..parameters.taggedaggregates import TaggedDict
-from ..utils.demosaicing import DEBAYER_ALGOS, NEGATIVE_PROCESSING_METHODS, VALID_BAYER_PATTERNS
+from pcot.inputs.inputmethod import InputMethod
+from pcot.dataformats import load
+from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDict
+from pcot.utils.demosaicing import DEBAYER_ALGOS, NEGATIVE_PROCESSING_METHODS, VALID_BAYER_PATTERNS
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ class RGBMethodWidget(TreeMethodWidget):
         self.patternCombo.addItems(VALID_BAYER_PATTERNS)
         self.algoCombo.addItems(DEBAYER_ALGOS)
         self.negCombo.addItems(NEGATIVE_PROCESSING_METHODS)
-        from ..cameras import getCameraNames
+        from pcot.cameras import getCameraNames
         self.cameraCombo.addItem("NONE")
         self.cameraCombo.addItems(getCameraNames())
 

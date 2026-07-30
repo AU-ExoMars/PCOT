@@ -1,4 +1,4 @@
 """The expression parser used in the expr nodes"""
 
-from .eval import ExpressionEvaluator
-from .parse import Parameter
+from pcot.expressions.eval import ExpressionEvaluator
+from pcot.expressions.parse import Parameter

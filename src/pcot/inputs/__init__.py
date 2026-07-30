@@ -8,4 +8,4 @@ The three main classes here are:
 
 """
 
-from .inp import Input
+from pcot.inputs.inp import Input

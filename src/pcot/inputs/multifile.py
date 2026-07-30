@@ -14,15 +14,15 @@ import pcot
 from pcot.imagecube import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
-from .inputmethod import InputMethod
-from .. import ui
-from ..cameras import getCameraNames
-from ..dataformats import load
-from ..dataformats.raw import RawLoader
-from ..parameters.taggedaggregates import TaggedDict
-from ..ui import uiloader
-from ..ui.presetmgr import PresetModel, PresetDialog, PresetOwner
-from ..utils import SignalBlocker
+from pcot.inputs.inputmethod import InputMethod
+from pcot import ui
+from pcot.cameras import getCameraNames
+from pcot.dataformats import load
+from pcot.dataformats.raw import RawLoader
+from pcot.parameters.taggedaggregates import TaggedDict
+from pcot.ui import uiloader
+from pcot.ui.presetmgr import PresetModel, PresetDialog, PresetOwner
+from pcot.utils import SignalBlocker
 
 logger = logging.getLogger(__name__)
 

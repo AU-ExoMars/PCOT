@@ -1,8 +1,8 @@
 from typing import List, Optional, TYPE_CHECKING
 
-from .inputmethod import InputMethod
+from pcot.inputs.inputmethod import InputMethod
 from pcot.ui.inputs import InputWindow
-from ..datum import Datum
+from pcot.datum import Datum
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,13 +34,13 @@ class Input:
         """this will initialise an Input from scratch, typically when
         you're creating a new main graph. The input will be initialised
         to use the null method."""
-        from .parc import PARCInputMethod
-        from .directinput import DirectInputMethod
-        from .envimethod import ENVIInputMethod
-        from .multifile import MultifileInputMethod
-        from .nullinput import NullInputMethod
-        from .rgb import RGBInputMethod
-        from .pds4input import PDS4InputMethod
+        from pcot.inputs.parc import PARCInputMethod
+        from pcot.inputs.directinput import DirectInputMethod
+        from pcot.inputs.envimethod import ENVIInputMethod
+        from pcot.inputs.multifile import MultifileInputMethod
+        from pcot.inputs.nullinput import NullInputMethod
+        from pcot.inputs.rgb import RGBInputMethod
+        from pcot.inputs.pds4input import PDS4InputMethod
 
         self.mgr = mgr
         self.idx = idx

@@ -1,7 +1,7 @@
 
-from .inputmethod import InputMethod
+from pcot.inputs.inputmethod import InputMethod
 from pcot.ui.inputs import NullMethodWidget
-from ..datum import Datum
+from pcot.datum import Datum
 
 
 class NullInputMethod(InputMethod):
