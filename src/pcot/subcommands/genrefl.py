@@ -65,7 +65,10 @@ def genrefl(args):
         # get basic metadata fields
         t = {k:d[k] for k in ('description','author','date','name','short')}
         # turn the date into a string
-        t["date"] = t["date"].strftime("%Y-%m-%d")        
+        try:
+            t["date"] = t["date"].strftime("%Y-%m-%d")
+        except AttributeError:
+            raise Exception("The date format is incorrect. Should be a parseable ISO 8601 date, e.g. DD-MM-YYYY")
 
         # Get the style of data we have - it's the same for all patches.
         patch_format = d['format']

@@ -7,10 +7,10 @@ from functools import partial
 from typing import Dict, Callable, Union
 
 import pcot.config
-from imagecube import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.config import parserhook
 from pcot.expressions.ops import binop, unop, Operator
-from .parse import Parser, execute
+from pcot.expressions.parse import Parser, execute
 
 # TODO: keep expression guide in help updated
 from ..datum import Datum
