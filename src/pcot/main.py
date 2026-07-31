@@ -31,7 +31,9 @@ set_common_args([
              dest="loglevel", const=logging.INFO),
     argument("--log-level", dest="loglevel", help='set log level',
              choices=["ERROR", "WARN", "INFO", "DEBUG", "CRITICAL"]),
-    argument("--show-imports", action="store_true", help="show module imports for debugging")],
+    argument("--show-imports", action="store_true", help="show module imports for debugging"),
+    argument("--ignore-version", action="store_true",
+             help="don't do a version check when loading PCOT documents")],
     loglevel=logging.WARNING)
 
 
@@ -39,7 +41,9 @@ set_common_args([
 # There are additional arguments used by the entire system (main command and
 # subcommands), which are in subcommands.py.
 
-@maincommand([argument("file", metavar="FILE", help="PCOT file to load", type=str, nargs="?")])
+@maincommand([
+    argument("file", metavar="FILE", help="PCOT file to load", type=str, nargs="?"),
+])
 def mainfunc(args):
     """Run the PCOT application, loading any file specified"""
     import pcot.app
@@ -57,6 +61,8 @@ def main():
     func, args = process()
     # process the common ags
     logger.setLevel(args.loglevel)
+    import pcot.config
+    pcot.config.ignore_version = args.ignore_version
     if args.show_imports:
         print("adding import monitor")
 

@@ -55,7 +55,7 @@ data:Optional[TaggedDict] = None
 
 
 main_app_running = False        # set when we are actually running the GUI
-
+ignore_version = False          # if this is true (set from the command line) we ignore version checks on PCOT files
 
 
 def getUserName():
