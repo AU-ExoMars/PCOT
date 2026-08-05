@@ -16,7 +16,6 @@ import pcot
 import pcot.dq
 import pcot.ui as ui
 from pcot import canvasnormalise, dq
-from pcot.assets import getAssetAsFile
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui import theme
