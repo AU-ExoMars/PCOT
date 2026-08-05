@@ -394,6 +394,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
             for i, f in enumerate(self.node.filters):
                 table.newRow(f.name)
                 table.add("Filter", f.name)
+                table.add("CWL",int(f.cwl))
                 table.add("Gradient", m[i])
                 table.add("Intercept", c[i])
 
@@ -619,12 +620,13 @@ class TabReflectance(pcot.ui.tabs.Tab):
             if fit:
                 ax.axline((0, fit.c), slope=fit.m, color=colname)
             # ax.plot(known, measured, '+', color=colname, label=band)
-            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=band, fmt='x',
+            cwl = self.node.camera.getFilter(band).cwl
+            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std,
+                        label=f"{band} {int(cwl)}nm", fmt='x',
                         color=colname)
 
             # point labelling: don't do this if we're plotting all bands or it's turned off
             if len(bands) == 1 and self.node.params.show_patches:
-                cwl = self.node.camera.getFilter(band).cwl
                 ax.set_title(f"Fit for {band} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}")
                 for i, patch in enumerate(patches):
                     # plot the patch name and the measured value at the point
