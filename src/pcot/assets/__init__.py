@@ -2,6 +2,7 @@
 This package handles and contains assets, usually strings but some binaries.
 """
 import importlib
+import importlib.resources
 import io
 import pkgutil
 
@@ -24,8 +25,13 @@ def getAssetAsFile(fn, package="pcot.assets"):
 
 
 def getAssetPath(fn, package="pcot.assets"):
-    """Find a file in the assets package and return its path"""
-    with importlib.resources.path(package, fn) as p:
+    """Find a file in the assets package and return its path. The file may be in a
+    subdirectory of the package, in which case use '/' to separate path components
+    (regardless of platform)."""
+    resource = importlib.resources.files(package)
+    for part in fn.split('/'):
+        resource = resource / part
+    with importlib.resources.as_file(resource) as p:
         return p
 
 

@@ -16,7 +16,7 @@ import pcot.ui as ui
 import pcot.xform as xform
 import pcot.xforms
 from pcot.config import getUserName, addMainWindowHook, addExprFuncHook
-from pcot.utils import archive
+from pcot.utils import archive, spectralparameters
 from pcot.xforms import *
 import logging
 import pkgutil
@@ -78,6 +78,9 @@ def setup():
     config.loadCameras()
     # and reflectances
     config.loadReflectances()
+
+    spectralparameters.loadSpectralParameters()
+
 
     # If we run without a GUI, we still need an application. This will provide that.
     from pcot.app import checkApp
