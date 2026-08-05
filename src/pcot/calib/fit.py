@@ -1,5 +1,5 @@
 import dataclasses
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -21,11 +21,36 @@ class SimpleValue:
 
 @dataclasses.dataclass
 class Fit:
-    """The result of a fit. This is a dataclass to make it easier to pass around."""
+    """The result of a fit. This is a dataclass to make it easier to pass around.
+        - m, c : slope and intercept of linear model mapping radiance to reflectance
+        - sdm, sdc: uncertainty in the above in standard deviations
+        - warning: None, or a string if there may be problems with this fit
+    """
+
     m: float
     c: float
     sdm: float
     sdc: float
+
+    # warning field is not initialised; it's calculated in the post init.
+    warning: Optional[str] = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        """calculate extra attributes"""
+        warns = []
+        if self.m < 0:
+            warns.append("negative gradient")
+        elif self.m <= 0.001:
+            warns.append("very small gradient")
+
+        # distance from origin
+        d = np.abs(self.c)/np.sqrt(self.m*self.m+1)
+        if d > 0.1:
+            warns.append("line is far from origin")
+
+        self.warning = None if len(warns) == 0 else ",".join(warns)
+
+
 
 
 def fit(rho: List[SimpleValue], signals: List[SimpleValue]) -> Fit:
@@ -47,10 +72,7 @@ def fit(rho: List[SimpleValue], signals: List[SimpleValue]) -> Fit:
             number of samples.
           Bad pixels should be removed first.
 
-    Returns m, c, sdm, sdc
-
-        - m, c : slope and intercept of linear model mapping radiance to reflectance
-        - sdm, sdc: uncertainty in the above in standard deviations
+    Returns a Fit object; see above.
 
     From Gunn, M. Spectral imaging for Mars exploration (Doctoral dissertation, Aberystwyth University).
 

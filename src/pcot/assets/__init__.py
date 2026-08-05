@@ -7,6 +7,8 @@ import pkgutil
 
 from PySide6.QtGui import QIcon
 
+from pcot.ui.theme import isDarkMode
+
 
 def getAssetAsString(fn, package="pcot.assets"):
     """Find a file in the assets package and return its contents as a string, assuming it is utf-8 encoded"""
@@ -31,7 +33,10 @@ class Icons:
     icons = {}
     @classmethod
     def get(cls, name):
+        if isDarkMode():
+            name = name + "-darkmode"
+
         if name not in cls.icons:
-            icon = QIcon(str(getAssetPath(name)))
+            icon = QIcon(str(getAssetPath(name+".svg")))
             cls.icons[name] = icon
         return cls.icons[name]

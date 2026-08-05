@@ -984,7 +984,7 @@ class Canvas(QtWidgets.QWidget):
         self.scrollH.valueChanged.connect(self.horzScrollChanged)
         layout.addWidget(self.scrollH, 1, 0)
 
-        icon = pcot.assets.Icons.get("maximize-2.svg")
+        icon = pcot.assets.Icons.get("maximize-2")
         self.resetButton = QtWidgets.QPushButton()
         self.resetButton.setIcon(icon)
         self.resetButton.setMaximumWidth(20)

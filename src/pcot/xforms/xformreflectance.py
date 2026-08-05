@@ -4,14 +4,17 @@ import dataclasses
 from typing import List, Dict, Tuple
 
 import numpy as np
+from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 
 import pcot.ui.tabs
 from pcot import cameras, ui
 import pcot.calib
+from pcot.assets import Icons
 from pcot.calib import SimpleValue
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
+from pcot.ui.help import showHelpDialog
 from pcot.ui.tabledialog import TableDialog
 from pcot.ui import theme
 from pcot.utils import SignalBlocker, image
@@ -318,6 +321,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.sepPlotsBox.checkStateChanged.connect(self.sepPlotsBoxStateChanged)
         self.w.saveButton.clicked.connect(self.save)
         self.w.showMCButton.clicked.connect(self.showMCClicked)
+        self.w.hideButton.clicked.connect(self.hideClicked)
+        self.w.fudgesInfoButton.clicked.connect(self.showFudgesInfo)
 
         self.w.phiSpin.valueChanged.connect(self.phiChanged)
         self.w.thetaSpin.valueChanged.connect(self.thetaChanged)
@@ -326,10 +331,41 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
         self.w.zeroFudgeBox.checkStateChanged.connect(self.zeroFudgeStateChanged)
         self.w.simplifyFudgeBox.checkStateChanged.connect(self.simplifyFudgeStateChanged)
+        self.w.warningsTable.setColumnCount(2)
+
+        self.w.fudgesInfoButton.setIcon(Icons.get("info"))
+
         self.nodeChanged()
 
     def save(self):
         self.w.mpl.save()
+
+    def showFudgesInfo(self):
+        showHelpDialog(self,"Fudges", """
+        # Fudges
+        
+        These are mainly for debugging and truly vile data sets.
+        
+        If you are not dealing with either of those cases, please **don't**. 
+        Even then, <font color='red'>**don't**</color>.
+        
+        If you decide to go ahead, ***tuum erit periculum.***
+        
+        * "Add zero points" adds a lot of points at the origin; the idea being to force the fit to go through
+        the origin.
+        * "Simplify data" makes all measured data have the same number of points and small variance.
+        
+        *Peidiwch â thynnu nythod cacwn ar eich ben.*
+        """)
+
+    def hideClicked(self):
+        self.w.controls.setVisible(not self.w.controls.isVisible())
+        self.setHideButtonText()
+
+    def setHideButtonText(self):
+        self.w.hideButton.setText(
+            "Hide Controls" if self.w.controls.isVisible() else "Show Controls"
+        )
 
     def changed(self):
         # when the node change is run, we need to clear the recalc button's style.
@@ -418,6 +454,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
             if self.node.params.target in cameras.getReflectanceNames():
                 self.w.targetCombo.setCurrentIndex(names.index(self.node.params.target))
         # populate the filter combo box with the filters from the image
+        filter_names = None
         with SignalBlocker(self.w.filterCombo):
             self.w.filterCombo.clear()
             if self.node.filters:
@@ -432,6 +469,29 @@ class TabReflectance(pcot.ui.tabs.Tab):
                     ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
                     self.w.filterCombo.setCurrentIndex(0)
                     self.node.filter_to_plot = self.w.filterCombo.currentText()
+
+        # reset and populate the warnings table
+
+        t = self.w.warningsTable
+        t.clear()
+        t.setHorizontalHeaderLabels(["filter","warning"])
+        hdr = t.horizontalHeader()
+        hdr.setSectionResizeMode(0,QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(1,QtWidgets.QHeaderView.ResizeMode.Stretch)
+
+        row=0
+        if self.node.fits and filter_names is not None:
+            for i,fname in enumerate(filter_names):
+                fit = self.node.fits.get(fname)
+                if fit.warning is not None:
+                    t.insertRow(row)
+                    t.setItem(row,0,QtWidgets.QTableWidgetItem(fname))
+                    t.setItem(row,1,QtWidgets.QTableWidgetItem(fit.warning))
+                    bg, fg = theme.warningItemColours()
+                    t.item(row,1).setBackground(bg)
+                    t.item(row,1).setForeground(fg)
+                    row+=1
+
 
         self.w.showPatchesBox.setChecked(self.node.params.show_patches)
         self.w.sepPlotsBox.setChecked(self.node.params.sep_plots)

@@ -248,8 +248,8 @@ class PresetDialog(QDialog):
         self.downButton.clicked.connect(self.demotePreset)
 
         from pcot.assets import Icons
-        self.upButton.setIcon(Icons.get("arrow-up.svg"))
-        self.downButton.setIcon(Icons.get("arrow-down.svg"))
+        self.upButton.setIcon(Icons.get("arrow-up"))
+        self.downButton.setIcon(Icons.get("arrow-down"))
 
         self.owner = owner
         self.model = model

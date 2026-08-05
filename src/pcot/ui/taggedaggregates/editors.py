@@ -268,16 +268,16 @@ class ListEditor(Editor):
             row_layout.addWidget(idxlabel)
 
             from pcot.assets import Icons
-            (up := QtWidgets.QToolButton()).setIcon(Icons.get("arrow-up.svg"))
+            (up := QtWidgets.QToolButton()).setIcon(Icons.get("arrow-up"))
             row_layout.addWidget(up)
             # use of partial here to avoid both the late-binding problem of lambdas, and
             # also other weirdness possibly to do with weak references to things dying.
             up.clicked.connect(partial(self.move, i, -1))
-            (down := QtWidgets.QToolButton()).setIcon(Icons.get("arrow-down.svg"))
+            (down := QtWidgets.QToolButton()).setIcon(Icons.get("arrow-down"))
             row_layout.addWidget(down)
             down.clicked.connect(partial(self.move, i, 1))
 
-            (delb := QtWidgets.QPushButton()).setIcon(Icons.get("x-circle.svg"))
+            (delb := QtWidgets.QPushButton()).setIcon(Icons.get("x-circle"))
             row_layout.addWidget(delb)
             delb.clicked.connect(partial(self.delete, i))
             self.buts.append(delb)

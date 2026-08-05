@@ -292,9 +292,9 @@ class Palette:
 
     def setCollapseButton(self):
         if self.collapser.shouldCollapseWhenButtonClicked():
-            icon = pcot.assets.Icons.get("chevrons-up.svg")
+            icon = pcot.assets.Icons.get("chevrons-up")
         else:
-            icon = pcot.assets.Icons.get("chevrons-down.svg")
+            icon = pcot.assets.Icons.get("chevrons-down")
         self.collapseButton.setIcon(icon)
 
     def createNodeByName(self, name):

@@ -55,6 +55,15 @@ def warningLabelStyle() -> str:
     return f"QLabel {{ background-color: {bg}; color: {fg}; }}"
 
 
+def warningItemColours():
+    """Background/foreground QColor pair for a table cell (e.g. QTableWidgetItem) flagging a
+    warning - an amber that should pop out against the normal item background in both colour
+    schemes, distinct from the red used for errors."""
+    bg = _pick(QColor(255, 235, 130), QColor(90, 65, 10))
+    fg = _pick(QColor(102, 60, 0), QColor(255, 200, 80))
+    return bg, fg
+
+
 def macroTagStyle() -> str:
     """Yellowish tint used to flag macro/favourite buttons in the node palette."""
     return f"background-color: {_pick('rgb(220,220,140)', 'rgb(100,95,40)')};"
