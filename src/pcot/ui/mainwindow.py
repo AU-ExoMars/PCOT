@@ -101,7 +101,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                  doAutoLayout: bool = True):
         """Constructor which just calls _init()"""
         super().__init__()
-        uiloader.loadUi('main.ui', self)
+        uiloader.loadUi('ui/dialogs/main.ui', self)
         # connect buttons etc.
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
         # self.dumpButton.clicked.connect(lambda: self.graph.dump())
@@ -543,10 +543,10 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def aboutAction(self):
         dialog = QDialog(self)
-        uiloader.loadUi('about.ui', dialog)
-        txt = Template(pcot.assets.getAssetAsString('about.md')).substitute(version=pcot.__fullversion__)
+        uiloader.loadUi('ui/dialogs/about.ui', dialog)
+        txt = Template(pcot.assets.getAssetAsString('ui/dialogs/about.md')).substitute(version=pcot.__fullversion__)
         doc = dialog.textEdit.document()
-        doc.setDefaultStyleSheet(pcot.assets.getAssetAsString('about.css'))
+        doc.setDefaultStyleSheet(pcot.assets.getAssetAsString('ui/dialogs/about.css'))
         txt = markdown.markdown(txt)
         doc.setHtml(txt)
         dialog.textEdit.moveCursor(QTextCursor.MoveOperation.Start)

@@ -29,7 +29,7 @@ class Dialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super().__init__(parent)
 
-        uiloader.loadUi('showcamsrefls.ui', self)
+        uiloader.loadUi('ui/dialogs/showcamsrefls.ui', self)
         self.cameraBox.currentIndexChanged.connect(self._camera_or_target_changed)
         self.reflBox.currentIndexChanged.connect(self._camera_or_target_changed)
         self.filterAngleSpin.valueChanged.connect(self._replot)

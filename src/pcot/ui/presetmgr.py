@@ -236,7 +236,7 @@ class PresetDialog(QDialog):
         super().__init__(parent)
 
         self.setWindowTitle(title)
-        uiloader.loadUi('presets.ui', self)
+        uiloader.loadUi('ui/dialogs/presets.ui', self)
         self.doneButton.pressed.connect(lambda: self.close())
         self.saveButton.pressed.connect(self.savePreset)
         self.loadButton.pressed.connect(self.loadPreset)

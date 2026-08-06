@@ -289,7 +289,7 @@ IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif|raw|bin)")
 class MultifileMethodWidget(MethodWidget, PresetOwner):
     def __init__(self, m):
         super().__init__(m)
-        uiloader.loadUi('inputmultifile.ui', self)
+        uiloader.loadUi('ui/inputs/inputmultifile.ui', self)
         self.model = None
         # all the files in the current directory (which match the filters)
         self.allFiles = []

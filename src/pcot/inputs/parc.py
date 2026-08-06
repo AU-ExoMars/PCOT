@@ -126,7 +126,7 @@ class Model(QtCore.QAbstractTableModel):
 class PARCMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
-        uiloader.loadUi("inputparc.ui", self)
+        uiloader.loadUi("ui/inputs/inputparc.ui", self)
         self.openButton.clicked.connect(self.openFile)
         self.tableView.doubleClicked.connect(self.itemSelected)
         self.tableView.setModel(Model(self, m.manifest))

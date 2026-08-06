@@ -11,7 +11,7 @@ from pcot.ui import uiloader
 class ImportDialog(QDialog):
     def __init__(self, doc, parent=None):
         super().__init__(parent)
-        uiloader.loadUi('import.ui', self)
+        uiloader.loadUi('ui/dialogs/import.ui', self)
         self.macstoimport = []
         self.favstoimport = []
 

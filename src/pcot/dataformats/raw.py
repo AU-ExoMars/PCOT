@@ -163,7 +163,7 @@ class RawLoaderDialog(QDialog):
 
     def __init__(self, parent, loader):
         super().__init__(parent)
-        uiloader.loadUi('rawloader.ui', self)
+        uiloader.loadUi('ui/dialogs/rawloader.ui', self)
 
         self.formatCombo.setCurrentIndex(loader.format)
         self.widthSpin.setValue(loader.width)

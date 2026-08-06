@@ -240,7 +240,7 @@ class Tab(QtWidgets.QWidget):
 
         # load the UI file into the main widget
         if uifile is not None:
-            uiloader.loadUi(uifile, self.w)
+            uiloader.loadUi(f"ui/tabs/{uifile}", self.w)
         # add the containing widget (self) to the tabs,
         # keeping the index at which it was created
         self.idx = window.tabWidget.addTab(self, self.title)

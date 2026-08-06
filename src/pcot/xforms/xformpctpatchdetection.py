@@ -7,7 +7,6 @@ holding the patch identities and their coordinates for all detected patches.
 
 """
 import math
-from os import path
 
 # assorted functional imports
 import cv2 as cv
@@ -17,6 +16,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
 
+from pcot.assets import getAssetPath
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.rois import ROICircle
@@ -914,10 +914,9 @@ class TabPCTPatchDetection(Tab):
         # register the pct description image scene
         descriptionImageScene = QGraphicsScene()
 
-        # look for the patch description image basd on location of this file to allow node to run in different places
-        fileLocation, _ = path.split(__file__)
+        # look for the patch description image among the package assets
         pixmapDescImageScene = QPixmap.fromImage(
-            QImage(path.join(fileLocation, "../assets/images/patchdescriptions.png")))
+            QImage(str(getAssetPath("images/patchdescriptions.png"))))
         descriptionImageScene.addItem(QGraphicsPixmapItem(pixmapDescImageScene.scaled(QSize(190, 190))))
 
         # Set the text or image onto the patch description view window

@@ -250,7 +250,7 @@ class TreeMethodWidget(MethodWidget):
 
     def __init__(self, m, uiFile: str, filterList: List[str]):
         super().__init__(m)
-        uiloader.loadUi(uiFile, self)
+        uiloader.loadUi(f"ui/inputs/{uiFile}", self)
         # set up the file tree
         self.dirModel = QFileSystemModel()
         # pretty ugly way to get hold of the config, done to avoid cyclic imports

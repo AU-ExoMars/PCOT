@@ -37,6 +37,6 @@ class Icons:
             name = name + "-darkmode"
 
         if name not in cls.icons:
-            icon = QIcon(str(getAssetPath(name+".svg")))
+            icon = QIcon(str(getAssetPath("icons/" + name + ".svg")))
             cls.icons[name] = icon
         return cls.icons[name]

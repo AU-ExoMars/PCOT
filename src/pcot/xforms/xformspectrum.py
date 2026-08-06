@@ -179,7 +179,7 @@ class ReorderDialog(QDialog):
     def __init__(self, parent, node):
         super().__init__(parent)
         # load the UI file into the actual dialog (as the UI was created as "dialog with buttons")
-        uiloader.loadUi('reorderplots.ui', self)
+        uiloader.loadUi('ui/dialogs/reorderplots.ui', self)
         self.upButton.clicked.connect(self.upClicked)
         self.downButton.clicked.connect(self.downClicked)
         self.revButton.clicked.connect(self.revClicked)

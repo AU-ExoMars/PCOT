@@ -508,7 +508,7 @@ def testimg(index, usetestfilters=0):
         img = testImageCache[name_for_cache]
     else:
         try:
-            p = getAssetPath(fileList[n])
+            p = getAssetPath("images/" + fileList[n])
         except FileNotFoundError as e:
             raise XFormException('DATA', f"cannot find test image{fileList[n]}")
 

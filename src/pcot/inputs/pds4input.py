@@ -231,7 +231,7 @@ class ImageLinearSetEntity(LinearSetEntity):
 class PDS4ImageMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
-        uiloader.loadUi('inputpdsfile.ui', self)
+        uiloader.loadUi('ui/inputs/inputpdsfile.ui', self)
 
         # set widget states from method data
         if self.method.dir is None:

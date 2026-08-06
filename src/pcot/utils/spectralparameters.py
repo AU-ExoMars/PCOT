@@ -103,5 +103,5 @@ def loadSpectralParameters():
     global _spectralEvaluator
     _spectralEvaluator = ExpressionEvaluator()
 
-    _load_group(getAssetPath("builtin_spectral_parameters.yaml"))
+    _load_group(getAssetPath("data/builtin_spectral_parameters.yaml"))
 
