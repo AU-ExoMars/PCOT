@@ -4,8 +4,10 @@ desc: |
   Builtin spectral parameters from INSERT PAPERS HERE
 
 parameters:
-    foo: 1
     bar:
       desc: Handy thing.
       expr: a*10
+    baz:
+      desc: Another test
+      expr: 3-a
 

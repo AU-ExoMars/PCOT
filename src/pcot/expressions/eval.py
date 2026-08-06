@@ -44,11 +44,16 @@ def registerBuiltinOperatorSyntax(p):
 
 
 def unboundVar():
-    """Placeholder value for a variable registered only so ExpressionEvaluator.compile() resolves
+    """Placeholder VALUE (see below) for a variable registered only so ExpressionEvaluator.compile() resolves
     its name to a rebindable InstVar - not because it has a real value yet. Raises if actually
     executed, so a compiled expression run before being properly rebound fails loudly instead of
     silently using stale or meaningless data. Stateless, so a single reference can be reused for
-    any number of variables/expressions."""
+    any number of variables/expressions.
+
+    Although it should be obvious, NEVER call this function - just use it as a value in variable bindings
+    like this:
+                expressionParser.compile("a*10",{"a": unboundVar})
+    """
     raise RuntimeError("expression variable read before being bound (see ExpressionEvaluator.compile)")
 
 
