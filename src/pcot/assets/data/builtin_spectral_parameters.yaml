@@ -3,11 +3,21 @@ date: 5th August 2026
 desc: |
   Builtin spectral parameters from INSERT PAPERS HERE
 
+# Each parameter has:
+#   name - the name and a short description. This might have some characters in it that YAML
+#     doesn't like in keys such as colons. if so, put quotes round the name.
+#   expr - the PCOT expr node expression, using "a" as the input image variable, e.g. "a$540" to
+#     just pull out the 540nm band
+#   desc  - a longer description and notes for internal use.
+
 parameters:
-    bar:
-      desc: Handy thing.
-      expr: a*10
+    identity, which does nothing to the image:
+        desc: Does nothing
+        expr: a
+    "bar: which does horrible things to cake":
+        desc: Handy thing.
+        expr: a*10
     baz:
-      desc: Another test
-      expr: 3-a
+        desc: Another test
+        expr: 3-a
 

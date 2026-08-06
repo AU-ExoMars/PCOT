@@ -69,6 +69,7 @@ class ReflectancePoint:
     """
     known: SimpleValue
     measured: SimpleValue
+    sample_count: int
     patch: str
 
 
@@ -198,6 +199,7 @@ class XFormReflectance(XFormType):
             # then the measured reflectance for each band.
             for filter in node.filters:
                 filter_name = filter.name
+
                 # get the band index for this filter - we have Filter items in node.filters
                 band_index = node.filter_index_by_name.get(filter_name, None)
                 if band_index is None:
@@ -212,12 +214,13 @@ class XFormReflectance(XFormType):
 
                 # flatten the means and sds and remove the masked pixels (we shouldn't really
                 # need to do this but it aids debugging)
+
                 band_means = means[band_index].compressed().flatten()
                 band_stds = stds[band_index].compressed().flatten()
 
                 # sanity check for no good pixels
                 if len(band_means) == 0:
-                    logger.debug(f"Band {band_index} has no good pixels, skipping")
+                    logger.debug(f"Band {band_index} has no good pixels in {patch}, skipping")
                     continue
 
                 # now prepare plotting data
@@ -245,6 +248,7 @@ class XFormReflectance(XFormType):
                 point = ReflectancePoint(
                     SimpleValue(known_mean, known_std),
                     SimpleValue(measured_mean, measured_std),
+                    band_means.size,
                     patch)
 
                 if filter_name not in points_per_filter:
@@ -552,7 +556,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
             # separate out the data
             points = [dataclasses.astuple(p) for p in points]
-            known, measured, patches = zip(*points)
+            known, measured, sample_counts, patches = zip(*points)
 
             known_mean = [x.mean for x in known]
             measured_mean = [x.mean for x in measured]
@@ -607,7 +611,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
                 continue
             # separate out the data
             points = [dataclasses.astuple(p) for p in points]
-            known, measured, patches = zip(*points)
+            known, measured, sample_counts, patches = zip(*points)
 
             known_mean = [x.mean for x in known]
             measured_mean = [x.mean for x in measured]
@@ -630,7 +634,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
                 ax.set_title(f"Fit for {band} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}")
                 for i, patch in enumerate(patches):
                     # plot the patch name and the measured value at the point
-                    ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f}",
+                    ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f} (n={sample_counts[i]})",
                                 (known_mean[i], measured_mean[i]), fontsize=8)
 
         if len(bands) > 1:

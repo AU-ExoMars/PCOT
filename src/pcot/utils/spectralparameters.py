@@ -6,6 +6,7 @@ from typing import Dict
 
 import yaml
 
+from pcot.datum import Datum
 from pcot.expressions.eval import ExpressionEvaluator, unboundVar
 from pcot.expressions.parse import CompiledExpression
 
@@ -43,6 +44,15 @@ class SpectralParameter:
             raise AttributeError(f"SpectralParameter requires 'desc' key in parameter {name}")
         self.desc = d['desc']
 
+    def run(self, d: Datum) -> Datum:
+        """Run the spectral parameter on a datum, which must be an image"""
+        if not isinstance(d, Datum):
+            raise TypeError(f"Expected Datum but got {type(d)} in parameter {self.name}")
+        if d.tp != Datum.IMG:
+            raise TypeError(f"Expected an image but got {d.tp.name} in parameter {self.name}")
+        return _spectralEvaluator.run(self.compiled, {"a": d})
+
+
 
 
 class Group:
@@ -67,6 +77,9 @@ class Group:
         return self.parameters.values()
     def items(self):
         return self.parameters.items()
+
+    def __getitem__(self, key):
+        return self.parameters[key]
 
 
 # Spectral parameters are organised into groups; each YAML file contains one group. The "builtin"
@@ -104,4 +117,3 @@ def loadSpectralParameters():
     _spectralEvaluator = ExpressionEvaluator()
 
     _load_group(getAssetPath("data/builtin_spectral_parameters.yaml"))
-

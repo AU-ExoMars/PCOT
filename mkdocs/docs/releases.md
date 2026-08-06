@@ -79,6 +79,16 @@ ROI is everything *outside* the given ROI (e.g. to exclude a calibration target 
 for inactive/unvisited tabs; missing source files/directories are now shown as a quiet in-tab
 marker and banner instead, cached data is preserved rather than silently discarded, and a "Retry
 missing inputs" button lets you re-check without reopening the document.
+* RGB/ENVI input file tree panel is now resizable via a splitter.
+* New global `--ignore-version` command line option to bypass PCOT file version checks.
+* New `eval()` datumfunc for evaluating an expression string against an image passed in as `a`.
+* *reflectance* node: fit table and plots now show each filter's CWL; dubious fits (negative or
+very small gradient, line far from the origin) are flagged in a new warnings table; the controls
+panel can be hidden/shown to give the plot more room; icons are now dark-mode-aware; per-patch plot
+annotations now show the sample count used for each point.
+* New (early/experimental) *spectral parameter* node: applies a named, pre-defined expression
+(e.g. a band ratio or index) from a spectral parameter group to an image, selected via group/parameter
+dropdowns.
 
 Site
 

@@ -119,7 +119,7 @@ class ExpressionEvaluator(Parser):
         return super().compile(s)
 
     def run(self, s: Union[str, CompiledExpression],
-            varDict: Dict[str, Union[Datum, Callable[[], Datum]]] = None, descDict: Dict[str, str] = None):
+            varDict: Dict[str, Union[Datum, Callable[[], Datum]]] = None, descDict: Dict[str, str] = None) -> Datum:
         """Parse (if necessary) and evaluate an expression:
 
          - s is the expression, either as a string (parsed fresh each call) or a
