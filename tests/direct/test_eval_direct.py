@@ -2,6 +2,7 @@
 Test "direct" use of the expression evaluator, outside an expr node
 """
 import numpy as np
+import pytest
 
 import pcot
 from pcot import dq
@@ -128,3 +129,22 @@ def test_compile_then_run():
     r2 = e.run(compiled, {'a': a2})
     assert compiled.instructions is instructions_before
     assert np.allclose(r2.get(Datum.NUMBER).n, 6.0)
+
+
+def test_compile_with_unbound_placeholder():
+    """Test the unboundVar() placeholder pattern: an expression can be compiled with a variable
+    that isn't really bound to anything yet (just enough to resolve as a variable rather than a
+    naked identifier), and running it before a real value is registered raises loudly rather
+    than silently producing a bad result."""
+    from pcot.expressions.eval import unboundVar
+    pcot.setup()
+
+    e = ExpressionEvaluator()
+    compiled = e.compile("a*2", {'a': unboundVar})
+
+    with pytest.raises(RuntimeError):
+        e.run(compiled)
+
+    a = Datum(Datum.NUMBER, Value(5.0, 0.0), nullSourceSet)
+    r = e.run(compiled, {'a': a})
+    assert np.allclose(r.get(Datum.NUMBER).n, 10.0)

@@ -42,6 +42,16 @@ def registerBuiltinOperatorSyntax(p):
     p.registerUnop('-', 70, lambda a: unop(Operator.NEG, a))
     p.registerUnop('!', 80, lambda a: unop(Operator.NOT, a))
 
+
+def unboundVar():
+    """Placeholder value for a variable registered only so ExpressionEvaluator.compile() resolves
+    its name to a rebindable InstVar - not because it has a real value yet. Raises if actually
+    executed, so a compiled expression run before being properly rebound fails loudly instead of
+    silently using stale or meaningless data. Stateless, so a single reference can be reused for
+    any number of variables/expressions."""
+    raise RuntimeError("expression variable read before being bound (see ExpressionEvaluator.compile)")
+
+
 class ExpressionEvaluator(Parser):
     """The core class for the expression evaluator, based on a generic Parser. The constructor
     is responsible for registering most functions."""
@@ -91,7 +101,15 @@ class ExpressionEvaluator(Parser):
                 descDict: Dict[str, str] = None) -> CompiledExpression:
         """Register any given variables, then parse (but do not run) an expression, returning
         a CompiledExpression which can be executed - possibly many times, and with rebound
-        variables (see registerVar) - without re-parsing. See run() for the argument meanings."""
+        variables (see registerVar) - without re-parsing. See run() for the argument meanings.
+
+        Any variable name the expression is meant to reference later must be given a value
+        (even a placeholder) in varDict here: naked identifiers are permitted in this parser,
+        so a name that isn't registered at compile time is baked in as a literal string
+        (InstIdent) rather than a rebindable variable reference, and later registerVar() calls
+        for that name won't affect the compiled expression. If the placeholder shouldn't ever
+        actually be used, register unboundVar (see above) as its value, so premature execution
+        fails loudly rather than silently using stale or meaningless data."""
         self._registerVars(varDict, descDict)
         return super().compile(s)
 
