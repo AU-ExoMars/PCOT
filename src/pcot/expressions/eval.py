@@ -10,7 +10,7 @@ import pcot.config
 from pcot.imagecube import ImageCube
 from pcot.config import parserhook
 from pcot.expressions.ops import binop, unop, Operator
-from pcot.expressions.parse import Parser, execute
+from pcot.expressions.parse import Parser, CompiledExpression
 
 # TODO: keep expression guide in help updated
 from pcot.datum import Datum
@@ -60,27 +60,21 @@ class ExpressionEvaluator(Parser):
             #  print(f"Calling   {x}")
             x(self)
 
-    def run(self, s, varDict: Dict[str, Union[Datum, Callable[[], Datum]]] = None, descDict: Dict[str, str] = None):
-        """Parse and evaluate an expression:
+    @staticmethod
+    def _getvar(d):
+        """check that a variable is not ANY (unwired). Also, if it's an image, make a shallow copy (see Issue #56, #65)"""
+        if d.tp == Datum.ANY:
+            raise XFormException("DATA",
+                                 "ANY not permitted as an expression variable type. Unconnected input in expr node?")
+        elif d.tp == Datum.IMG:
+            if d.val is not None:
+                d = Datum(Datum.IMG, d.val.shallowCopy())
+        return d
 
-         - s is the expression
-
-         The following two arguments are not used by the expression node, but by libraries.
-
-         - varDict is an optional dictionary of string to Datum or Callable for assigning variables
-         - descDict is an optional dictionary providing descriptions for the variables in varDict
-         """
-
-        def getvar(d):
-            """check that a variable is not ANY (unwired). Also, if it's an image, make a shallow copy (see Issue #56, #65)"""
-            if d.tp == Datum.ANY:
-                raise XFormException("DATA",
-                                     "ANY not permitted as an expression variable type. Unconnected input in expr node?")
-            elif d.tp == Datum.IMG:
-                if d.val is not None:
-                    d = Datum(Datum.IMG, d.val.shallowCopy())
-            return d
-
+    def _registerVars(self, varDict: Dict[str, Union[Datum, Callable[[], Datum]]] = None,
+                       descDict: Dict[str, str] = None):
+        """Register (or rebind, if already registered - see Parser.registerVar) each entry in varDict
+        as a parser variable."""
         if varDict:
             for k, v in varDict.items():
                 # if there's no description just use the name again
@@ -91,16 +85,40 @@ class ExpressionEvaluator(Parser):
                 if callable(v):
                     self.registerVar(k, desc, v)
                 else:
-                    self.registerVar(k, desc, partial(lambda xx: getvar(xx), v))
+                    self.registerVar(k, desc, partial(lambda xx: self._getvar(xx), v))
 
-        self.parse(s)
-        stack = []
-        return execute(self.output, stack)
+    def compile(self, s: str, varDict: Dict[str, Union[Datum, Callable[[], Datum]]] = None,
+                descDict: Dict[str, str] = None) -> CompiledExpression:
+        """Register any given variables, then parse (but do not run) an expression, returning
+        a CompiledExpression which can be executed - possibly many times, and with rebound
+        variables (see registerVar) - without re-parsing. See run() for the argument meanings."""
+        self._registerVars(varDict, descDict)
+        return super().compile(s)
+
+    def run(self, s: Union[str, CompiledExpression],
+            varDict: Dict[str, Union[Datum, Callable[[], Datum]]] = None, descDict: Dict[str, str] = None):
+        """Parse (if necessary) and evaluate an expression:
+
+         - s is the expression, either as a string (parsed fresh each call) or a
+           CompiledExpression obtained from compile() (parsing is skipped)
+
+         The following two arguments are not used by the expression node, but by libraries.
+
+         - varDict is an optional dictionary of string to Datum or Callable for assigning variables
+         - descDict is an optional dictionary providing descriptions for the variables in varDict
+         """
+        if isinstance(s, CompiledExpression):
+            self._registerVars(varDict, descDict)
+            return s.execute()
+
+        compiled = self.compile(s, varDict, descDict)
+        return compiled.execute()
 
 
-def evaluateOnImage(img: ImageCube, expr: str) -> Datum:
-    """Function for running a simple expression on an image; the image is passed in as variable "a"
-    """
+def evaluateOnImage(img: ImageCube, expr: Union[str, CompiledExpression]) -> Datum:
+    """Function for running a simple expression on an image; the image is passed in as variable "a".
+    expr may be a string (parsed fresh) or a CompiledExpression from ExpressionEvaluator.compile()
+    (parsing is skipped, and "a" is rebound to the new image)."""
     e = ExpressionEvaluator()
     dat = Datum(Datum.IMG, img)
     r = e.run(expr, {"a": dat})

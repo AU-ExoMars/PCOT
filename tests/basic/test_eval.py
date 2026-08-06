@@ -67,10 +67,10 @@ def execute(s, nakedIdents=False):
     p.registerVar('var1', "test var", lambda: variable_1)
     p.registerVar('var2', "test var", lambda: variable_2)
 
-    p.parse(s)
+    instructions = p.parse(s)
 
     stack = []
-    r = parse.execute(p.output, stack)
+    r = parse.execute(instructions, stack)
     # if the returned value is a number, extract it. Otherwise just return the Datum.
     if r.tp == Datum.NUMBER:
         return r.get(Datum.NUMBER).n

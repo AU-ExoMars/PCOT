@@ -104,3 +104,27 @@ def test_datum_and_number():
     r = a * 2       # test that it works with a number on the RHS
     assert np.allclose(20.0, r.get(Datum.NUMBER).n)
     assert np.allclose(0.2, r.get(Datum.NUMBER).u)
+
+
+def test_compile_then_run():
+    """Test that an expression can be compiled once and run multiple times, with the same
+    result as calling run() directly on the string, and that rebinding a variable via
+    registerVar() after compilation is picked up without re-parsing."""
+    pcot.setup()
+
+    e = ExpressionEvaluator()
+    a1 = Datum(Datum.NUMBER, Value(10.0, 0.1), nullSourceSet)
+    compiled = e.compile("a*2", {'a': a1})
+
+    direct = e.run("a*2", {'a': a1})
+    r1 = e.run(compiled)
+    assert np.allclose(r1.get(Datum.NUMBER).n, direct.get(Datum.NUMBER).n)
+    assert np.allclose(r1.get(Datum.NUMBER).n, 20.0)
+
+    # rebind 'a' to a different value and re-run the *same* compiled instructions -
+    # no re-parse should be needed
+    instructions_before = compiled.instructions
+    a2 = Datum(Datum.NUMBER, Value(3.0, 0.0), nullSourceSet)
+    r2 = e.run(compiled, {'a': a2})
+    assert compiled.instructions is instructions_before
+    assert np.allclose(r2.get(Datum.NUMBER).n, 6.0)

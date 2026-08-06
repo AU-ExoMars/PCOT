@@ -474,6 +474,20 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
     return stack[0]
 
 
+class CompiledExpression:
+    """A parsed expression, ready to be executed (possibly repeatedly, and with
+    rebound variables - see Parser.registerVar) without re-parsing."""
+
+    def __init__(self, instructions: List[Instruction], source: str):
+        self.instructions = instructions
+        self.source = source
+
+    def execute(self, stack: Optional[Stack] = None) -> Datum:
+        if stack is None:
+            stack = []
+        return execute(self.instructions, stack)
+
+
 def isOp(t):
     """Return whether a token is an operator (since we've got some weird ones)"""
     return t.type in [OP, ERRORTOKEN, PERCENT, DOT]
@@ -489,7 +503,6 @@ def dequote(s):
 class Parser:
     """Expression parser using the shunting algorithm, also incorporating the virtual machine for evaluation"""
     list: List[TokenInfo]
-    output: List[Instruction]
     opstack: List[Instruction]  # compile stack
 
     ## if true, naked identifiers are stacked as strings.
@@ -514,8 +527,18 @@ class Parser:
     varRegistry: Dict[str, Variable]
 
     def registerVar(self, name: str, description: str, fn: Callable[[], Any]):
-        """register a variable with a parameterless function to fetch it"""
-        self.varRegistry[name] = Variable(name, fn, description)
+        """Register a variable with a parameterless function to fetch it. If a variable
+        with this name is already registered, its function and description are updated
+        in place rather than replacing the Variable object - this lets a previously
+        compiled expression (see compile()) pick up the new value on its next execution
+        without needing to be re-parsed, because its InstVar instructions hold a
+        reference to this same Variable object."""
+        if name in self.varRegistry:
+            v = self.varRegistry[name]
+            v.fn = fn
+            v.desc = description
+        else:
+            self.varRegistry[name] = Variable(name, fn, description)
 
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
@@ -609,10 +632,6 @@ class Parser:
             t.add("description", " ".join(f.desc.split('\n')))
         return t.markdown()
 
-    def out(self, inst: Instruction):
-        """Internal method to output an instruction (part of shunting yard)"""
-        self.output.append(inst)
-
     def stackOp(self, op: InstOp):
         """Internal method to put an operator onto the operator stack (part of shunting yard)"""
         self.opstack.append(op)
@@ -638,8 +657,9 @@ class Parser:
         # getProperty is built into the parser, but can be bound to any operator.
         self.registerBinop('.', 80, lambda a, b: self.getProperty(a, b))
 
-    def parse(self, s: str):
-        """Parsing function - uses the shunting algorithm.
+    def parse(self, s: str) -> List[Instruction]:
+        """Parsing function - uses the shunting algorithm. Compiles the expression into
+        a list of VM instructions and returns it. Prefer compile() for a self-contained, reusable result.
         See also
         https://stackoverflow.com/questions/16380234/handling-extra-operators-in-shunting-yard/16392115
         """
@@ -649,7 +669,7 @@ class Parser:
                      and x.type != ENDMARKER and
                      x.type != NEWLINE]
         self.opstack = []
-        self.output = []
+        output = []
 
         wantOperand = True
 
@@ -692,7 +712,7 @@ class Parser:
                             if not op.prefix:
                                 if op.argcount != 0:
                                     raise ParseException("syntax error : bad no-arg function - has args!", t)
-                                self.out(InstCall(0))
+                                output.append(InstCall(0))
                                 wantOperand = False
                         elif isinstance(op, InstSquareBracket):
                             raise ParseException("syntax error : open square bracket matched with close bracket?", t)
@@ -701,19 +721,19 @@ class Parser:
                 #     add it to the output queue
                 #     goto have_operand
                 elif t.type == NUMBER:
-                    self.out(InstNumber(float(t.string)))
+                    output.append(InstNumber(float(t.string)))
                     wantOperand = False
                 elif t.type == STRING:
-                    self.out(InstString(dequote(t.string)))
+                    output.append(InstString(dequote(t.string)))
                     wantOperand = False
                 elif t.type == NAME:
                     if t.string in self.varRegistry:
-                        self.out(InstVar(self.varRegistry[t.string]))
+                        output.append(InstVar(self.varRegistry[t.string]))
                     elif t.string in self.funcRegistry:
                         fn = self.funcRegistry[t.string]
-                        self.out(InstFunc(t.string, fn))
+                        output.append(InstFunc(t.string, fn))
                     elif self.nakedIdents:
-                        self.out(InstIdent(t.string))
+                        output.append(InstIdent(t.string))
                     else:
                         raise ParseException("unknown variable or function", t)
                     wantOperand = False
@@ -732,8 +752,8 @@ class Parser:
                         #     if an open bracket is found on the stack, announce an error and stop.
                         if isinstance(op, InstOp) and op.name == '(' or op.name == '[':
                             raise ParseException("syntax error : mismatched bracket left", t)
-                        self.out(op)
-                    return  # ALL DONE
+                        output.append(op)
+                    return output  # ALL DONE
                 #   if the token is a postfix operator:
                 #   could deal with postfix here, but won't.
 
@@ -743,7 +763,7 @@ class Parser:
                     while self.stackTopIsNotLPar():
                         #       pop an operator off the stack and add it to the output queue
                         op = self.opstack.pop()
-                        self.out(op)
+                        output.append(op)
                     #     if the stack becomes empty, announce an error and stop.
                     if len(self.opstack) == 0:
                         raise ParseException("syntax error : mismatched bracket right", t)
@@ -761,14 +781,14 @@ class Parser:
                         # bracket. Square brackets need to generate a vector.
                         if isinstance(op, InstSquareBracket):
                             # We're creating a vector. See below for why the +1.
-                            self.out(InstCreateVector(op.argcount + 1))
+                            output.append(InstCreateVector(op.argcount + 1))
                     else:
                         # We increment the argument count here because (like ",") closing a bracket marks a
                         # new argument. That's why we have to deal with no arguments cleverly.
                         if isinstance(op, InstSquareBracket):
-                            self.out(InstIndex(op.argcount + 1))
+                            output.append(InstIndex(op.argcount + 1))
                         elif isinstance(op, InstBracket):
-                            self.out(InstCall(op.argcount + 1))
+                            output.append(InstCall(op.argcount + 1))
                         else:
                             raise ParseException("syntax error : mismatched bracket right 2", t)
 
@@ -781,10 +801,10 @@ class Parser:
                     while self.stackTopIsNotLPar():
                         #       pop an operator off the stack and add it to the output queue
                         op = self.opstack.pop()
-                        self.out(op)
+                        output.append(op)
                     # top of stack should now be a '(' or '[', which is special - increment the argument count
                     self.opstack[-1].argcount += 1
-                    #                    self.out(InstComma())  # JCF mod - add comma as actual operator with low precendence
+                    #                    output.append(InstComma())  # JCF mod - add comma as actual operator with low precendence
                     #     if the stack becomes empty, announce an error
                     if len(self.opstack) == 0:
                         raise ParseException("syntax error : mismatched bracket left 2", t)
@@ -799,12 +819,19 @@ class Parser:
                     else:
                         op = InstOp(t.string, False, self)
                     while self.stackTopIsOperatorPoppable(op):
-                        self.out(self.opstack.pop())
+                        output.append(self.opstack.pop())
                     self.stackOp(op)
                     wantOperand = True
                 else:
                     # token is probably an operand.
                     raise ParseException("syntax error : unexpected operand", t)
+
+    def compile(self, s: str) -> CompiledExpression:
+        """Parse an expression and return it as a standalone CompiledExpression,
+        which can be executed (possibly repeatedly, and with rebound variables -
+        see registerVar) without re-parsing."""
+        instructions = self.parse(s)
+        return CompiledExpression(list(instructions), s)
 
     def stackTopIsNotLPar(self):
         """internal method - op stack top is NOT an open bracket"""
