@@ -51,6 +51,10 @@ def registerBuiltinProperties(p):
                        "return a vector of the centre wavelengths of each band in the image",
                        lambda d: Datum(Datum.NUMBER, Value(d.get(Datum.IMG).bands()), SourceSet(d.getSources())))
 
+    p.registerProperty("roicount", Datum.IMG,
+                       "return the number of ROIs in an image",
+                       lambda d: Datum(Datum.NUMBER, Value(len(d.get(Datum.IMG).rois)), SourceSet(d.getSources())))
+
     def _roi_all(d):
         from pcot.rois import ROIRect
         img = d.get(Datum.IMG)
