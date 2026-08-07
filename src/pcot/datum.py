@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 import numpy as np
 
-from pcot.dq import NOUNCERTAINTY
+from pcot.dq import NOUNCERTAINTY, NODATA
 from pcot.sources import SourcesObtainable, nullSource, nullSourceSet
 import pcot.datumtypes
 
@@ -77,11 +77,20 @@ def stats_wrapper(val, func):
     from pcot.utils.image import imgsplit
     from pcot.xform import XFormException
 
+    def safe_func(n, u, d):
+        # If every pixel going into this stat is masked out (e.g. the ROI/DQ masking left nothing),
+        # numpy's masked-array reductions (np.mean, np.sum etc.) return the singleton np.ma.masked
+        # rather than a usable number, which isn't something we can put in a Value. Short-circuit
+        # that case here and flag the result as NODATA instead.
+        if isinstance(n, np.ma.MaskedArray) and np.ma.count(n) == 0:
+            return 0.0, 0.0, NODATA
+        return func(n, u, d)
+
     if val.tp == Datum.NUMBER:
         ns = val.get(Datum.NUMBER).n
         us = val.get(Datum.NUMBER).u
         dqs = val.get(Datum.NUMBER).dq
-        nr, ur, dqr = func(ns, us, dqs)
+        nr, ur, dqr = safe_func(ns, us, dqs)
         return Datum(Datum.NUMBER, Value(nr, ur, dqr), sources=val.sources)
     elif val.isImage():
         img = val.get(Datum.IMG)
@@ -96,13 +105,13 @@ def stats_wrapper(val, func):
 
         if img.channels == 1:
             # mono image
-            ns, us, ds = func(imgn_masked, imgu_masked, imgd_masked)
+            ns, us, ds = safe_func(imgn_masked, imgu_masked, imgd_masked)
         else:
             # split the image into bands
             ns = imgsplit(imgn_masked)
             us = imgsplit(imgu_masked)
             ds = imgsplit(imgd_masked)
-            v = [func(ns[i], us[i], ds[i]) for i in range(0, len(ns))]
+            v = [safe_func(ns[i], us[i], ds[i]) for i in range(0, len(ns))]
             # we now have a list of tuples. We want to get from this:
             # [(n,u,d),(n,u,d),(n,u,d) .. ] to [(n,n,n,n),(u,u,u,u),(d,d,d,d)]
             # so we use zip to transpose the list of tuples
