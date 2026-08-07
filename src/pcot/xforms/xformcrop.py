@@ -30,8 +30,6 @@ class XformCropROI(XFormType):
             # tell it to use the node's mapping so that the canvas
             # will work correctly
             img.mapping = node.mapping
-            # and strip the ROIs
-            # img.rois = []
             out = Datum(Datum.IMG, img)
         else:
             out = None

@@ -1,6 +1,5 @@
 import numpy as np
 from PySide6 import QtCore
-from poetry.console.commands import self
 
 from pcot import ui
 from pcot.datum import Datum
@@ -9,7 +8,6 @@ from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.sources import MultiBandSource, SourceSet
 from pcot.ui.tabs import Tab
 from pcot.utils import SignalBlocker, image
-from pcot.utils.decorr import decorrelation_stretch
 from pcot.value import Value
 from pcot.xform import xformtype, XFormType
 import pcot.dq

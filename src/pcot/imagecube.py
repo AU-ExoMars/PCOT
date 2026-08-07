@@ -18,11 +18,12 @@ from PySide6.QtGui import QPainter
 import pcot
 from pcot import dq, ui
 from pcot.documentsettings import DocumentSettings
-from pcot.rois import ROI, ROIBoundsException
+from pcot.rois import ROI, ROIBoundsException, ROIRect
 from pcot.sources import MultiBandSource, SourcesObtainable, Source
 from pcot.utils import annotations, debayering
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
+from itertools import filterfalse
 from pcot.utils.archive import FileArchive,ArchiveType
 from pcot.utils.geom import Rect
 import pcot.dq
@@ -879,7 +880,13 @@ class ImageCube(SourcesObtainable):
                         dq=subimg.dq,
                         rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
         img.rois = [roi.rebase(subimg.bb.x, subimg.bb.y) for roi in self.rois]
-        #        img.rois = [ROIPainted(subimg.mask, "crop")]
+        # if there is now any rect ROI which covering the entire image, remove it.
+        def covers(roi):
+            if isinstance(roi, ROIRect):
+                x,y,w,h = roi.bb().astuple()
+                return x==0 and y==0 and w==img.w and h==img.h
+            return False
+        img.rois = list(filterfalse(covers, img.rois))
         return img
 
     ## perform a simple function on an image's ROI or the whole image if there is no ROI
