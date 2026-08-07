@@ -89,6 +89,8 @@ annotations now show the sample count used for each point.
 * New (early/experimental) *spectral parameter* node: applies a named, pre-defined expression
 (e.g. a band ratio or index) from a spectral parameter group to an image, selected via group/parameter
 dropdowns.
+* `mean()`/`sum()`/`sd()`/`min()`/`max()` on a band with no unmasked pixels (e.g. entirely excluded
+by ROI or bad-pixel DQ) now correctly return NODATA rather than leaking a numpy masked constant.
 
 Site
 
