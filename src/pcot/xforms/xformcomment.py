@@ -31,6 +31,14 @@ class GStringText(QtWidgets.QGraphicsTextItem):
         This is probably a good idea anyway, as it lets the node's context menu run"""
         event.ignore()
 
+    def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        """Shift-click forces a drag of the node box rather than editing the text -
+        comment boxes are often almost entirely text, making them hard to drag otherwise."""
+        if event.modifiers() & QtCore.Qt.KeyboardModifier.ShiftModifier:
+            event.ignore()
+        else:
+            super().mousePressEvent(event)
+
     def editDone(self):
         self.node.mark()
         self.node.params.string = self.toPlainText()
@@ -60,7 +68,9 @@ class GStringText(QtWidgets.QGraphicsTextItem):
 
 @xformtype
 class XFormComment(XFormType):
-    """Comment box"""
+    """Comment box. Clicking on the text allows editing, and opening the node allows more
+    comprehensive editing (changing text and box colour). Moving comment boxes can be difficult -
+    hold down the shift key to force dragging rather than editing."""
 
     def __init__(self):
         super().__init__("comment", "utility", "0.0.0")

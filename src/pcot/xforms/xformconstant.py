@@ -37,6 +37,13 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
         This is probably a good idea anyway, as it lets the node's context menu run"""
         event.ignore()
 
+    def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        """Shift-click forces a drag of the node box rather than editing the text."""
+        if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            event.ignore()
+        else:
+            super().mousePressEvent(event)
+
     def setFromTextAndRunIfRequired(self):
         v = self.toPlainText()
         if v != self.node.params.val:
@@ -67,7 +74,8 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
 
 @xformtype
 class XFormConstant(XFormType):
-    """Generates a numeric value which can be typed directly into the node's box in the graph"""
+    """Generates a numeric value which can be typed directly into the node's box in the graph.
+    Moving constant nodes can be difficult - hold down the shift key to force dragging rather than editing."""
     def __init__(self):
         super().__init__("constant", "maths", "0.0.0")
         self.addOutputConnector("", Datum.NUMBER)
