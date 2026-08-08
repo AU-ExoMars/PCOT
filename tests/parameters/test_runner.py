@@ -66,7 +66,7 @@ def test_scalar_output(globaldatadir):
         r.run(None, test)
 
         txt = open(out).read()
-        assert txt == "0.45332±0.19508\n"
+        assert txt == "0.45332±0.19508u\n"
 
     # and again, modifying the constant
     with tempfile.TemporaryDirectory() as td:
@@ -83,7 +83,7 @@ def test_scalar_output(globaldatadir):
         r.run(None, test)
 
         txt = open(out).read()
-        assert txt == "0.90664±0.39016\n"   # double the previous value
+        assert txt == "0.90664±0.39016u\n"   # double the previous value
 
 
 def test_noclobber(globaldatadir):
@@ -136,7 +136,7 @@ def test_vector_output(globaldatadir):
         r.run(None, test)
 
         txt = open(out).read()
-        assert txt == "[0.67498±0.11292, 0.43386±0.085651, 0.25112±0.060702]\n"
+        assert txt == "[0.67498±0.11292u, 0.43386±0.085651u, 0.25112±0.060702u]\n"
 
 
 def test_multiple_text_output_append(globaldatadir):
@@ -162,7 +162,7 @@ def test_multiple_text_output_append(globaldatadir):
         r.run(None, test)
 
         txt = open(out).read()
-        assert txt == "[0.67498±0.11292, 0.43386±0.085651, 0.25112±0.060702]\n0.45332±0.19508\n"
+        assert txt == "[0.67498±0.11292u, 0.43386±0.085651u, 0.25112±0.060702u]\n0.45332±0.19508u\n"
 
 
 def test_multiple_text_output_append_shorthand_and_prefix(globaldatadir):
@@ -197,11 +197,11 @@ def test_multiple_text_output_append_shorthand_and_prefix(globaldatadir):
         txt = open(out).read()
         # inspect.cleandoc will remove the leading whitespace from the string, so we can format it nicely here,
         # but it will also remove the trailing newline, so we add it back in.
-        assert txt == inspect.cleandoc("""meanchans=[0.67498±0.11292, 0.43386±0.085651, 0.25112±0.060702]
-            chans=0.45332±0.19508
+        assert txt == inspect.cleandoc("""meanchans=[0.67498±0.11292u, 0.43386±0.085651u, 0.25112±0.060702u]
+            chans=0.45332±0.19508u
             mean chans image
-            [0.57216±0.16391, 0.3716±0.11629, 0.22292±0.080861]
-            0.38889±0.19005
+            [0.57216±0.16391u, 0.3716±0.11629u, 0.22292±0.080861u]
+            0.38889±0.19005u
             """)+"\n"
 
 
@@ -227,11 +227,11 @@ def test_multiple_text_output_append_shorthand_from_file_jinja(globaldatadir):
         # but it will also remove the trailing newline, so we add it back in.
 
         # There is a LUDICROUSLY SMALL chance that this will fail if run very, very close to midnight! :)
-        assert txt == inspect.cleandoc(f"""meanchans=[0.67498±0.11292, 0.43386±0.085651, 0.25112±0.060702]
-            chans0=0.45332±0.19508
+        assert txt == inspect.cleandoc(f"""meanchans=[0.67498±0.11292u, 0.43386±0.085651u, 0.25112±0.060702u]
+            chans0=0.45332±0.19508u
             mean chans image at {datetime.datetime.now().date().isoformat()}
-            [0.57216±0.16391, 0.3716±0.11629, 0.22292±0.080861]
-            0.38889±0.19005
+            [0.57216±0.16391u, 0.3716±0.11629u, 0.22292±0.080861u]
+            0.38889±0.19005u
             """)+"\n"
 
         # run again and check the count gets incremented.
@@ -240,11 +240,11 @@ def test_multiple_text_output_append_shorthand_from_file_jinja(globaldatadir):
         r.run(globaldatadir / "runner/testscalars.params",
               data_for_template={"out": out, "globaldatadir": globaldatadir})
         txt = open(out).read()
-        assert txt == inspect.cleandoc(f"""meanchans=[0.67498±0.11292, 0.43386±0.085651, 0.25112±0.060702]
-            chans1=0.45332±0.19508
+        assert txt == inspect.cleandoc(f"""meanchans=[0.67498±0.11292u, 0.43386±0.085651u, 0.25112±0.060702u]
+            chans1=0.45332±0.19508u
             mean chans image at {datetime.datetime.now().date().isoformat()}
-            [0.57216±0.16391, 0.3716±0.11629, 0.22292±0.080861]
-            0.38889±0.19005
+            [0.57216±0.16391u, 0.3716±0.11629u, 0.22292±0.080861u]
+            0.38889±0.19005u
             """)+"\n"
 
         # run again with a different file with slightly different data
@@ -253,11 +253,11 @@ def test_multiple_text_output_append_shorthand_from_file_jinja(globaldatadir):
         r.run(globaldatadir / "runner/testscalars2.params",
               data_for_template={"out": out, "globaldatadir": globaldatadir})
         txt = open(out).read()
-        assert txt == inspect.cleandoc(f"""meanchans=[1.125±0.18821, 0.7231±0.14275, 0.41853±0.10117]
-            chans2=0.75553±0.32514
+        assert txt == inspect.cleandoc(f"""meanchans=[1.125±0.18821u, 0.7231±0.14275u, 0.41853±0.10117u]
+            chans2=0.75553±0.32514u
             mean chans image at {datetime.datetime.now().date().isoformat()} for test2.pcot with testscalars2.params
-            [0.9536±0.27318, 0.61933±0.19381, 0.37154±0.13477]
-            mean image for 2   0.64816±0.31675
+            [0.9536±0.27318u, 0.61933±0.19381u, 0.37154±0.13477u]
+            mean image for 2   0.64816±0.31675u
             """)+"\n"
 
 
@@ -356,9 +356,9 @@ def test_run_modify_run(globaldatadir):
         r.run(None, test)
 
         txt = open(out1).read()
-        assert txt == "0.45332±0.19508\n"
+        assert txt == "0.45332±0.19508u\n"
         txt = open(out2).read()
-        assert txt == "0.90664±0.39016\n"   # double the previous value
+        assert txt == "0.90664±0.39016u\n"   # double the previous value
 
 
 def test_run_modify_with_reset_value_run(globaldatadir):
@@ -392,11 +392,11 @@ def test_run_modify_with_reset_value_run(globaldatadir):
         r.run(None, test)
 
         txt = open(out1).read()
-        assert txt == "0.45332±0.19508\n"
+        assert txt == "0.45332±0.19508u\n"
         txt = open(out2).read()
-        assert txt == "0.90664±0.39016\n"  # double the previous value
+        assert txt == "0.90664±0.39016u\n"  # double the previous value
         txt = open(out3).read()
-        assert txt == "0.45332±0.19508\n"
+        assert txt == "0.45332±0.19508u\n"
 
 
 def test_run_modify_with_reset_node_run(globaldatadir):
@@ -430,11 +430,11 @@ def test_run_modify_with_reset_node_run(globaldatadir):
         r.run(None, test)
 
         txt = open(out1).read()
-        assert txt == "0.45332±0.19508\n"
+        assert txt == "0.45332±0.19508u\n"
         txt = open(out2).read()
-        assert txt == "0.90664±0.39016\n"  # double the previous value
+        assert txt == "0.90664±0.39016u\n"  # double the previous value
         txt = open(out3).read()
-        assert txt == "0.45332±0.19508\n"
+        assert txt == "0.45332±0.19508u\n"
 
 
 def test_colourmap(globaldatadir):
@@ -471,10 +471,10 @@ def test_colourmap(globaldatadir):
 
         txt = open(out1).read()
         # standard viridis default will be fairly cyan
-        assert txt == "[0.15516±0.023474, 0.51942±0.079119, 0.54824±0.012403]\n"
+        assert txt == "[0.15516±0.023474u, 0.51942±0.079119u, 0.54824±0.012403u]\n"
         txt = open(out2).read()
         # magma default will be fairly purple
-        assert txt == "[0.63664±0.13113, 0.19228±0.05203, 0.47936±0.027683]\n"
+        assert txt == "[0.63664±0.13113u, 0.19228±0.05203u, 0.47936±0.027683u]\n"
 
         # now check the images themselves
         from PIL import Image
@@ -588,4 +588,4 @@ def test_jinja2_functions(globaldatadir):
         r.run(None, test, data_for_template={"inp": inp, "out": out})
 
         txt = open(out).read()
-        assert txt == "basn2c16 -> output 0.43473±0.30135\n"
+        assert txt == "basn2c16 -> output 0.43473±0.30135u\n"

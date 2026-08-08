@@ -28,8 +28,8 @@ def getvar(d):
 @xformtype
 class XFormExpr(XFormType):
     r"""
-    Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to
-    set the node to the new expression and perform it. The input can accept any type of data
+    Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked
+    (or ctrl+enter) to set the node to the new expression and perform it. The input can accept any type of data
     and the output type is determined when the node is run.
 
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
@@ -313,6 +313,7 @@ class TabExpr(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabexpr.ui')
         self.w.run.clicked.connect(self.run)
+        self.w.expr.runRequested.connect(self.run)
         self.w.expr.textChanged.connect(self.exprChanged)
         self.w.expr.node = node   # need a link from the text edit box into the node, so we can get help on funcs.
 

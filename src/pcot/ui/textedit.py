@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QPlainTextEdit, QTextEdit
 
@@ -52,11 +53,22 @@ def handleMenuEvent(self, ev):
 
 
 class PlainTextEditWithHelp(QPlainTextEdit):
+    # emitted when the user presses Ctrl-Enter/Ctrl-Return to run the expression
+    runRequested = Signal()
+
     def __init__(self, parent):
         super().__init__(parent)
 
     def contextMenuEvent(self, ev):
         handleMenuEvent(self, ev)
+
+    def keyPressEvent(self, event):
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier and \
+                event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.runRequested.emit()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
 
 styleSheet = """

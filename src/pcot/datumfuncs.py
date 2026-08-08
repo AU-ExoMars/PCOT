@@ -495,7 +495,8 @@ def testimg(index, usetestfilters=0):
     @param index : number : the index of the image to load
     @param usetestfilters : number : if nonzero, a set of test filter sources for the TEST camera will be created. Default 0.
     """
-    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png", "tstreg1.png", "tstreg2.png", "simpct.png")
+    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png", "tstreg1.png", "tstreg2.png", "simpct.png",
+                "blackAndCols.png")
     n = int(index.get(Datum.NUMBER).n)
     if n < 0:
         raise XFormException('DATA', 'negative test file index')

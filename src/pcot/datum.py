@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 import numpy as np
 
-from pcot.dq import NOUNCERTAINTY, NODATA
+from pcot.dq import NOUNCERTAINTY, NODATA, BAD
 from pcot.sources import SourcesObtainable, nullSource, nullSourceSet
 import pcot.datumtypes
 
@@ -70,7 +70,16 @@ def func_wrapper(fn, d):
 
 
 def stats_wrapper(val, func):
-    """Takes a function that operates on a tuple of val,unc,dq and returns same
+    """Takes a function that operates on a tuple of (nominal,unc,dq) arrays for the "good" (non-BAD)
+    elements under consideration and returns a tuple of the same kind for the aggregate result.
+
+    Elements with a 'BAD' DQ bit (NODATA, SAT, DIVZERO, UNDEF, COMPLEX, ERROR) are excluded from
+    the arithmetic before "func" is called. Regardless of "func"'s return value, the result's DQ
+    bits are then OR'd with the DQ bits of every element that was under consideration - whether it
+    ended up included in the arithmetic or excluded as BAD - so e.g. a BAD element anywhere in the
+    input will always leave its mark on the result, and NODATA is forced on if every element was
+    excluded (there's nothing to aggregate). See "DQ propagation in aggregate functions" in
+    devguide/values.md for the reasoning.
     """
 
     from pcot.value import Value
@@ -78,13 +87,29 @@ def stats_wrapper(val, func):
     from pcot.xform import XFormException
 
     def safe_func(n, u, d):
-        # If every pixel going into this stat is masked out (e.g. the ROI/DQ masking left nothing),
-        # numpy's masked-array reductions (np.mean, np.sum etc.) return the singleton np.ma.masked
-        # rather than a usable number, which isn't something we can put in a Value. Short-circuit
-        # that case here and flag the result as NODATA instead.
-        if isinstance(n, np.ma.MaskedArray) and np.ma.count(n) == 0:
-            return 0.0, 0.0, NODATA
-        return func(n, u, d)
+        n = np.atleast_1d(n)
+        u = np.atleast_1d(u)
+        d = np.atleast_1d(d)
+
+        # elements already excluded from consideration (e.g. outside an ROI) don't contribute
+        # their DQ bits and can't be "the" reason we have no data.
+        already_excluded = np.ma.getmaskarray(d)
+        rawd = np.ma.getdata(d).astype(np.uint16)
+
+        contributed = np.uint16(np.bitwise_or.reduce(
+            np.where(already_excluded, np.uint16(0), rawd), axis=None, initial=np.uint16(0)))
+
+        badmask = already_excluded | ((rawd & BAD) != 0)
+        if np.all(badmask):
+            # nothing usable was left to aggregate
+            return 0.0, 0.0, np.uint16(contributed | NODATA)
+
+        nm = np.ma.masked_array(np.ma.getdata(n), mask=badmask)
+        um = np.ma.masked_array(np.ma.getdata(u), mask=badmask)
+        dm = np.ma.masked_array(rawd, mask=badmask)
+
+        nr, ur, dqr = func(nm, um, dm)
+        return nr, ur, np.uint16(np.uint16(dqr) | contributed)
 
     if val.tp == Datum.NUMBER:
         ns = val.get(Datum.NUMBER).n
@@ -97,11 +122,11 @@ def stats_wrapper(val, func):
         if img is None:
             return None
 
-        # get the subimage (i.e. only the part covered by ROIs if there are any)
-        # and mask out the bad pixels
+        # get the subimage (i.e. only the part covered by ROIs if there are any). Bad pixels are
+        # deliberately NOT excluded here - safe_func needs to see them to work out which DQ bits
+        # were present among the pixels under consideration, before it excludes them itself.
         subimage = img.subimage()
-        # I was making a copy, but I don't think it's needed.
-        imgn_masked, imgu_masked, imgd_masked = subimage.masked_all(True)
+        imgn_masked, imgu_masked, imgd_masked = subimage.masked_all(False)
 
         if img.channels == 1:
             # mono image
@@ -421,7 +446,7 @@ class Datum(SourcesObtainable):
             # and return the sum of those two.
             return np.sqrt(varianceOfMeans + sumOfVariances)
 
-        return stats_wrapper(self, lambda n, u, d: (np.sum(n), sum_of_variances(n, u), pcot.dq.NOUNCERTAINTY))
+        return stats_wrapper(self, lambda n, u, d: (np.sum(n), sum_of_variances(n, u), pcot.dq.NONE))
 
 
 # a handy null datum object

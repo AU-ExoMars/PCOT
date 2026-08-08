@@ -247,7 +247,7 @@ def test_parc_image_write(globaldatadir):
         # now check some property of the image - in this case we check the mean
         # of the result, which we got the ground truth for by running the application.
         v = df.mean(imgd).get(Datum.NUMBER)
-        assert str(v) == "[0.4557±0.15167, 0.47677±0.13817, 0.47621±0.13479]"
+        assert str(v) == "[0.4557±0.15167u, 0.47677±0.13817u, 0.47621±0.13479u]"
 
 
 def test_parc_multi(globaldatadir):
@@ -296,7 +296,7 @@ def test_parc_multi(globaldatadir):
         assert img.h == 256
         assert img.channels == 3
         mean = df.mean(imgd).get(Datum.NUMBER)
-        assert str(mean) == "[0.4557±0.15167, 0.47677±0.13817, 0.47621±0.13479]"
+        assert str(mean) == "[0.4557±0.15167u, 0.47677±0.13817u, 0.47621±0.13479u]"
 
         # test1 mean is [0.31899±0.10617, 0.47677±0.13817, 0.47621±0.13479]
         # test2 mean is [0.4557±0.15167, 0.095353±0.027633, 0.47621±0.13479]
@@ -308,7 +308,7 @@ def test_parc_multi(globaldatadir):
         assert img is not None
         assert img.channels == 3
         mean = df.mean(imgd).get(Datum.NUMBER)
-        assert str(mean) == "[0.31899±0.10617, 0.47677±0.13817, 0.47621±0.13479]"
+        assert str(mean) == "[0.31899±0.10617u, 0.47677±0.13817u, 0.47621±0.13479u]"
 
         imgd = s.get("testimg2")
         assert s.getMetadata("testimg2").description == "Test image 2"
@@ -316,7 +316,7 @@ def test_parc_multi(globaldatadir):
         assert img is not None
         assert img.channels == 3
         mean = df.mean(imgd).get(Datum.NUMBER)
-        assert str(mean) == "[0.4557±0.15167, 0.095353±0.027633, 0.47621±0.13479]"
+        assert str(mean) == "[0.4557±0.15167u, 0.095353±0.027633u, 0.47621±0.13479u]"
 
         imgd = s.get("testimg3")
         assert s.getMetadata("testimg3").description == "Test image 3, with 4 channels"
@@ -324,7 +324,7 @@ def test_parc_multi(globaldatadir):
         assert img is not None
         assert img.channels == 4
         mean = df.mean(imgd).get(Datum.NUMBER)
-        assert str(mean) == "[0.4557±0.15167, 0.47677±0.13817, 0.23811±0.067394, 0.93246±0.27525]"
+        assert str(mean) == "[0.4557±0.15167u, 0.47677±0.13817u, 0.23811±0.067394u, 0.93246±0.27525u]"
 
 
 def test_parc_multi_jinja_multi_run(globaldatadir):
@@ -375,7 +375,7 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
         assert img.h == 256
         assert img.channels == 3
         mean = df.mean(imgd).get(Datum.NUMBER)
-        assert str(mean) == "[0.4557±0.15167, 0.47677±0.13817, 0.47621±0.13479]"
+        assert str(mean) == "[0.4557±0.15167u, 0.47677±0.13817u, 0.47621±0.13479u]"
 
         # test1 mean is [0.31899±0.10617, 0.47677±0.13817, 0.47621±0.13479]
         # test2 mean is [0.4557±0.15167, 0.095353±0.027633, 0.47621±0.13479]
@@ -387,7 +387,7 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
         assert img is not None
         assert img.channels == 3
         mean = df.mean(imgd).get(Datum.NUMBER)
-        assert str(mean) == "[0.31899±0.10617, 0.47677±0.13817, 0.47621±0.13479]"
+        assert str(mean) == "[0.31899±0.10617u, 0.47677±0.13817u, 0.47621±0.13479u]"
 
         imgd = s.get("testimg2")
         assert s.getMetadata("testimg2").description == "Test image 2"
@@ -395,7 +395,7 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
         assert img is not None
         assert img.channels == 3
         mean = df.mean(imgd).get(Datum.NUMBER)
-        assert str(mean) == "[0.4557±0.15167, 0.095353±0.027633, 0.47621±0.13479]"
+        assert str(mean) == "[0.4557±0.15167u, 0.095353±0.027633u, 0.47621±0.13479u]"
 
         imgd = s.get("testimg3")
         assert s.getMetadata("testimg3").description == "Test image 3"
@@ -403,4 +403,4 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
         assert img is not None
         assert img.channels == 4
         mean = df.mean(imgd).get(Datum.NUMBER)
-        assert str(mean) == "[0.4557±0.15167, 0.47677±0.13817, 0.23811±0.067394, 0.93246±0.27525]"
+        assert str(mean) == "[0.4557±0.15167u, 0.47677±0.13817u, 0.23811±0.067394u, 0.93246±0.27525u]"

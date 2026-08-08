@@ -654,11 +654,16 @@ class TabStringTest(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabstringtest.ui')
         self.w.finishedButton.clicked.connect(self.editFinished)
+        self.w.copyActualButton.clicked.connect(self.copyActualToExpected)
         self.w.expected.textChanged.connect(self.textChanged)
         self.nodeChanged()
 
     def textChanged(self):
         theme.setStaleStyle(self.w.finishedButton, True)
+
+    def copyActualToExpected(self):
+        self.w.expected.setPlainText(self.node.inp)
+        self.editFinished(None)
 
     def onNodeChanged(self):
         self.w.expected.setPlainText(self.node.params.string)

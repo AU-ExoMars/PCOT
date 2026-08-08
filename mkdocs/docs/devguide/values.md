@@ -208,4 +208,48 @@ def mean(val):
     """
     return val.mean()
 ```
+
+For vector Values (i.e. a plain array of elements, not an image), elements with `BAD` DQ bits are
+masked out of the arithmetic in the same way as bad pixels in an image - a vector containing a
+`NODATA` element doesn't get to silently pollute a `sum` or `mean` just because it isn't an image.
+
+### DQ propagation in aggregate functions (using stats_wrapper)
+
+The functions that go through `stats_wrapper` (`mean`, `sd`, `min`, `max`, `sum`) reduce many
+elements down to a single value, so they need a consistent rule for how the DQ bits of those many
+inputs combine into the DQ bits of the one result.
+
+**The result's DQ is the bitwise OR of the DQ bits of every element that contributed to the
+calculation** - whether that element was included in the arithmetic, or excluded from it for being
+`BAD` - with `NODATA` forced on if nothing at all was left to compute. This is the same convention
+`combineDQs` uses for ordinary binary operations elsewhere in the codebase, applied here too.
+
+Breaking that down by bit category:
+
+* **Bits in `dq.BAD`** (`NODATA`, `SAT`, `DIVZERO`, `UNDEF`, `COMPLEX`, `ERROR`) mark an element's
+  *value* as untrustworthy, so elements carrying any of them are excluded from the arithmetic.
+  Whichever specific `BAD` bits caused an exclusion are OR'd into the result, so e.g. a mean
+  computed while dropping one saturated element will itself carry `SAT`, not just a generic
+  "something was wrong" flag.
+  * If *every* contributing element is excluded, there's nothing left to compute: the result is
+    `(0.0, 0.0, ...)` with `NODATA` added on top of whatever `BAD` bits were actually present, since
+    the aggregate has no data regardless of which specific failure caused that.
+* **`NOUNCERTAINTY`** is not a `BAD` bit - the element's value is fine and is included in the
+  arithmetic, but its uncertainty is an unreliable placeholder (0). If any *included* element
+  carries it, the result carries it too, because the aggregate's own computed uncertainty may be
+  an underestimate. This falls out of the same OR rule as any other non-`BAD` bit - no special
+  casing is needed except where a function's own uncertainty isn't derived from the inputs at all
+  (see `sd()` below).
+* **Everything else** (`ZERO`, `TEST`, and any future non-`BAD` bits) propagates via the same OR
+  rule with no special handling.
+
+Per-function notes:
+
+* `mean` and `sum` are straightforward applications of the rule above.
+* `sd`'s own uncertainty-of-the-uncertainty is never computed (its `u` is hardcoded to `0`), so
+  `NOUNCERTAINTY` is always forced onto the result *in addition to* whatever the OR rule produces
+  from the inputs.
+* `min`/`max` propagate the winning element's own DQ bits (via `minmax`'s `d[idx]`). Under the OR
+  rule they additionally pick up the `BAD` bits of any *other* element that was excluded from
+  consideration, even though it wasn't the element chosen as the min/max.
     
