@@ -78,15 +78,10 @@ def test_datum_str_all_types():
     being imported, which would make this test's coverage depend on test run order.)"""
     pcot.setup()
 
-    roi = ROIRect()
-    roi.set(0, 0, 4, 4)
-
-    img = genrgb(4, 4, 1.0, 2.0, 3.0)
-
     values_by_type_name = {
         'any': None,
-        'img': img,
-        'roi': roi,
+        'img': genrgb(4, 4, 1.0, 2.0, 3.0),
+        'roi': ROIRect(rect=(0,0,4,4)),
         'number': Value(3.0, 0.5, dq.NONE),
         'variant': None,
         'table': None,

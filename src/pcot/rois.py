@@ -610,6 +610,7 @@ class ROIRect(ROI):
         self.y = y
         self.w = w
         self.h = h
+        return self
 
     #def changed(self):
     #    raise NotImplementedError("ROIRect.changed")

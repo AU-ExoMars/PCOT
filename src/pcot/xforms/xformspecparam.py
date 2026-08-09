@@ -34,38 +34,36 @@ class XFormSpecParam(XFormType):
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
 
+        groupname = node.params.group
+        pname = node.params.parameter
+        if groupname is None or pname is None:
+            raise XFormException('DATA', 'no parameter group or parameter')
+
+        # get the parameter info and update the node's data
+        # pull the data from the spectral parameter set if we can
         try:
-            groupname = node.params.group
-            pname = node.params.parameter
-            if groupname is None or pname is None:
-                raise XFormException('DATA', 'no parameter group or parameter')
+            group = spectralparameters.groups[groupname]
+        except KeyError:
+            raise XFormException('DATA', f"no parameter group '{groupname}'")
+        try:
+            parameter = group[pname]
+            node.expr = parameter.expr
+            node.desc = parameter.desc
+        except KeyError:
+            raise XFormException('DATA', f"no parameter '{pname}' in group '{groupname}'")
 
-            # get the parameter info and update the node's data
-            # pull the data from the spectral parameter set if we can
-            try:
-                group = spectralparameters.groups[groupname]
-            except KeyError:
-                raise XFormException('DATA', f"no parameter group '{groupname}'")
-            try:
-                parameter = group[pname]
-                node.expr = parameter.expr
-                node.desc = parameter.desc
-            except KeyError:
-                raise XFormException('DATA', f"no parameter '{pname}' in group '{groupname}'")
+        logger.info("Performing %s in group %s [%s]", pname, groupname, node.expr)
+        if img is None:
+            raise XFormException('DATA', 'no image data')
 
-            logger.info("Performing %s in group %s [%s]", pname, groupname, node.expr)
-            if img is None:
-                raise XFormException('DATA', 'no image data')
-
-
+        try:
             # run the parameter
             out = parameter.run(node.getInput(0))
-            node.setOutput(0, out) # temporary no-op.
+        except Exception as e:
+            node.setOutput(0, Datum.null)
+            raise XFormException('DATA', str(e))
+        node.setOutput(0, out) # temporary no-op.
 
-        except Exception:
-            # something went wrong, clean up.
-            node.setOutput(0, None)
-            raise
 
     def createTab(self, xform, window):
         return TabSpecParam(xform, window)
