@@ -507,7 +507,7 @@ class XFormMacro(XFormType):
 
     def paramChanged(self):
         """A parameter has changed. We need to recreate the TDT defining the parameters from the parameter nodes."""
-        print("rebuilding params")
+        logger.debug("rebuilding params")
         tdd_def = {}
         # recreate the TDT for parameters from the TDs in the parameter nodes
         for x in filter(lambda x: x.type.name == "param", self.graph.nodes):

@@ -244,7 +244,7 @@ class Datum(SourcesObtainable):
             return self.val if self.tp == tp else None
 
     def __str__(self):
-        return "<DATUM-{}, value {}>".format(self.tp, self.val)
+        return f"{self.val} ({self.tp})"
 
     def getSources(self):
         """Get the full source set as an actual single set, unioning all SourceSets within."""

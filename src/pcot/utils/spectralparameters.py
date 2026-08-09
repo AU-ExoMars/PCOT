@@ -68,7 +68,6 @@ class Group:
         self.parameters = {}
 
         for name, parameter in parameters.items():
-            print(parameter)
             self.parameters[name] = SpectralParameter(name, parameter)
 
     def keys(self):
@@ -82,27 +81,26 @@ class Group:
         return self.parameters[key]
 
 
-# Spectral parameters are organised into groups; each YAML file contains one group. The "builtin"
-# group is loaded from the assets, while other groups can be loaded from user-provided files.
+# Spectral parameters are organised into groups; each YAML file can contain multiple groups.
+# The builtins groups are loaded from the assets, while other groups can be loaded from user-provided files.
 
 groups: Dict[str, Group] = {}
 
-def _load_group(fn: Path):
+def _load_groups(fn: Path):
     """Load a group from a YAML file and store it"""
     global groups
     with open(fn, "r") as f:
-        data = yaml.load(f, Loader=yaml.SafeLoader)
-        if 'name' not in data:
-            raise AttributeError(f"No group name found in {fn}")
-        if 'desc' not in data:
-            raise AttributeError(f"No group description 'desc' found in {fn}")
-        if 'date' not in data:
-            raise AttributeError(f"No group date found in {fn}")
-        if 'parameters' not in data:
-            raise AttributeError(f"No group parameters found in {fn}")
-        if not isinstance(data['parameters'], dict):
-            raise ValueError(f"Group parameters in {fn} must be a dictionary not {type(data['parameters'])}")
-        groups[data['name']] = Group(data['name'], data['desc'], data['parameters'])
+        file = yaml.load(f, Loader=yaml.SafeLoader)
+        for name,data in file.items():
+            if 'desc' not in data:
+                raise AttributeError(f"No group description 'desc' found in {fn}")
+            if 'date' not in data:
+                raise AttributeError(f"No group date found in {fn}")
+            if 'parameters' not in data:
+                raise AttributeError(f"No group parameters found in {fn}")
+            if not isinstance(data['parameters'], dict):
+                raise ValueError(f"Group parameters in {fn} must be a dictionary not {type(data['parameters'])}")
+            groups[name] = Group(name, data['desc'], data['parameters'])
 
 
 
@@ -116,4 +114,4 @@ def loadSpectralParameters():
     global _spectralEvaluator
     _spectralEvaluator = ExpressionEvaluator()
 
-    _load_group(getAssetPath("data/builtin_spectral_parameters.yaml"))
+    _load_groups(getAssetPath("data/builtin_spectral_parameters.yaml"))

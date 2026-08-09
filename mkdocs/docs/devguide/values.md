@@ -30,18 +30,18 @@ relying on Numpy's broadcasting to do the "right thing" with what it's given.
 
 Examples - the multiplication operator:
 ```python
-    def __mul__(self, other):
-        return Value(self.n * other.n, mul_unc(self.n, self.u, other.n, other.u),
-                     combineDQs(self, other))
+def __mul__(self, other):
+    return Value(self.n * other.n, mul_unc(self.n, self.u, other.n, other.u),
+                 combineDQs(self, other))
 ```
 The AND operator:
 ```python
-    def __and__(self, other):
-        """The & operator actually finds the minimum (Zadeh fuzzy op)"""
-        n = np.where(self.n > other.n, other.n, self.n)
-        u = np.where(self.n > other.n, other.u, self.u)
-        d = np.where(self.n > other.n, other.dq, self.dq)
-        return Value(n, u, d)
+def __and__(self, other):
+    """The & operator actually finds the minimum (Zadeh fuzzy op)"""
+    n = np.where(self.n > other.n, other.n, self.n)
+    u = np.where(self.n > other.n, other.u, self.u)
+    d = np.where(self.n > other.n, other.dq, self.dq)
+    return Value(n, u, d)
 ```
 
 
@@ -74,15 +74,15 @@ returned, we just wrap that in a Datum.
 For other types - not Datum.NUMBER or Datum.IMG - other semantics methods will have been written. For example,
 the ROI types have binary operators which construct ROIBinop objects using dunder methods:
 ```python
-    def regROIBinopSemantics(op, fn):
-        """Used to register binops for ROIs, which support a subset of ops."""
-        registerBinopSemantics(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
+def regROIBinopSemantics(op, fn):
+    """Used to register binops for ROIs, which support a subset of ops."""
+    registerBinopSemantics(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
 
-    regROIBinopSemantics(Operator.ADD, lambda x, y: x + y)
-    regROIBinopSemantics(Operator.SUB, lambda x, y: x - y)
-    regROIBinopSemantics(Operator.MUL, lambda x, y: x * y)
-    regROIBinopSemantics(Operator.DIV, lambda x, y: x / y)
-    regROIBinopSemantics(Operator.POW, lambda x, y: x ** y)
+regROIBinopSemantics(Operator.ADD, lambda x, y: x + y)
+regROIBinopSemantics(Operator.SUB, lambda x, y: x - y)
+regROIBinopSemantics(Operator.MUL, lambda x, y: x * y)
+regROIBinopSemantics(Operator.DIV, lambda x, y: x / y)
+regROIBinopSemantics(Operator.POW, lambda x, y: x ** y)
 ```
 
 
@@ -140,8 +140,8 @@ wrappers work for operations. It will also wrap the resulting Value in a Datum.
 
 An example is `Datum.sin`, a method that finds the sine of a numeric or image Datum. Here is the method in full:
 ```python
-    def sin(self):
-        return func_wrapper(lambda x: x.sin(), self)
+def sin(self):
+    return func_wrapper(lambda x: x.sin(), self)
 ```
 The wrapper takes a function and the Datum on which perform the function. It
 returns a Datum. The function passed must take and return a Value. In this case, we use

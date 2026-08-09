@@ -1,7 +1,3 @@
-name: builtins
-date: 5th August 2026
-desc: |
-  Builtin spectral parameters from INSERT PAPERS HERE
 
 # Each parameter has:
 #   name - the name and a short description. This might have some characters in it that YAML
@@ -10,14 +6,98 @@ desc: |
 #     just pull out the 540nm band
 #   desc  - a longer description and notes for internal use.
 
-parameters:
-    identity, which does nothing to the image:
-        desc: Does nothing
-        expr: a
-    "bar: which does horrible things to cake":
-        desc: Handy thing.
-        expr: a*10
-    baz:
-        desc: Another test
-        expr: 3-a
 
+  AUPE LWAC:
+    date: 5th August 2026
+    desc: |
+      AUPE LWAC spectral parameters from Allender, E. J., Cousins, C., Gunn, M., & Caudill, C. (2020).
+      Multiscale and multispectral characterization of mineralogy with the ExoMars 2022 rover remote sensing payload.
+      Earth and Space Science. 7, e2019EA000692. https://doi.org/10.1029/2019EA000692
+    parameters:
+      S438_671 oxidation:
+          desc: Related to degree of oxidation
+          expr: (a$671-a$438)/(671-438)
+      BD532 ferric:
+          desc: Identifies ferric minerals, particularly hematite, and is related to degree of oxidation
+          expr: 1-(a$532/((0.53*a$500)+(0.47*a$568)))
+      BD610 goethite:
+          desc: Can indicate goethite development and can be influenced by olivine and pyroxene
+          expr: 1-(a$610/((0.6*a$568)+(0.4*a$671)))
+      S532_610 ferric and dust:
+          desc: Ferric minerals and dust
+          expr: (a$610-a$532)/(610-532)
+      R671_438 ferric and dust:
+          desc: Ferric minerals and dust
+          expr: a$671/a$438
+      S610_671 shoulder absorption:
+          desc: Tests for presence of shoulder absorption indicative of hematite or goethite
+          expr: (a$671-a$610)/(671-610)
+
+  AUPE RWAC:
+    date: 5th August 2026
+    desc: |
+      AUPE RWAC spectral parameters from Allender, E. J., Cousins, C., Gunn, M., & Caudill, C. (2020).
+      Multiscale and multispectral characterization of mineralogy with the ExoMars 2022 rover remote sensing payload.
+      Earth and Space Science. 7, e2019EA000692. https://doi.org/10.1029/2019EA000692
+    parameters:
+      R740_1000 ferrous:
+          desc: Ferrous minerals
+          expr: a$740/a$1000
+      S740_1000 ferrous:
+          desc: Strength and position of NIR absorption linked to ferrous minerals
+          expr: (a$1000-a$740)/(1000-740)
+      BD775 nontronite:
+          desc: Nontronite
+          expr: 1-(a$775/((0.5*a$740)+(0.545*a$850)))
+      BD900 ferric:
+          desc: Strength of NIR absorption, related to ferric minerals
+          expr: 1-(a$900/((0.455*a$840)+(0.545*a$950)))
+      S900_1000 hydrous:
+          desc: Related to detection of hydrous minerals
+          expr: (a$1000-a$900)/(1000-900)
+      BD950 hydrous:
+          desc: Related to hydrous minerals, some clays, and silicates
+          expr: 1-(a$950/((0.5*a$900)+(0.5*a$1000)))
+      S950_1000 hydrous:
+          desc: Linked to detection of hydrous minerals
+          expr: (a$1000-a$950)/(1000-950)
+
+  PanCam:
+    date: 9th August 2026
+    desc: |
+      PanCam spectral parameters from 
+      The PanCam instrument for the ExoMars rover.
+      Coates, A. J., Jaumann, R., Griffiths, A. D., Leff, C. E., Schmitz, N., Josset, J. L., ... & 
+      the PanCam Team. (2017).  
+      Astrobiology, 17(6-7), 511-541.
+    parameters:
+      BD530 ferric:
+          desc: Ferric minerals, namely hematite, and degree of oxidation
+          expr: 1-(a$530/((0.56*a$500)+(0.44*a$568)))
+      S530_610 ferric and dust:
+          desc: Ferric minerals and dust
+          expr: (a$610-a$530)/(610-530)
+      BD900 ferric:
+          desc: Strength of NIR absorption, related to ferric minerals
+          expr: 1-(a$900/((0.455*a$840)+(0.545*a$950)))
+      S740_1000 ferrous:
+          desc: Strength and position of NIR absorption in ferrous minerals
+          expr: (a$1000-a$740)/(1000-740)
+      S950_1000 hydration:
+          desc: Beginning of the hydration band at ~1100 nm
+          expr: (a$1000-a$950)/(1000-950)
+      R740_1000 ferrous:
+          desc: Ferrous minerals
+          expr: a$740/a$1000
+      R670_440 ferric and dust:
+          desc: Ferric minerals and dust
+          expr: a$670/a$440
+      BD610 goethite:
+          desc: Can indicate goethite development
+          expr: 1-(a$610/((0.6*a$568)+(0.4*a$671)))
+      BD950 hydrous:
+          desc: Related to hydrous minerals, some clays and silicates
+          expr: 1-(a$950/((0.5*a$900)+(0.5*a$1000)))
+      S440_670 oxidation:
+          desc: Related to degree of oxidation
+          expr: (a$670-a$440)/(670-440)

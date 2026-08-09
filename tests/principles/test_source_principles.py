@@ -154,7 +154,7 @@ def test_extract_by_band():
     img = expr.getOutputDatum(0)
     assert img is Datum.null
     assert isinstance(expr.error, XFormException)
-    assert expr.error.message == "unable to get this band from an image: <DATUM-ident, value _4>"
+    assert expr.error.message == "unable to get this band from an image: _4 (ident)"
 
 
 def test_extract_by_wavelength(envi_image_1):
@@ -170,7 +170,7 @@ def test_extract_by_wavelength(envi_image_1):
     img = expr.getOutputDatum(0)
     assert img is Datum.null
     assert isinstance(expr.error, XFormException)
-    assert expr.error.message == "unable to get this band from an image: <DATUM-number, value 60±0>"
+    assert expr.error.message == "unable to get this band from an image: 60±0 (number)"
 
     expr.params.expr = "a$640"
     doc.run()
