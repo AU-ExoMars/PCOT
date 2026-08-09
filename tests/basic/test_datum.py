@@ -4,7 +4,9 @@ import numpy
 
 import pcot
 from pcot.datum import Datum
-from pcot.sources import SourceSet
+from pcot.datumtypes import Type
+from pcot.rois import ROIRect
+from pcot.sources import SourceSet, nullSourceSet
 from pcot.value import Value
 
 from fixtures import *
@@ -67,4 +69,42 @@ def test_datum_can_create_and_serialise_img(bwimage):
     assert np.allclose(img.dq[img.h-1][img.w-1], (dq.NONE, dq.UNDEF, dq.DIVZERO))
 
 
+def test_datum_str_all_types():
+    """Datum.__str__ should produce a "<value> (<type name>)" string for every builtin Datum type
+    without raising. Build a representative value for each type exposed as a Datum.<CONST>, rather
+    than hardcoding the list by hand, so a new builtin type added later fails this test until it's
+    covered here. (We use the Datum.<CONST> attributes rather than the global typesByName registry,
+    since other test modules register their own ad-hoc types into that registry as a side effect of
+    being imported, which would make this test's coverage depend on test run order.)"""
+    pcot.setup()
+
+    roi = ROIRect()
+    roi.set(0, 0, 4, 4)
+
+    img = genrgb(4, 4, 1.0, 2.0, 3.0)
+
+    values_by_type_name = {
+        'any': None,
+        'img': img,
+        'roi': roi,
+        'number': Value(3.0, 0.5, dq.NONE),
+        'variant': None,
+        'table': None,
+        'data': None,
+        'testresult': [],
+        'ident': 'someident',
+        'string': 'somestring',
+        'func': None,
+        'none': None,
+        'cameradata': None,
+    }
+
+    builtin_types = {v.name: v for v in vars(Datum).values() if isinstance(v, Type)}
+
+    # if this fails, a builtin Datum type has been added or removed and values_by_type_name needs updating
+    assert set(values_by_type_name.keys()) == set(builtin_types.keys())
+
+    for name, val in values_by_type_name.items():
+        d = Datum(builtin_types[name], val, sources=nullSourceSet)
+        assert str(d) == f"{val} ({name})"
 
