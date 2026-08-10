@@ -91,6 +91,8 @@ annotations now show the sample count used for each point.
 dropdowns. Ships with builtin AUPE LWAC, AUPE RWAC and PanCam parameter groups.
 * `mean()`/`sum()`/`sd()`/`min()`/`max()` on a band with no unmasked pixels (e.g. entirely excluded
 by ROI or bad-pixel DQ) now correctly return NODATA rather than leaking a numpy masked constant.
+* Canvas RGB channel selectors now have a link button to lock the three channel combos together,
+so changing one changes all three.
 
 Site
 

@@ -8,14 +8,15 @@ from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 import cv2 as cv
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtCore import Qt, QTimer, QPoint, QPointF, QRectF
-from PySide6.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
-from PySide6.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel
+from PySide6.QtCore import Qt, QTimer, QPointF, QRectF
+from PySide6.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent, QPalette
+from PySide6.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel, QPushButton, QLayout, QSizePolicy, QToolButton
 
 import pcot
 import pcot.dq
 import pcot.ui as ui
-from pcot import canvasnormalise, dq
+from pcot import canvasnormalise
+from pcot.assets import Icons
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui import theme
@@ -798,7 +799,6 @@ class InnerCanvas(QtWidgets.QWidget):
 
 def makesidebarLabel(t):
     lab = QtWidgets.QLabel(t)
-    lab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
     return lab
 
 
@@ -903,6 +903,7 @@ class Canvas(QtWidgets.QWidget):
         self.ROInode = None
         self.mapping = None  # mapping used in either the image, or the image we are rendering a "premapped" RGB of
         self.isDQHidden = False  # does not persist!
+        self.channelsLinked = False  # are the R/G/B channel combos locked together? does not persist!
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
         self.dqSourceCache = [None for i in range(NUMDQS)]  # source name cache for each channel
         # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
@@ -1007,37 +1008,45 @@ class Canvas(QtWidgets.QWidget):
 
         hideable = QtWidgets.QGridLayout()
         hideable.setContentsMargins(3, 10, 3, 10)  # LTRB
+
         # these are the actual widgets specifying which channel in the cube is viewed.
         # We need to deal with these carefully.
-        hideable.addWidget(makesidebarLabel("R"), 0, 0)
-        self.redChanCombo = QtWidgets.QComboBox()
-        self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
-        hideable.addWidget(self.redChanCombo, 0, 1)
+        def mkChanCombo(name, row, changedSlot):
+            chanLabel = makesidebarLabel(name)
+            chanLabel.setMaximumWidth(10)
+            chanLabel.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Preferred)
+            hideable.addWidget(chanLabel, row, 0)
+            box = QtWidgets.QComboBox()
+            box.currentIndexChanged.connect(changedSlot)
+            hideable.addWidget(box, row, 1)
+            return box
+        self.redChanCombo = mkChanCombo("R", 0, self.redIndexChanged)
+        self.greenChanCombo = mkChanCombo("G", 1, self.greenIndexChanged)
+        self.blueChanCombo = mkChanCombo("B", 2, self.blueIndexChanged)
 
-        hideable.addWidget(makesidebarLabel("G"), 1, 0)
-        self.greenChanCombo = QtWidgets.QComboBox()
-        self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
-        hideable.addWidget(self.greenChanCombo, 1, 1)
-
-        hideable.addWidget(makesidebarLabel("B"), 2, 0)
-        self.blueChanCombo = QtWidgets.QComboBox()
-        self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
-        hideable.addWidget(self.blueChanCombo, 2, 1)
+        # button for linking the three channels to be the same band (initially copied
+        # from the red channel's data).
+        self.linkButton = QToolButton(self)
+        hideable.addWidget(self.linkButton, 0,2, 3, 1)
+        self.linkButton.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        self.linkButton.setFixedWidth(24)
+        self.linkButton.setCheckable(True)
+        self.linkButton.setIcon(Icons.get("unlock"))
+        self.linkButton.toggled.connect(self.linkButtonToggled)
 
         # these boxes are repopulated whenever the image changes, so use AdjustToContents rather than
         # AdjustToContentsOnFirstShow (the default) - otherwise a box which was empty (or short) when
         # first shown never widens to fit later, longer, item text (seen as truncated text on Linux).
+        # Kept narrower than the combo's natural sizeHint so the link button (column 2) always has
+        # room, rather than being squeezed out when the sidebar is at its normal width.
         for combo in (self.redChanCombo, self.greenChanCombo, self.blueChanCombo):
             combo.setSizeAdjustPolicy(QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToContents)
-            combo.setMinimumWidth(160)
+            combo.setMinimumWidth(110)
+        hideable.setColumnStretch(1, 1)
 
         self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
-        hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
+        hideable.addWidget(self.resetMapButton, 3, 0, 1, 3)
         self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
-
-        hideable.addWidget(makesidebarLabel("gamma"), 4, 0)
-        self.gammaLabel = makesidebarLabel("1.1")
-        hideable.addWidget(self.gammaLabel, 4, 1)
 
         class GammaSlider(QtWidgets.QSlider):
             # subclass of a slider which zeroes on doubleclick
@@ -1048,9 +1057,21 @@ class Canvas(QtWidgets.QWidget):
                 # If you call this, the slider gets a move event too and we end up at slightly off centre.
                 # super().mouseDoubleClickEvent(event)
 
+        gammaContainer = QtWidgets.QWidget()
+        gammaLayout = QtWidgets.QGridLayout()
+        gammaContainer.setLayout(gammaLayout)
+        gammaLayout.setContentsMargins(0, 0, 0, 0)
+
+        gammaLayout.addWidget(makesidebarLabel("gamma"),0,0,1,2)
+        self.gammaLabel = makesidebarLabel("1.1")
+        gammaLayout.addWidget(self.gammaLabel,1,0)
         self.gammaSlider = GammaSlider(Qt.Orientation.Horizontal)
-        hideable.addWidget(self.gammaSlider, 5, 0, 1, 2)
         self.gammaSlider.valueChanged.connect(self.gammaChanged)
+        gammaLayout.addWidget(self.gammaSlider,1,1,1,2)
+        hideable.addWidget(gammaContainer, 4, 0, 1, 3)
+
+        # debugging: self.hideablebuttons.setStyleSheet("background-color: rgb(255, 255, 255);")
+
 
         self.hideablebuttons.setLayout(hideable)  # add layout to widget
         hideableLayout = QtWidgets.QVBoxLayout()  # make a single-widget layout
@@ -1436,6 +1457,8 @@ class Canvas(QtWidgets.QWidget):
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.red = i
+            if self.channelsLinked:
+                self.syncLinkedChannels(i)
             self.mappingModified()
 
     def greenIndexChanged(self, i):
@@ -1443,13 +1466,35 @@ class Canvas(QtWidgets.QWidget):
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.green = i
+            if self.channelsLinked:
+                self.syncLinkedChannels(i)
             self.mappingModified()
 
     def blueIndexChanged(self, i):
-        logger.debug(f"GREEN CHANGED TO {i}")
+        logger.debug(f"BLUE CHANGED TO {i}")
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.blue = i
+            if self.channelsLinked:
+                self.syncLinkedChannels(i)
+            self.mappingModified()
+
+    def syncLinkedChannels(self, i):
+        """Force all three RGB channel combos (and the underlying mapping) to the same
+        channel index, used when the channels are linked together."""
+        self.mapping.red = self.mapping.green = self.mapping.blue = i
+        self.blockSignalsOnComboBoxes(True)
+        self.redChanCombo.setCurrentIndex(i)
+        self.greenChanCombo.setCurrentIndex(i)
+        self.blueChanCombo.setCurrentIndex(i)
+        self.blockSignalsOnComboBoxes(False)
+
+    def linkButtonToggled(self, checked):
+        self.channelsLinked = checked
+        self.linkButton.setIcon(Icons.get("lock" if checked else "unlock"))
+        if checked and self.previmg:
+            # copy the red channel's selection into green and blue
+            self.syncLinkedChannels(self.redChanCombo.currentIndex())
             self.mappingModified()
 
     def roiToggleChanged(self, v):
