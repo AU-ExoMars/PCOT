@@ -1492,6 +1492,7 @@ class Canvas(QtWidgets.QWidget):
     def linkButtonToggled(self, checked):
         self.channelsLinked = checked
         self.linkButton.setIcon(Icons.get("lock" if checked else "unlock"))
+        theme.setLinkButtonStyle(self.linkButton, checked)
         if checked and self.previmg:
             # copy the red channel's selection into green and blue
             self.syncLinkedChannels(self.redChanCombo.currentIndex())

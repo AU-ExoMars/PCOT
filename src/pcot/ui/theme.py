@@ -45,6 +45,21 @@ def setDisabledRunStyle(button, needsRun: bool):
         button.setStyleSheet("")
 
 
+def setLinkButtonStyle(button, locked: bool):
+    """Canvas RGB-channel link button: the lock/unlock icons alone are too similar to read at
+    a glance, so also highlight the button while the channels are locked together."""
+    if locked:
+        button.setStyleSheet(f"background-color: {_pick('rgb(255,200,80)', 'rgb(120,85,20)')};")
+    else:
+        button.setStyleSheet("")
+    # a QToolButton that has ever had a stylesheet applied can otherwise keep rendering the old
+    # background after it's cleared, because Qt caches the style for its :checked pseudo-state -
+    # force it to recompute.
+    button.style().unpolish(button)
+    button.style().polish(button)
+    button.update()
+
+
 def errorLabelStyle() -> str:
     return f"QLabel {{ color: {_pick('rgb(200,0,0)', 'rgb(255,120,120)')}; }}"
 
