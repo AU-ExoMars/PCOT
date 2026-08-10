@@ -62,8 +62,7 @@ class XFormSpecParam(XFormType):
         except Exception as e:
             node.setOutput(0, Datum.null)
             raise XFormException('DATA', str(e))
-        node.setOutput(0, out) # temporary no-op.
-
+        node.setOutput(0, out)
 
     def createTab(self, xform, window):
         return TabSpecParam(xform, window)
