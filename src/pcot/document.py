@@ -144,8 +144,11 @@ class Document:
         to point to the new nodes.
 
         """
-        # deserialise macros before graph!
+        # deserialise macros before graph! The incoming data is the complete macro set, so
+        # clear out any existing macros first (they'll otherwise collide by name - this is
+        # particularly an issue for undo/redo, which deserialises back into the same Document).
         if 'MACROS' in d:
+            self.macros.clear()
             for k, v in d['MACROS'].items():
                 XFormMacro(self, k, data=v)  # will autoregister, so it ends up in self.macros and the palette!
 
