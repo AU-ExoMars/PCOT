@@ -6,8 +6,11 @@ import numpy as np
 
 @dataclass
 class FloodFillParams:
-    # minpix and maxpix are the minimum and maximum number of pixels to fill. If the fill is outside these bounds,
-    # None is returned.
+    # minpix is the minimum number of pixels required for a fill to be accepted; if fewer are found,
+    # None is returned. maxpix is a cap on fill growth - once reached, the fill simply stops growing
+    # and the mask found so far (exactly maxpix pixels) is returned; it is not rejected. This matters
+    # because maxpix is often set close to a region's expected true size, so a "complete" fill will
+    # regularly reach it.
     minpix: int = 0
     maxpix: int = 10000
     # threshold is the threshold for the fill. What it actually means depends on the fill update method,
@@ -19,9 +22,10 @@ class FloodFillParams:
 
 class FloodFillerBase:
     """Base class for flood fillers. Subclasses should implement update() and inside(). The fill() method
-    will return a mask if the number of pixels found is within the range minpix to maxpix, otherwise None.
-    The fillToPaintedRegion() method will return an ROIPainted object instead of a mask.
-    It's pretty ugly, because it would be better done functionally (using closures) but that gets messy."""
+    returns a mask, capped at maxpix pixels if the fill would otherwise grow larger; it returns None only
+    if fewer than minpix pixels were found. The fillToPaintedRegion() method will return an ROIPainted
+    object instead of a mask. It's pretty ugly, because it would be better done functionally (using
+    closures) but that gets messy."""
 
     def __init__(self, img, params=FloodFillParams()):
         # the first thing we need to do is to convert the image to a 2D array; that will speed things
@@ -92,16 +96,17 @@ class MeanFloodFiller(FloodFillerBase):
                 dsq = (img[addr] - means) ** 2
                 if dsq > threshold:
                     continue
-                if n > maxpix:
-                    return None
-            if not mask[addr]:
-                mask[addr] = True
-                means = (img[addr] + n * means) / (n + 1)
-                n += 1
-                queue.append(addr - 1)
-                queue.append(addr + 1)
-                queue.append(addr - w)
-                queue.append(addr + w)
+            if n >= maxpix:
+                # cap reached - stop growing, but keep what's already been filled rather
+                # than discarding the whole fill
+                continue
+            mask[addr] = True
+            means = (img[addr] + n * means) / (n + 1)
+            n += 1
+            queue.append(addr - 1)
+            queue.append(addr + 1)
+            queue.append(addr - w)
+            queue.append(addr + w)
 
         # main loop is done, now check the number of pixels filled
         if n < self.params.minpix:

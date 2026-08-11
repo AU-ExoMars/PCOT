@@ -74,7 +74,7 @@ for row in range(4):
     for col in range(6):
         cx = x + col * pitch
         cy = y + row * pitch
-        edge = pitch/5
-        patch = RectPatch(x-edge/2, y-edge/2, edge, edge, pnames[idx], pdescs[idx], pcols[idx])
+        edge = 150  # matches the diameter of the CircularPatch this replaced (radius 75)
+        patch = RectPatch(cx, cy, edge, edge, pnames[idx], pdescs[idx], pcols[idx])
         target.patches += (patch,)
         idx += 1

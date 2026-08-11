@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.ma import masked
 
-from pcot.calib.target import CircularPatch
+from pcot.calib.target import CircularPatch, RectPatch
 from pcot.datum import Datum
 import cv2 as cv
 
@@ -20,32 +20,68 @@ from pcot.xform import xformtype, XFormType, XFormException
 BRUSHSCALE = 0.1
 
 
-def createPatchROI(img, x, y, radius):
-    """Create a ROIPainted which encompasses the coords x,y. The patch has
-    a given radius in mm, which we use to determine the min and max number
-    of pixels acceptable. This works using a floodfill on the image, so it is
-    *destructive*"""
+def patchBoundRadius(p):
+    """Get an equivalent radius in mm for a patch, used to bound the flood fill area and
+    as the fallback circle size if the flood fill fails."""
+    if isinstance(p, CircularPatch):
+        return p.r
+    elif isinstance(p, RectPatch):
+        return min(p.w, p.h) / 2
+    else:
+        raise XFormException('DATA', f"unsupported patch type {p.__class__.__name__}")
 
-    # first step - create a bool mask the same size as the image, all zeroes.
 
-    # second step - perform a flood fill of this mask, using the image itself
-    # as a reference. Fill should stop when the point about to be filled is
-    # very far from the mean of the points so far.
+def patchOutlinePoints(p, scale=1.0):
+    """List of (x,y) points in PCT space tracing the patch's outline, scaled about its centre.
+    Used both to preview a patch's shape and (in 'Shape' ROI generation mode) to build its ROI,
+    so the two are always identical."""
+    if isinstance(p, CircularPatch):
+        r = p.r * scale
+        return [
+            [p.x + r * np.sin(theta), p.y + r * np.cos(theta)] for theta in np.arange(0, 2 * np.pi, np.pi / 32)
+        ]
+    elif isinstance(p, RectPatch):
+        w, h = p.w * scale, p.h * scale
+        return [
+            [p.x - w / 2, p.y - h / 2],
+            [p.x + w / 2, p.y - h / 2],
+            [p.x + w / 2, p.y + h / 2],
+            [p.x - w / 2, p.y + h / 2],
+        ]
+    else:
+        raise XFormException('DATA', f"unsupported patch type {p.__class__.__name__}")
 
-    # get minimum and maximum pixel sizes (empirically determined from radius of patch)
+
+def createPatchROI(img, x, y, radius, tolerance):
+    """Create a ROIPainted which encompasses the coords x,y, using MeanFloodFiller: each
+    candidate pixel is compared against a running mean of the fill so far, rather than a fixed
+    seed value, so the fill tolerates the smooth lighting gradients/vignetting real patches have.
+    'tolerance' is a direct, linear intensity difference (squared internally, since
+    MeanFloodFiller's own threshold is a squared distance - this keeps the user-facing number
+    directly interpretable). The patch's radius in mm caps how many pixels the fill is allowed to
+    grow to - a fill that would otherwise bleed into a neighbouring patch simply stops growing at
+    that size, it isn't discarded. We only fall back to a small circle around the point if nothing
+    at all could be filled. This is destructive - it works on a copy of the image."""
+
     maxPix = radius ** 2 * 4
-    minPix = 0  # probably best to not have a min pixel count
-    ff = MeanFloodFiller(img, FloodFillParams(minPix, maxPix, threshold=0.003))
-
-    # perform a flood fill and get a region out. This may return None if the
-    # number of pixels is too low or too high. If so, we just fill a small region around
-    # the point.
+    ff = MeanFloodFiller(img, FloodFillParams(0, maxPix, threshold=tolerance ** 2))
     roi = ff.fillToPaintedRegion(int(x), int(y))
     if roi is None:
         roi = ROIPainted()
         roi.setContainingImageDimensions(img.w, img.h)
         roi.setCircle(x, y, radius / 4)
         roi.cropDownWithDraw()
+    return roi
+
+
+def createShapeROI(img, points):
+    """Create a ROIPainted by filling a polygon (image-space points) directly, rather than
+    flood-filling. Used for 'Shape' ROI generation mode, where the ROI is exactly the patch's
+    perspective-projected outline (see patchOutlinePoints) instead of an organic flood-filled blob."""
+    roi = ROIPainted()
+    roi.setContainingImageDimensions(img.w, img.h)
+    pts = np.array(points, np.int32).reshape((-1, 1, 2))
+    roi.cropDownWithDraw(draw=lambda fullsize: cv.fillPoly(fullsize, [pts], 255))
     return roi
 
 
@@ -57,7 +93,8 @@ class CalibrationTargetBase(XFormType):
         self.addInputConnector("img", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.params = TaggedDictType()  # no parameters; it's pointless because the ROIs are painted.
-        self.autoserialise = ('brushSize', 'pctPoints', 'drawMode', ('radiusScale', 1.0))
+        self.autoserialise = ('brushSize', 'pctPoints', 'drawMode', ('roiScale', 1.0), ('roiGenMode', 'Shape'),
+                              ('floodTolerance', 0.05))
         self.target = target
 
     def createTab(self, n, w):
@@ -81,7 +118,9 @@ class CalibrationTargetBase(XFormType):
         node.rgbImage = None
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
         node.brushSize = 10
-        node.radiusScale = 1.0
+        node.roiScale = 1.0
+        node.roiGenMode = 'Shape'
+        node.floodTolerance = 0.05
         node.drawMode = 'Fill'
         # (x,y) tuples for screen positions of screws; a deque so we can rotate
         node.pctPoints = []
@@ -157,7 +196,10 @@ class CalibrationTargetBase(XFormType):
 
     def generateROIs(self, n):
         """Generate the regions of interest for the colour patches. These are
-        stored in a list in the same order as in pct.patches."""
+        stored in a list in the same order as in pct.patches. Depending on n.roiGenMode,
+        either flood-fills out from each patch centre, or fills the patch's perspective-
+        projected outline directly (necessary since that outline is generally not a
+        rectangle or circle once the perspective distortion is applied)."""
 
         # We need to get from PCT space to image space
         pts1 = np.float32(self.target.regpoints)
@@ -176,15 +218,12 @@ class CalibrationTargetBase(XFormType):
         timer = Timer("flood")
         tmpimg = n.img.copy()  # temp copy to work on
         for p in self.target.patches:
-            # get patch centre, convert to image space, get xy coords.
-            pp = np.float32([[[p.x, p.y]]])
-            if len(n.pctPoints) == 4:
-                # we have a perspective transform
-                pp = cv.perspectiveTransform(pp, M)
+            if n.roiGenMode == 'Shape':
+                points = transformPoints(patchOutlinePoints(p, n.roiScale), M)
+                roi = createShapeROI(tmpimg, points)
             else:
-                pp = cv.transform(pp, M)
-            x, y = pp.ravel().tolist()
-            roi = createPatchROI(tmpimg, x, y, p.r * maxScale * n.radiusScale)
+                (x, y), = transformPoints([[p.x, p.y]], M)
+                roi = createPatchROI(tmpimg, x, y, patchBoundRadius(p) * maxScale, n.floodTolerance)
             n.rois.append(roi)
         timer.mark("done")
 
@@ -200,12 +239,9 @@ def transformPoints(points, matrix):
     return points.reshape(-1, 2)
 
 
-def drawCircle(cx, cy, r, matrix, painter, canvas):
-    points = [
-        [cx + r * np.sin(theta), cy + r * np.cos(theta)] for theta in np.arange(0, 2 * np.pi, np.pi / 32)
-    ]
-
-    points = transformPoints(points, matrix)
+def drawPatchOutline(patch, scale, matrix, painter, canvas):
+    """Draw a patch's projected outline (see patchOutlinePoints) onto the canvas."""
+    points = transformPoints(patchOutlinePoints(patch, scale), matrix)
     points = [canvas.getCanvasCoords(*p) for p in points]
     painter.drawPolygon(QPolygon([QPoint(*p) for p in points]))
 
@@ -222,7 +258,9 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.genButton.clicked.connect(self.genPressed)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
         self.w.stddevsBox.checkStateChanged.connect(self.stddevsBoxChanged)
-        self.w.radiusScale.valueChanged.connect(self.radiusScaleChanged)
+        self.w.roiScale.valueChanged.connect(self.roiScaleChanged)
+        self.w.roiGenMode.currentIndexChanged.connect(self.roiGenModeChanged)
+        self.w.floodTolerance.valueChanged.connect(self.floodToleranceChanged)
         self.w.roiLabelSize.valueChanged.connect(self.roiLabelSizeChanged)
         self.w.canvas.canvas.setMouseTracking(True)
         self.target = node.type.target
@@ -235,8 +273,16 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.node.roiLabelSize = val
         self.changed()
 
-    def radiusScaleChanged(self, val):
-        self.node.radiusScale = val
+    def roiScaleChanged(self, val):
+        self.node.roiScale = val
+        self.changed()
+
+    def roiGenModeChanged(self, val):
+        self.node.roiGenMode = self.w.roiGenMode.currentText()
+        self.changed()
+
+    def floodToleranceChanged(self, val):
+        self.node.floodTolerance = val
         self.changed()
 
     def drawModeChanged(self, val):
@@ -286,10 +332,16 @@ class TabPCT(pcot.ui.tabs.Tab):
             readyToGen = False
             clearEnabled = True
         self.w.clearButton.setEnabled(clearEnabled)
-        self.w.radiusScale.setValue(self.node.radiusScale)
+        self.w.roiScale.setValue(self.node.roiScale)
         self.w.genButton.setEnabled(readyToGen)
         self.w.rotateButton.setEnabled(readyToGen)
         self.w.drawMode.setCurrentIndex(self.w.drawMode.findText(self.node.drawMode))
+        self.w.roiGenMode.setCurrentIndex(self.w.roiGenMode.findText(self.node.roiGenMode))
+        self.w.floodTolerance.setValue(self.node.floodTolerance)
+        # roiScale only affects Shape mode; floodTolerance only affects Flood Fill mode
+        isShape = self.node.roiGenMode == 'Shape'
+        self.w.roiScale.setEnabled(isShape)
+        self.w.floodTolerance.setEnabled(not isShape)
         self.w.roiLabelSize.setValue(self.node.roiLabelSize)
 
         self.w.canvas.setNode(self.node)
@@ -388,12 +440,11 @@ class TabPCT(pcot.ui.tabs.Tab):
                 p.setPen(QColor(255, 255, 255))
                 p.drawPolygon(QPolygon([QPoint(*p) for p in points]))
 
-                # now draw the patches
+                # now draw the patches, at the size they'll actually be generated at (roiScale
+                # only applies in Shape mode - Flood Fill mode is governed by floodTolerance instead)
+                scale = n.roiScale if n.roiGenMode == 'Shape' else 1.0
                 for patch in self.target.patches:
-                    if isinstance(patch, CircularPatch):
-                        drawCircle(patch.x, patch.y, patch.r, M, p, c)
-                    else:
-                        raise XFormException('DATA', f"unsupported patch type {patch.__class__.__name__}")
+                    drawPatchOutline(patch, scale, M, p, c)
         else:
             # we are editing ROIS; draw the preview circle
             if self.mousePos is not None and n.previewRadius is not None and n.selROI is not None:
@@ -478,18 +529,49 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.mouseDown = False
 
 
+# Shared explanation of the ROI-generation controls, appended to both XFormPCT's and
+# XFormColorCheckerClassic's docstrings below so this doesn't have to be maintained twice.
+# getHelpMarkdown's common-leading-whitespace strip (pcot.ui.help.md2html) can't be relied on here:
+# a docstring's first line is always flush-left (it follows the opening triple-quote on the same
+# source line) while later lines carry the class body's indentation, so the computed "common"
+# indentation is always 0 and nothing actually gets stripped. That's harmless for a single paragraph
+# (Markdown treats an indented continuation line as part of the same paragraph), but this block starts
+# a new paragraph after a blank line, and 4+ spaces of indentation there would read as a code block -
+# so every line here must start flush-left (0 or 2 spaces for list-item continuations only).
+_ROI_CONTROLS_HELP = """
+
+Once the control points are placed, **Generate ROIs** builds one ROI per patch.
+
+* **ROI Generation Mode** - *Shape* (the default) fills each patch's outline exactly as projected
+  by the perspective transform - reliable even for small or heavily-distorted targets. *Flood Fill*
+  instead grows a region outward from each patch's centre, following similar-coloured pixels.
+* **ROI scale** - only used in *Shape* mode. Scales the projected patch outline about its centre,
+  shown live as a preview before you click Generate.
+* **Flood Fill Tolerance** - only used in *Flood Fill* mode. The maximum brightness difference a
+  pixel may have from the fill's running average and still be included; too low and the fill stops
+  almost immediately, too high and it may bleed into neighbouring patches.
+* **ROI Draw Mode** / **ROI Label Size** - how the generated ROIs are annotated on the canvas."""
+
+
 @xformtype
 class XFormPCT(CalibrationTargetBase):
     """Allows the user to locate the PANCAM Calibration Target in an image by specifying control points,
-    move those control points, and generate ROIs for each patch by floodfill."""
+    move those control points, and generate ROIs for each patch."""
     def __init__(self):
         super().__init__("pct", "calibration", "0.0.0",
                          pcot.calib.pct.target)
 
+
+XFormPCT._cls.__doc__ += _ROI_CONTROLS_HELP  # __doc__ lives on the wrapped class - @xformtype rebinds the name
+
+
 @xformtype
 class XFormColorCheckerClassic(CalibrationTargetBase):
     """Allows the user to locate a GretagMacbeth ColorChecker Classic in an image by specifying
-    control points, move those control points, and generate ROIs for each patch by floodfill."""
+    control points, move those control points, and generate ROIs for each patch."""
     def __init__(self):
         super().__init__("colorchecker", "calibration", "0.0.0",
                          pcot.calib.colorchecker_classic.target)
+
+
+XFormColorCheckerClassic._cls.__doc__ += _ROI_CONTROLS_HELP

@@ -33,7 +33,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="sizeConstraint">
-       <enum>QLayout::SetDefaultConstraint</enum>
+       <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
       </property>
       <item>
        <widget class="QLabel" name="roiHelpLabel">
@@ -60,10 +60,10 @@
       <item>
        <layout class="QFormLayout" name="formLayout">
         <property name="sizeConstraint">
-         <enum>QLayout::SetDefaultConstraint</enum>
+         <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
         </property>
         <property name="fieldGrowthPolicy">
-         <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+         <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
         </property>
         <property name="rightMargin">
          <number>6</number>
@@ -87,7 +87,7 @@
            <number>99</number>
           </property>
           <property name="orientation">
-           <enum>Qt::Horizontal</enum>
+           <enum>Qt::Orientation::Horizontal</enum>
           </property>
          </widget>
         </item>
@@ -169,20 +169,79 @@
         <item row="2" column="0">
          <widget class="QLabel" name="label">
           <property name="text">
-           <string>ROI radius generator scale</string>
+           <string>ROI scale</string>
           </property>
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QDoubleSpinBox" name="radiusScale">
+         <widget class="QDoubleSpinBox" name="roiScale">
+          <property name="toolTip">
+           <string>Shape mode only: scales the patch outline about its centre before it's used as the ROI.</string>
+          </property>
           <property name="minimum">
            <double>0.200000000000000</double>
           </property>
           <property name="maximum">
-           <double>3.000000000000000</double>
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
           </property>
           <property name="value">
            <double>1.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="rOIGenModeLabel">
+          <property name="text">
+           <string>ROI Generation Mode</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QComboBox" name="roiGenMode">
+          <property name="toolTip">
+           <string>Shape: fill each patch's projected outline directly. Flood Fill: grow a region out from the patch centre.</string>
+          </property>
+          <item>
+           <property name="text">
+            <string>Shape</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Flood Fill</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="floodToleranceLabel">
+          <property name="text">
+           <string>Flood Fill Tolerance</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QDoubleSpinBox" name="floodTolerance">
+          <property name="toolTip">
+           <string>Flood Fill mode only: max brightness difference from the fill's running average still counted as part of the patch.</string>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>0.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.001000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.050000000000000</double>
           </property>
          </widget>
         </item>
@@ -191,7 +250,7 @@
       <item>
        <spacer name="verticalSpacer">
         <property name="orientation">
-         <enum>Qt::Vertical</enum>
+         <enum>Qt::Orientation::Vertical</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
