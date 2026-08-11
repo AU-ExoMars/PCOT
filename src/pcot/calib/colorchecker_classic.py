@@ -1,4 +1,4 @@
-from pcot.calib.target import Target, CircularPatch
+from pcot.calib.target import Target, CircularPatch, RectPatch
 
 """ Geometry of the ColorChecker Classic."""
 target = Target(
@@ -72,12 +72,9 @@ pitch = 176
 
 for row in range(4):
     for col in range(6):
-        target.patches += (CircularPatch(
-            x + col * pitch,
-            y + row * pitch,
-            75,
-            pnames[idx],
-            pdescs[idx],
-            pcols[idx]
-        ),)
+        cx = x + col * pitch
+        cy = y + row * pitch
+        edge = pitch/5
+        patch = RectPatch(x-edge/2, y-edge/2, edge, edge, pnames[idx], pdescs[idx], pcols[idx])
+        target.patches += (patch,)
         idx += 1
