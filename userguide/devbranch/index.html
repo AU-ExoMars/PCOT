@@ -262,9 +262,11 @@ environment to get things working; hopefully this will no longer be necessary.</
 which conflict with those in Anaconda. Typically, this manifests as lots of
 errors when you run poetry install. To fix this, tell Anaconda not to look at
 your system install at all:</p>
-<p>conda env config vars set PYTHONNOUSERSITE=1 -n pcot
+<pre><code class="language-txt">conda env config vars set PYTHONNOUSERSITE=1 -n pcot
 conda deactivate
-conda activate pcot</p>
+conda activate pcot
+poetry install
+</code></pre>
 <h2 id="updating-the-dev-branch">Updating the dev branch</h2>
 <p>From time to time, it's a good idea to <code>git pull</code> on this branch
 to download the most recent changes. If you get errors running 
