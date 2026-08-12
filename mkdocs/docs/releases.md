@@ -93,6 +93,9 @@ dropdowns. Ships with builtin AUPE LWAC, AUPE RWAC and PanCam parameter groups.
 by ROI or bad-pixel DQ) now correctly return NODATA rather than leaking a numpy masked constant.
 * Canvas RGB channel selectors now have a link button to lock the three channel combos together,
 so changing one changes all three.
+* Calibration target locator nodes *pct* and *colorchecker* have been improved, giving the user the option
+of using the actual patch shape (Shape mode) (which can be scaled) or a flood fill from the centre (the previous
+mode of operation) with a variable fill tolerance. The rectangular patches of the ColorChecker are now fully supported.
 
 Site
 
