@@ -1,5 +1,6 @@
 from typing import List, Optional, TYPE_CHECKING
 
+from pcot import ui
 from pcot.inputs.inputmethod import InputMethod
 from pcot.ui.inputs import InputWindow
 from pcot.datum import Datum
@@ -145,7 +146,20 @@ class Input:
         # we only save the active method's data in the external (save to file) case.
         
         if saveInputs and not internal:
-            activeData = self.get().serialise()  # returns Datum
+            method = self.getActive()
+            data = self.get()
+            if data.isNone() and not method.lastGoodData.isNone():
+                # the live (re)read failed - typically because the method was invalidated
+                # (a parameter change, or a prior invalidate()) and the source can no longer
+                # be read - but we still have data from an earlier successful read. Fall back
+                # to that rather than silently saving a document with no data for this input.
+                logger.warning(f"Input {self.idx} ({method.getName()}) could not be read - "
+                               f"saving last known-good cached data instead")
+                ui.warn(f"Input {self.idx} ({method.getName()}) could not be read while saving - "
+                       f"the file will keep the last successfully loaded data for this input, "
+                       f"which may not reflect its current settings.")
+                data = method.lastGoodData
+            activeData = data.serialise()  # returns Datum
         else:
             activeData = None
 

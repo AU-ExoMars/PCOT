@@ -232,6 +232,82 @@ def test_multifile_raw(globaldatadir):
         assert bands[2].dq == dq.NOUNCERTAINTY
 
 
+def test_multifile_save_falls_back_to_last_good_data_when_unreadable(globaldatadir):
+    """If a multifile input's cached data has been invalidated and can no longer be
+    re-read (e.g. because a parameter change broke it, or the source vanished after
+    the last successful read), saving the document should still persist the last
+    successfully-loaded data rather than silently saving nothing for that input."""
+    pcot.setup()
+    doc = Document()
+
+    names = ["0.png", "32768.png", "65535.png"]
+    # setInputMulti() forces an eager read, so this also populates lastGoodData
+    assert doc.setInputMulti(0, str(globaldatadir / "multi"), names) is None
+
+    inp = doc.inputMgr.getInput(0)
+    method = inp.getActive()
+    assert not method.data.isNone()
+    assert not method.lastGoodData.isNone()
+
+    # break it: add a mismatched-size file, so the next reload will raise even though
+    # the directory and existing files are all still present; then invalidate so a
+    # reload is actually attempted (the source isn't "missing" so this isn't a no-op)
+    method.files = names + ["wrongsize.png"]
+    method.invalidate()
+    assert method.missingPathReason() is None
+    assert method.data.isNone()
+
+    out = inp.serialise(internal=False, saveInputs=True)
+
+    # the live method itself really is broken now
+    assert method.data.isNone()
+    # but the serialised data still has the last known-good image
+    assert out['activeData'] is not None
+    restored = Datum.deserialise(out['activeData'])
+    assert restored.isImage()
+    assert restored.val.channels == 3
+
+
+def test_multifile_save_does_not_reset_mapping(globaldatadir):
+    """readData() used to unconditionally reset the RGB channel mapping ("reguess") on every
+    call. That meant a reload triggered purely to serialise data for saving (e.g. because the
+    method was left invalidated from an earlier change) would silently reset the user's chosen
+    channel mapping as a side effect of Save. The reguess should only happen when the method is
+    actually invalidated for a real reason, not on every readData()."""
+    pcot.setup()
+    doc = Document()
+
+    names = ["0.png", "32768.png", "65535.png"]
+    assert doc.setInputMulti(0, str(globaldatadir / "multi"), names) is None
+
+    inp = doc.inputMgr.getInput(0)
+    method = inp.getActive()
+    assert not method.data.isNone()
+
+    # simulate the user having picked a specific (non-guessed) channel mapping
+    method.mapping.set(2, 1, 0)
+
+    # break it exactly as in the fallback test above, but WITHOUT calling invalidate()
+    # again afterwards - self.data is already null from setInputMulti()'s internal
+    # invalidate(), so this reload attempt is only triggered by serialise()/get() below,
+    # not by any fresh "something changed" event.
+    method.files = names + ["wrongsize.png"]
+    method.invalidate()
+    assert method.mapping.red == -1  # invalidate() itself does force a reguess...
+
+    # ...so re-set it to simulate a plain reload attempt (e.g. via save) happening after
+    # the mapping had already been (re)established some other way
+    method.mapping.set(2, 1, 0)
+
+    inp.serialise(internal=False, saveInputs=True)
+
+    # readData() ran (and failed) as part of that serialise(), but should not have
+    # touched the mapping
+    assert method.mapping.red == 2
+    assert method.mapping.green == 1
+    assert method.mapping.blue == 0
+
+
 def test_multifile_preset_apply_legacy_and_missing_fields():
     """MultifileInputMethod.applyPreset() is the single canonical implementation used by
     the GUI widget, the parameter-file path and the scripting load.multifile() path.

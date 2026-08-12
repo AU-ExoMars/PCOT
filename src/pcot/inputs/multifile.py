@@ -102,6 +102,12 @@ class MultifileInputMethod(InputMethod, PresetOwner):
             return
         self.cachedFiles = {}
         self.dnRanges = {}
+        # force the mapping to be "reguessed" - done here, at the point something actually
+        # changed, rather than in readData() itself. That way a reload triggered merely to
+        # fetch data for serialisation (e.g. Input.serialise() at save time, when nothing
+        # about the input has actually changed since it was last loaded) doesn't reset the
+        # user's chosen RGB channels as a side effect.
+        self.mapping.red = -1
         super().invalidate(force=force)
 
     def missingPathReason(self) -> Optional[str]:
@@ -120,8 +126,6 @@ class MultifileInputMethod(InputMethod, PresetOwner):
         return None
 
     def readData(self):
-        # we force the mapping to have to be "reguessed"
-        self.mapping.red = -1
         self.dnRanges = {}
         self.dnRangesAttempted = True
 

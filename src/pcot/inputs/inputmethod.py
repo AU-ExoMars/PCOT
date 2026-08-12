@@ -27,6 +27,11 @@ class InputMethod(ABC):
     def __init__(self, inp):
         self.input = inp
         self.data = Datum.null
+        # the most recent successfully-read data, kept around even after invalidate()/a
+        # failed reload have wiped self.data - so that if this method can't currently be
+        # (re)read, saving the document can still fall back to the last known-good data
+        # rather than silently persisting nothing. See Input.serialise().
+        self.lastGoodData = Datum.null
         Canvas.initPersistData(self)  # creates data inside the canvas
         self.showROIs = False  # used by the canvas
 
@@ -122,6 +127,8 @@ class InputMethod(ABC):
             self.setInputException(None)
             try:
                 self.data = self.readData()  # this is a method in each subclass
+                if not self.data.isNone():
+                    self.lastGoodData = self.data
                 # a lot of debugging output
                 name = f"{self.input.idx}:{self.getName()}"
                 if self.isActive():
