@@ -15,6 +15,7 @@ to install and run PCOT and give you a tutorial covering the basics.
 * [The canvas and its optional views](canvas)
 * [Favourites and macros](favesandmacros)
 * [The settings dialog](settings)
+* [Using the development branch](devbranch)
 
 ### Special topics
 * [Updating PCOT](update.md)

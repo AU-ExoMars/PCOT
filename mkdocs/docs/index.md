@@ -29,6 +29,10 @@ from the ExoMars PANCAM instrument - but we also support
 Existing PCOT installs can be updated by following the instructions
 [here](userguide/update.md).
 
+## Dev branch
+Those of you with an adventurous bent may wish to try the current
+development branch. [Instructions are here](userguide/devbranch.md).
+
 
 ## Reporting bugs
 
