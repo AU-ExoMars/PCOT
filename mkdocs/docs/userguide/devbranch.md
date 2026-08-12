@@ -55,9 +55,12 @@ which conflict with those in Anaconda. Typically, this manifests as lots of
 errors when you run poetry install. To fix this, tell Anaconda not to look at
 your system install at all:
 
+```txt
 conda env config vars set PYTHONNOUSERSITE=1 -n pcot
 conda deactivate
 conda activate pcot
+poetry install
+```
 
 ## Updating the dev branch
 
