@@ -118,6 +118,10 @@
 <li>
     <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/devbranch/" class="dropdown-item">Using the development branch</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">
@@ -226,13 +230,13 @@ place or haven't read <a href="../plugins/">Writing PCOT plugins</a>.</p>
 <p>This process - converting node data into data which can be saved to archives - is called <strong>serialisation</strong>, and there no less than four different mechanisms for doing it. This is largely for historical reasons, but also because the different mechanisms serve different needs:</p>
 <p>In order of preference, with the best at the top:</p>
 <ul>
-<li><strong>TaggedAggregate serialisation</strong> - the data is JSON-serialisable but we want to make it possible to edit it from a batch/parameter file (see <a href="../../userguide/batch/">batch mode</a>). <strong>Probably the best choice if you can.</strong></li>
+<li><strong>TaggedAggregate serialisation</strong> - the data is JSON-serialisable but we want to make it possible to edit it from a batch/parameter file (see <a href="/userguide/batch">batch mode</a>). <strong>Probably the best choice if you can.</strong></li>
 <li><strong>complex serialisation via TaggedAggregate</strong> - the data is not serialisable, but we want to edit it from a parameter file. <strong>Probably the second-best</strong> and suitable where simple TA-serialisation can't handle the more complex data involved.</li>
 <li><strong>autoserialisation</strong> - for when your data is already JSON-serialisable and you don't need to edit it from a parameter file. It is very simple to implement, but doesn't allow editing from a batch file and doesn't document itself automatically. Used only in legacy nodes.</li>
 <li><strong>complex serialisation</strong> - for when your data is not directly JSON-serialisable (for example, regions of interest) and you don't need to edit it from a parameter file because it makes no sense (such as painted ROIs)</li>
 </ul>
 <h2 id="taggedaggregate-serialisation">TaggedAggregate serialisation</h2>
-<p>This is the method we use when we want to be able to edit the parameters of nodes in batch mode, using parameter files (see <a href="../../userguide/batch/">batch mode</a>). It is probably the best method to use because of this, but it is rather more complicated.</p>
+<p>This is the method we use when we want to be able to edit the parameters of nodes in batch mode, using parameter files (see <a href="/userguide/batch">batch mode</a>). It is probably the best method to use because of this, but it is rather more complicated.</p>
 <p>We make use of <strong>tagged aggregate structures</strong>, which can be found in
 <code>pcot.utils.taggedaggregate</code>. These are dictionaries and lists, but
 each has a formal, typed structure with "tags" giving the names of the
@@ -373,7 +377,7 @@ exists as a pcot.utils.gradient.Gradient object which is a wrapper around a list
 defining the colour <em>r,g,b</em> at value <em>x</em>. </p>
 <p>The CTAS methods are responsible for converting tagged aggregate data and this
 Gradient object. They also handle a <em>preset</em> string which can override the
-data when set from a <a href="../../userguide/batch/">parameter file</a>.</p>
+data when set from a <a href="/userguide/batch">parameter file</a>.</p>
 <p><a href="../roi_ctas/">Regions of interest are a rather more complex example...</a></p>
 </div>
 <h2 id="autoserialisation">Autoserialisation</h2>

@@ -1,0 +1,75 @@
+# Using the development branch
+
+A new version of PCOT is released every few months, but PCOT is
+continuously being updated and refined. If you want to try 
+the latest development branch, this page is for you.
+
+@@@ danger
+The development branch **should** be fully tested - we don't push
+code to it unless it is complete - but bugs might still get through.
+If you find one, [please let us know by creating an issue!](https://github.com/AU-ExoMars/PCOT/issues).
+@@@
+
+@@@ warning
+The next version of PCOT incorporates a major upgrade to the user interface
+from Pyside2 (qt4) to Pyside6 (qt6), since Pyside2 is no longer supported.
+This future-proofs the development but means that you will need to rebuild
+the environment. If you need to go back to the master branch (the current
+release) you will need to delete the environment and reinstall. Instructions
+are below.
+@@@
+
+## List of changes
+
+A list of changes for the dev build from the previous release
+can be found as the most recent entry in
+[the dev branch's releases file](https://github.com/AU-ExoMars/PCOT/blob/dev/mkdocs/docs/releases.md).
+
+## Installing the dev branch
+
+You'll need to delete the old PCOT conda environment and recreate it
+with the new dependencies. I am assuming you already have a working PCOT
+installation and know how to open an Anaconda shell. 
+
+The process is very similar to a full install, because dependencies
+often change. From this shell:
+
+* Go into the directory into which you installed PCOT. It should
+contain the `pyproject.toml` file.
+* `conda deactivate` if you are already in the PCOT environment.
+* `conda env remove -n pcot` to delete the old environment.
+* `git checkout dev` to move to the dev branch.
+* `git pull` to get the latest changes.
+* `conda create -n pcot python=3.11 poetry` to create a new environment with
+the correct Python and the Poetry dependency manager.
+* `conda activate pcot` to work in the new environment.
+* `poetry install` to install the dependencies.
+
+Some modern Mac users previously had to do some Weird Stuff with an osx-64
+environment to get things working; hopefully this will no longer be necessary.
+
+### Problems with pre-existing Python packages
+
+You may have pre-existing packages in your system level Python installation
+which conflict with those in Anaconda. Typically, this manifests as lots of
+errors when you run poetry install. To fix this, tell Anaconda not to look at
+your system install at all:
+
+conda env config vars set PYTHONNOUSERSITE=1 -n pcot
+conda deactivate
+conda activate pcot
+
+## Updating the dev branch
+
+From time to time, it's a good idea to `git pull` on this branch
+to download the most recent changes. If you get errors running 
+PCOT after this, it may be that the dependencies have changed.
+Try running `poetry install` to refresh them.
+
+## Going back to the old version
+
+If you have problems, you can deactivate and delete the old environment,
+check out the `master` branch and recreate and reinstall the environment -
+as if you were doing a standard install.
+
+

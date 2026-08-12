@@ -118,6 +118,10 @@
 <li>
     <a href="../../userguide/settings/" class="dropdown-item">Settings dialog</a>
 </li>
+                                    
+<li>
+    <a href="../../userguide/devbranch/" class="dropdown-item">Using the development branch</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">
@@ -221,8 +225,8 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="guppy-guide-to-uncertainty-in-pcot-python">GUPPY: Guide to Uncertainty in PCOT Python</h1>
-<p>Read this first: <a href="../classes/">Important Classes</a>.</p>
-<p>More details on Value and Datum can be found in <a href="../values/">How Values Work</a>.</p>
+<p>Read this first: <a href="/devguide/classes">Important Classes</a>.</p>
+<p>More details on Value and Datum can be found in <a href="/devguide/values">How Values Work</a>.</p>
 <p>When you are writing code which uses PCOT as a library, or adding
 new nodes or other functionality to PCOT itself, you will be dealing
 with quantities which have inherent uncertainty. Every number, including
@@ -262,7 +266,7 @@ calculations required to process an image would make PCOT grind to a halt.</p>
 of some the calculations in PCOT, the paths data can take through a graph, and
 the nature of the sources, it would be impossible to work out all the
 covariances. You need to consider this carefully both in your calculations
-and how you use PCOT <a href="../../gettingstarted/concepts/#uncertainty">as we have seen before</a>.</p>
+and how you use PCOT <a href="/gettingstarted/concepts/#uncertainty">as we have seen before</a>.</p>
 <h2 id="formulae-used">Formulae used</h2>
 <table>
 <thead>
@@ -311,12 +315,12 @@ and how you use PCOT <a href="../../gettingstarted/concepts/#uncertainty">as we 
 <tr>
 <td><span class="arithmatex"><span class="MathJax_Preview">a \wedge b</span><script type="math/tex">a \wedge b</script></span></td>
 <td><span class="arithmatex"><span class="MathJax_Preview">\min(\sigma_a,\sigma_b)</span><script type="math/tex">\min(\sigma_a,\sigma_b)</script></span></td>
-<td>minimum, i.e. the fuzzy logic "OR" operator, "|" in Python</td>
+<td>i.e. the fuzzy logic "OR" operator, "|" in Python</td>
 </tr>
 <tr>
 <td><span class="arithmatex"><span class="MathJax_Preview">a \vee b</span><script type="math/tex">a \vee b</script></span></td>
 <td><span class="arithmatex"><span class="MathJax_Preview">\max(\sigma_a,\sigma_b)</span><script type="math/tex">\max(\sigma_a,\sigma_b)</script></span></td>
-<td>maximum, i.e. the fuzzy logic "AND" operator, "&amp;" in Python</td>
+<td>i.e. the fuzzy logic "AND" operator, "&amp;" in Python</td>
 </tr>
 <tr>
 <td><span class="arithmatex"><span class="MathJax_Preview">\sqrt{a}</span><script type="math/tex">\sqrt{a}</script></span></td>
@@ -424,7 +428,7 @@ look at <code>xformesimpleexample.py</code> in the PCOT code (in
 node processes data using the above technique.</p>
 </div>
 <h2 id="the-value-class">The Value class</h2>
-<p>As mentioned above, numeric values and arrays are stored using the <a href="../values/"><code>Value</code> class</a>,
+<p>As mentioned above, numeric values and arrays are stored using the <a href="/devguide/values"><code>Value</code> class</a>,
 and occasionally it may be necessary to work at this level. It is also useful to understand
 some of the extra work that is done here in addition to the "raw" uncertainty
 calculations which are mentioned in the final section.</p>

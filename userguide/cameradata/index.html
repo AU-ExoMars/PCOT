@@ -118,6 +118,10 @@
 <li>
     <a href="../settings/" class="dropdown-item">Settings dialog</a>
 </li>
+                                    
+<li>
+    <a href="../devbranch/" class="dropdown-item">Using the development branch</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">
@@ -237,7 +241,7 @@ storing them under names given in the files themselves.</p>
 data for AUPE and PanCam from the <a href="https://pcot.aber.ac.uk">PCOT Cookbook</a> site.</p>
 <p>Store the camera files in a separate directory from the reflectances.
 In my own system, I've created <code>cameras</code> and <code>reflectances</code> directories
-in my PCOT install directory.</p>
+in my PCOT install directory. <a href="/wobble">wibble</a></p>
 <p>The rest of this page describes how to make your own data files if you
 are working with a new camera or target.</p>
 <h2 id="creating-camera-files">Creating camera files</h2>
@@ -384,7 +388,7 @@ To specify the raw loader fully use the following format:</p>
       preset: pancam-rawloader  # use this multifile preset for loading PANCAM files
 </code></pre>
 <p>where the preset has been created in the multifile input. However, It's best to specify the data fully rather than risk another user not having the preset when
-trying to reconstruct the data. See the <a href="../multifile/">multifile docs</a> for more details on presets for loading binary
+trying to reconstruct the data. See the <a href="/userguide/multifile.md">multifile docs</a> for more details on presets for loading binary
 files. </p>
 <h3 id="remapping-filter-names-in-flatfield-data">Remapping filter names in flatfield data</h3>
 <p>Sometimes the directory names are not the same as the filter names or positions. In
@@ -465,7 +469,7 @@ $$
 Each <code>.sed</code> file is directly taken from the RS-3500 instrument; we use the Reflect. (reflectance) percentage field.</p>
 <h2 id="listing-camera-data-using-pcot">Listing camera data using PCOT</h2>
 <div class="alert alert-info" role="alert">
-<p>Some of this information is duplicated in <a href="../multifile/">the multifile input docs </a></p>
+<p>Some of this information is duplicated in <a href="/userguide/multifile/">the multifile input docs </a></p>
 </div>
 <p>You can find out which cameras are available and what data they have using the <code>lscams</code> subcommand:</p>
 <pre><code class="language-commandline">pcot lscams
