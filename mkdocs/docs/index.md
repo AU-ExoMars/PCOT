@@ -35,6 +35,10 @@ The [PCOT Cookbook](https://pcot.aber.ac.uk) is a separate site
 with useful techniques and examples. It also hosts the 
 camera and reflectance target definition files.
 
+## Dev branch
+Those of you with an adventurous bent may wish to try the current
+development branch. [Instructions are here](userguide/devbranch.md).
+
 ## Reporting bugs
 
 There are known issues which can stop PCOT running - see

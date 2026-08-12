@@ -42,6 +42,7 @@ nav:
         - Autodocs: autodocs/index.md
         - Favorites and macros: userguide/favesandmacros/index.md
         - Settings dialog: userguide/settings.md
+        - Using the development branch: userguide/devbranch.md
     - Developer's Guide:
         - Overview: devguide/index.md
         - Using PCOT as a library: devguide/library.md
