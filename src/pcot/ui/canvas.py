@@ -794,6 +794,24 @@ class InnerCanvas(QtWidgets.QWidget):
         self.setOverlayRadius()
         self.specOverlay.update()
 
+    def copyToClipboard(self):
+        """Copy the currently displayed view to the clipboard as an image. We just grab the widget
+        rather than re-rendering, because paintEvent already composites the DQ overlays and the
+        annotations/ROIs onto the RGB image - grabbing gives us exactly what's on screen.
+
+        Flashing DQ overlays are forced on for the grab: flashCycle toggles on a timer, so a
+        flashing layer could otherwise be mid-flash-off at the moment of the grab and silently
+        vanish from the copy."""
+        if self.rgb is None:
+            return
+        oldFlashCycle = self.flashCycle
+        self.flashCycle = True
+        try:
+            QtWidgets.QApplication.clipboard().setPixmap(self.grab())
+        finally:
+            self.flashCycle = oldFlashCycle
+
+
 
 
 
@@ -1262,6 +1280,7 @@ class Canvas(QtWidgets.QWidget):
         if not ev.isAccepted():  # if the event wasn't accepted, run our menu
             menu = QMenu()
             save = menu.addAction("Save as image, PDF, SVG or PARC")
+            copyToClipboard = menu.addAction("Copy image to clipboard")
             saveRect = menu.addAction("Store canvas view location")
             loadRect = menu.addAction("Load canvas view location")
             if Canvas.canvasRect is None:
@@ -1270,6 +1289,8 @@ class Canvas(QtWidgets.QWidget):
             a = menu.exec(ev.globalPos())
             if a == save:
                 self.saveAction()
+            elif a == copyToClipboard:
+                self.canvas.copyToClipboard()
             elif a == saveRect:
                 Canvas.canvasRect = (self.canvas.x,self.canvas.y,self.canvas.zoomscale)
             elif a == loadRect:
