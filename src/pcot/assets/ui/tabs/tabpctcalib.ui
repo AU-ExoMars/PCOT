@@ -115,6 +115,16 @@
             <string>Edge</string>
            </property>
           </item>
+          <item>
+           <property name="text">
+            <string>White Fill</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Red Fill</string>
+           </property>
+          </item>
          </widget>
         </item>
         <item row="2" column="0">

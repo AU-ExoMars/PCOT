@@ -162,7 +162,12 @@ class CalibrationTargetBase(XFormType):
                         p = self.target.patches[i]
                         r.label = p.name
                         r.labeltop = True
-                        r.colour = p.col
+                        if node.drawMode == "Red Fill":
+                            r.colour = (1,0,0)
+                        elif node.drawMode == "White Fill":
+                            r.colour = (1,1,1)
+                        else:
+                            r.colour = p.col
 
                         r.fontsize = node.roiLabelSize
                         r.thickness = 0

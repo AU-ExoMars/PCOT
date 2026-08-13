@@ -625,13 +625,16 @@ class TabReflectance(pcot.ui.tabs.Tab):
                         label=f"{band} {int(cwl)}nm", fmt='x',
                         color=colname)
 
-            # point labelling: don't do this if we're plotting all bands or it's turned off
-            if len(bands) == 1 and self.node.params.show_patches:
+
+
+            # point labelling and title : don't do this if we're plotting all bands or it's turned off
+            if len(bands) == 1:
                 ax.set_title(f"Fit for {band} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}")
-                for i, patch in enumerate(patches):
-                    # plot the patch name and the measured value at the point
-                    ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f} (n={sample_counts[i]})",
-                                (known_mean[i], measured_mean[i]), fontsize=8)
+                if  self.node.params.show_patches:
+                    for i, patch in enumerate(patches):
+                        # plot the patch name and the measured value at the point
+                        ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f} (n={sample_counts[i]})",
+                                    (known_mean[i], measured_mean[i]), fontsize=8)
 
         if len(bands) > 1:
             ax.legend(loc="lower right")
