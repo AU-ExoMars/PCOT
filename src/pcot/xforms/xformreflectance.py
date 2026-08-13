@@ -323,7 +323,6 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.replot.clicked.connect(self.replot)
         self.w.showPatchesBox.checkStateChanged.connect(self.showPatchesStateChanged)
         self.w.sepPlotsBox.checkStateChanged.connect(self.sepPlotsBoxStateChanged)
-        self.w.saveButton.clicked.connect(self.save)
         self.w.showMCButton.clicked.connect(self.showMCClicked)
         self.w.hideButton.clicked.connect(self.hideClicked)
         self.w.fudgesInfoButton.clicked.connect(self.showFudgesInfo)
@@ -340,9 +339,6 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.fudgesInfoButton.setIcon(Icons.get("info"))
 
         self.nodeChanged()
-
-    def save(self):
-        self.w.mpl.save()
 
     def showFudgesInfo(self):
         showHelpDialog(self,"Fudges", """

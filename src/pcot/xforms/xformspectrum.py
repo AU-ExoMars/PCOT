@@ -240,7 +240,6 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.bandwidthmode.currentIndexChanged.connect(self.bandwidthmodeChanged)
         self.w.colourmode.currentIndexChanged.connect(self.colourmodeChanged)
         self.w.replot.clicked.connect(self.replot)
-        self.w.save.clicked.connect(self.save)
         self.w.reorderButton.clicked.connect(self.openReorder)
         self.w.stackSepSpin.valueChanged.connect(self.stackSepChanged)
         self.w.legendFontSpin.valueChanged.connect(self.legendFontSizeChanged)
@@ -351,9 +350,6 @@ class TabSpectrum(ui.tabs.Tab):
 
         self.w.mpl.draw()
         theme.setStaleStyle(self.w.replot, False)
-
-    def save(self):
-        self.w.mpl.save()
 
     def hideClicked(self):
         self.w.controls.setVisible(not self.w.controls.isVisible())

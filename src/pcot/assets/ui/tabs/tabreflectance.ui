@@ -252,13 +252,6 @@
        </widget>
       </item>
       <item row="10" column="0">
-       <widget class="QPushButton" name="saveButton">
-        <property name="text">
-         <string>Save plot</string>
-        </property>
-       </widget>
-      </item>
-      <item row="10" column="1">
        <widget class="QPushButton" name="showMCButton">
         <property name="text">
          <string>Show m,c</string>

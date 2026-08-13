@@ -92,7 +92,6 @@ class TabHistogram(Tab):
         super().__init__(w, node, 'tabhistogram.ui')
         self.w.bins.editingFinished.connect(self.binsChanged)
         self.w.replot.clicked.connect(self.replot)
-        self.w.save.clicked.connect(self.save)
         self.nodeChanged()
 
     def replot(self):
@@ -113,9 +112,6 @@ class TabHistogram(Tab):
             self.w.mpl.ax.legend()
             self.w.mpl.draw()
         theme.setStaleStyle(self.w.replot, False)
-
-    def save(self):
-        self.w.mpl.save()
 
     def binsChanged(self):
         self.mark()

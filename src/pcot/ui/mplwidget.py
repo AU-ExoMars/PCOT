@@ -7,6 +7,8 @@ https://www.learnpyqt.com/courses/graphics-plotting/plotting-matplotlib/
 import os
 
 from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QMenu
 
 import matplotlib
 
@@ -43,6 +45,25 @@ class MplWidget(QtWidgets.QWidget):
         self.setLayout(self.vbl)
         self.fig = self.canvas.fig  # convenience
         self.ax = self.canvas.ax    # ditto
+
+        # right-click menu for copying the plot to the clipboard or saving it to a file
+        self.canvas.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.canvas.customContextMenuRequested.connect(self.showContextMenu)
+
+    ## show the right-click menu on the plot
+    def showContextMenu(self, pos):
+        menu = QMenu(self)
+        copyAct = menu.addAction("Copy to clipboard")
+        saveAct = menu.addAction("Save...")
+        act = menu.exec(self.canvas.mapToGlobal(pos))
+        if act == copyAct:
+            self.copyToClipboard()
+        elif act == saveAct:
+            self.save()
+
+    ## copy the current figure to the system clipboard as an image
+    def copyToClipboard(self):
+        QApplication.clipboard().setPixmap(self.canvas.grab())
 
     ## called when we want to save a figure
     def save(self):
