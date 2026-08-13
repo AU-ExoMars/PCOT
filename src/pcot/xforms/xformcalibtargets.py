@@ -15,6 +15,7 @@ from pcot.rois import getRadiusFromSlider, ROIPainted
 from pcot.utils.deb import Timer
 from pcot.utils.flood import MeanFloodFiller, FloodFillParams
 from pcot.xform import xformtype, XFormType, XFormException
+from pcot.xforms.tabgeneric import TabGeneric
 
 # scale of editing brush
 BRUSHSCALE = 0.1
@@ -575,3 +576,31 @@ class XFormColorCheckerClassic(CalibrationTargetBase):
 
 
 XFormColorCheckerClassic._cls.__doc__ += _ROI_CONTROLS_HELP
+
+
+@xformtype
+class XFormCalibrate(XFormType):
+    """
+    Perform calibration of an image given the coefficients m,c from a reflectance
+    node (or possibly elsewhere). These are vectors of gradient and intercept for
+    each channel.
+    """
+    def __init__(self):
+        super().__init__("calibrate", "calibration","0.0.0")
+        self.addInputConnector("img", Datum.IMG)
+        self.addInputConnector("m", Datum.NUMBER)
+        self.addInputConnector("c", Datum.NUMBER)
+        self.addOutputConnector("", Datum.IMG)
+
+    def perform(self, node):
+        img = node.getInput(0, Datum.IMG, return_datum=True)
+        m = node.getInput(1, Datum.NUMBER, return_datum=True)
+        c = node.getInput(2, Datum.NUMBER, return_datum=True)
+        img = (img - c)/m
+        node.setOutput(0, img)
+
+    def init(self,node):
+        pass
+
+    def createTab(self, xform, window):
+        return TabGeneric(xform, window)

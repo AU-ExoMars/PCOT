@@ -150,6 +150,9 @@ class Document:
         if 'MACROS' in d:
             self.macros.clear()
             for k, v in d['MACROS'].items():
+                if k in XFormType.all():
+                    ui.warn(f"Macro '{k}' has the same name as a built-in node type and will be ignored.")
+                    continue
                 XFormMacro(self, k, data=v)  # will autoregister, so it ends up in self.macros and the palette!
 
         if 'FAVOURITES' in d:
@@ -369,6 +372,9 @@ class Document:
             if name in doc.macros:
                 if name in self.macros:
                     ui.warn(f"Macro {name} already exists, skipping.")
+                    continue
+                if name in XFormType.all():
+                    ui.warn(f"Macro '{name}' has the same name as a built-in node type and will be ignored.")
                     continue
                 s = doc.macros[name].graph.serialise()
                 p = XFormMacro(self, name)
