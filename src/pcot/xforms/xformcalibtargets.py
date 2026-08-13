@@ -94,7 +94,9 @@ class CalibrationTargetBase(XFormType):
         self.addInputConnector("img", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.params = TaggedDictType()  # no parameters; it's pointless because the ROIs are painted.
-        self.autoserialise = ('brushSize', 'pctPoints', 'drawMode', ('roiScale', 1.0), ('roiGenMode', 'Shape'),
+        self.autoserialise = ('brushSize', 'pctPoints', 'drawMode', ('roiScale', 1.0),
+                              ('roiGenMode', 'Shape'),
+                              ('roiLabelSize', 4),
                               ('floodTolerance', 0.05))
         self.target = target
 
@@ -130,7 +132,7 @@ class CalibrationTargetBase(XFormType):
         node.rois = []  # list of ROIs (ROIPainted); if none then we're editing points.
         node.selROI = None  # selected ROI index or None
         node.showStdDevs = False  # show stddevs on canvas
-        node.roiLabelSize = 8  # roi label size 0-20
+        node.roiLabelSize = 4  # roi label size 0-20
 
     def perform(self, node):
         img_in = node.getInput(0, Datum.IMG)
@@ -161,6 +163,7 @@ class CalibrationTargetBase(XFormType):
                         r.label = p.name
                         r.labeltop = True
                         r.colour = p.col
+
                         r.fontsize = node.roiLabelSize
                         r.thickness = 0
                         r.drawbg = True
