@@ -783,16 +783,16 @@ class XForm:
         except IndexError as e:
             raise IndexError(f"Node '{self.displayName}' has no output {i}") from e
 
-    def getOutput(self, i, tp=None):
+    def getOutput(self, i, tp=None, return_datum=False):
         """get an output, raising an exception if the type is incorrect or the index is output range
         used in external code; compare with Datum.get() which doesn't raise. Dereferences the output,
-        so you get the value stored in the Datum.
+        so you get the value stored in the Datum - unless you set return_datum.
         """
         d = self.outputs[i]  # may raise IndexError
         if d is None:
             return None
         elif tp is None or d.tp == tp or tp == Datum.IMG and d.isImage():
-            return d.val
+            return d if return_datum else d.val
         else:
             raise BadTypeException(i)
 
@@ -1036,10 +1036,12 @@ class XForm:
             traceback.print_exc()
             ui.logXFormException(self, e)
 
-    def getInput(self, i: int, tp=None):
+    def getInput(self, i: int, tp=None, return_datum=False):
         """get the value of an input.
-            Optional type; if passed in will check for that type and dereference the contents if
+            * Optional type; if passed in will check for that type and dereference the contents if
             matched, else returning null.
+            * Optional return_datum: if true and a type is supplied, this will just check
+            the type but still return the containing Datum.
             """
         if self.inputs[i] is None:
             # if we're asking for a particular type, "dereference" the
@@ -1067,8 +1069,12 @@ class XForm:
                 # we create an exception and deal with it locally.
                 self.setError(XFormException('TYPE', f"expected a {tp}, got {o.tp}"))
                 return None
+            elif return_datum:
+                # although we've given a type, we still just want the Datum containing it. Do no
+                # unwrapping.
+                return o
             else:
-                # we have passed in a type and it matches, so dereference
+                # we have passed in a type and it matches, so dereference/unwrap
                 return o.val
 
     def ensureConnectionsValid(self):
