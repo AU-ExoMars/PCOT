@@ -39,13 +39,16 @@ class Filter:
     wavelengths: Optional[np.ndarray]
     # filter response data
     response: FilterResponse
+    # super-Gaussian order used only when simulating the response (1 = standard Gaussian)
+    order: float
 
     def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, camera_name=None, description=None,
-                 response:FilterResponse = None
+                 response:FilterResponse = None, order=1
                  ):
         """constructor:
             If we don't pass in a FilterResponse object this class will create one that simulates the response
-            based on cwl,fwhm,transmission.
+            based on cwl,fwhm,transmission,order (order is the super-Gaussian order used only for simulation;
+            order=1 is a standard Gaussian).
         """
         self.cwl = cwl
         self.fwhm = fwhm
@@ -54,9 +57,10 @@ class Filter:
         self.position = position
         self.camera_name = camera_name
         self.description = description
+        self.order = order
         if response is None:
             # create simulated filter if none provided
-            response = FilterResponse.createSimulated(cwl, fwhm, transmission)
+            response = FilterResponse.createSimulated(cwl, fwhm, transmission, order)
         self.response = response
 
     def __hash__(self):
@@ -97,7 +101,8 @@ class Filter:
             "name": self.name,
             "camera_name": self.camera_name,
             "description": self.description,
-            "response": resp
+            "response": resp,
+            "order": self.order
         }
 
     @classmethod
@@ -117,6 +122,7 @@ class Filter:
             camname = d["camera_name"]
             resp = d["response"]
             desc = d["description"]
+            order = d.get("order", 1)
         elif isinstance(d, list):
             # legacy stuff
             # we might have to deserialise a truncated tuple for legacy code
@@ -124,6 +130,7 @@ class Filter:
             d = d + defaults[len(d):]
             cwl, fwhm, trans, pos, name, camname, desc, resp = d
             resp = None
+            order = 1
         else:
             raise ValueError("filter serialisation format is not valid")
 
@@ -131,8 +138,8 @@ class Filter:
         if resp is not None:
             response = FilterResponse.deserialise(d["response"])
         else:
-            response = FilterResponse.createSimulated(cwl,fwhm,trans)
-        return Filter(cwl, fwhm, trans, pos, name, camname, desc, response=response)
+            response = FilterResponse.createSimulated(cwl, fwhm, trans, order)
+        return Filter(cwl, fwhm, trans, pos, name, camname, desc, response=response, order=order)
 
     def getResponse(self, wavelengths: np.ndarray, angle=0) -> np.ndarray:
         """Get the filter response at the given wavelengths and angle. This may be a simulated response

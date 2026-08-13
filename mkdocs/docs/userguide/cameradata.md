@@ -70,6 +70,21 @@ filters:
 (and so on)
 ```
 
+If no `response` field is given (see below), the filter's response is simulated as a Gaussian from
+`cwl` and `fwhm`. You can make this simulated profile more of a top-hat shape, with a roll-off at the
+edges, by adding an optional `order` field (default 1, giving a standard Gaussian); higher values
+square off the profile while still passing through half-maximum at `cwl` ± `fwhm/2`. For example:
+
+```yaml
+  C03L:
+    cwl: 500
+    fwhm: 40
+    position: L01
+    transmission: 1.0
+    order: 4
+    description: "Simulated top-hat filter"
+```
+
 ## Filter response data
 
 As well as the above parameters, filters typically have a CSV file containing filter response data

@@ -56,11 +56,13 @@ class FilterResponse:
         return f"{'sim' if self._is_simulated else 'real'},{dims}"
 
     @staticmethod
-    def createSimulated(cwl: float, fwhm: float, transmission: float):
-        """Simulate a Gaussian filter profile with the given centre wavelength, full-width at half-maximum
-        and transmission. Return the values at the given wavelengths. We keep a cache of these."""
+    def createSimulated(cwl: float, fwhm: float, transmission: float, order: float = 1):
+        """Simulate a super-Gaussian filter profile with the given centre wavelength, full-width at half-maximum,
+        transmission and order. order=1 gives a standard Gaussian; larger orders square off the profile towards a
+        top-hat shape with a roll-off at the edges. Return the values at the given wavelengths. We keep a cache
+        of these."""
 
-        key = f"{cwl}/{fwhm}{transmission}"
+        key = f"{cwl}/{fwhm}/{transmission}/{order}"
         if key in FilterResponse._sim_cache:
             return FilterResponse._sim_cache[key]
 
@@ -68,10 +70,11 @@ class FilterResponse:
             # handle the "dummy filter" response
             values = np.zeros(SIMULATED_FILTER_WAVELENGTHS.shape)
         else:
-            sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
-            values = transmission * np.exp(-0.5 * ((SIMULATED_FILTER_WAVELENGTHS - cwl) / sigma) ** 2)
+            # sigma is derived so that the profile still passes through half-maximum at cwl +/- fwhm/2
+            # regardless of order.
+            sigma = (fwhm / 2) / (2 * np.log(2)) ** (1 / (2 * order))
+            values = transmission * np.exp(-0.5 * (np.abs(SIMULATED_FILTER_WAVELENGTHS - cwl) / sigma) ** (2 * order))
         res = FilterResponse(None, wavelengths=SIMULATED_FILTER_WAVELENGTHS, values=values, is_simulated=True)
-        FilterResponse._sim_cache[key] = res
         FilterResponse._sim_cache[key] = res
         return res
 

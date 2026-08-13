@@ -200,7 +200,8 @@ def createFilters(filter_dict, position_dict=None):
             name=k,
             response=response,
             position=pos,
-            description=d.get("description", "No description given"))
+            description=d.get("description", "No description given"),
+            order=d.get("order", 1))
         fs[k] = f
     return fs
 

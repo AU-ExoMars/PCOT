@@ -15,6 +15,7 @@ FILTERDICT = TaggedDictType(
     position=("Position of filter in camera (e.g. 'L01')", Maybe(str), None),
     name=("Name of filter", Maybe(str), None),
     response=("Filter response data", Maybe(dict), None),   # the dict is a serialised FilterResponse object
+    order=("Super-Gaussian order used only when simulating the response (1 = standard Gaussian)", float, 1.0),
 )
 
 FILTERLIST = TaggedListType(FILTERDICT, 0)
@@ -73,7 +74,7 @@ class CameraParams:
             return None if d is None else FilterResponse.deserialise(d)
 
         p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name,
-                                    None, response=deser_response(f.response))
+                                    None, response=deser_response(f.response), order=f.order)
                      for f in p.params['filters']}
 
         for f in p.filters.values():
@@ -88,7 +89,7 @@ class CameraParams:
         self.params.filters.clear()
         for k, v in self.filters.items():
             e = self.params.filters.append_default()
-            for attr in ('cwl', 'fwhm', 'transmission', 'position', 'name'):
+            for attr in ('cwl', 'fwhm', 'transmission', 'position', 'name', 'order'):
                 e[attr] = getattr(v, attr)
             # save a serialised version of the filter response - this include nparrays, but that
             # is still serialisable if we're saving to a FileArchive.
