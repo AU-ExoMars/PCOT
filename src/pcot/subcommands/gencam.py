@@ -23,6 +23,7 @@ class FlatFileData:
     key: str  # either "name" or "position" - used to look up which filter we are adding data for
     preset: str  # if loading raw binary files, the multifile loader preset to use
     bitdepth: int  # how many bits are used; we scale the data according to this
+    leftjustified: bool  # is the data left-justified if the bitdepth is not full?
     filters: dict  # a dictionary of filtername -> Filter object.
 
     # Each filter has a directory, which is usually named after the filter name or position.
@@ -139,6 +140,7 @@ def gencam(args):
                                 flatd["key"],       # "name" or "position"
                                 flatd.get("preset", None),
                                 flatd.get("bitdepth", None),
+                                flatd.get("leftjustified", None),
                                 fs,
                                 flatd.get("directory_map", None),
                                 get_raw_loader(flatd))
@@ -256,7 +258,7 @@ def get_files_for_filter(filt, data):
 
     try:
         cube = load.multifile(dirpath, list_of_files, bitdepth=data.bitdepth, filterpat=".*",
-                              camera=None, really_no_camera=True,
+                              camera=None, really_no_camera=True,leftjustified=data.leftjustified,
                               rawloader=data.rawloader).get(Datum.IMG)
     except CannotLoadImageBadFormatException as e:
         raise Exception(f"Cannot load an image due to a bad format extension - should you be using a rawloader?")

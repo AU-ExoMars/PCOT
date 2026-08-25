@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 @xformtype
 class XFormSpecParam(XFormType):
+    """
+    Simple node for evaluating common spectral parameters. These are divided into groups
+    and are loaded from assets/data/builtin_spectral_parameters.yaml.
+    """
     def __init__(self):
         super().__init__("spectral parameter", "processing", "0.0.0")
         self.addInputConnector("", Datum.IMG)
