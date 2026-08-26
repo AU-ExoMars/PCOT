@@ -1,4 +1,5 @@
 import logging
+import re
 
 from pcot.cameras.filters import DUMMY_FILTER
 from pcot.cameras.filtresponse import FilterResponse
@@ -213,6 +214,17 @@ class CameraData:
                         v_in_filter = -100  # make sure it won't match if it's not a float
                 if v_in_filter == value:
                     matches.append(x)
+                else:
+                    # if both the filter pos in the camera (e.g.L01) and the name from the file (e.g.L1) consist of
+                    # "<string><digits>" then allow a match if the strings are the same and the int represented by
+                    # the digits is the same.
+                    matches_in_value = re.match(r"^([a-zA-Z]+)([0-9]+)$", str(value))
+                    matches_in_filter = re.match(r"^([a-zA-Z]+)([0-9]+)$", str(v_in_filter))
+                    if matches_in_filter and matches_in_value:
+                        if matches_in_value.group(1) == matches_in_filter.group(1) and \
+                                int(matches_in_value.group(2)) == int(matches_in_filter.group(2)):
+                            matches.append(x)
+
             if len(matches) > 1:
                 raise ValueError(f"Multiple matches for {key}={value}")
             elif len(matches) == 0:
