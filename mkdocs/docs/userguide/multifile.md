@@ -63,7 +63,6 @@ using the Camera widget.
 
 ## Which image is which filter? Setting a file pattern
 
-
 The multifile input method lets you specify a camera, but PCOT still needs to
 be able to work out which filter was used to capture each band in the image.
 This is done by extracting the filter name or position from the filename using
@@ -102,7 +101,6 @@ then be used to look up the filter.
 
 The default pattern can be set from the [settings dialog](settings.md).
 
-
 ### Named matches and how they are used
 
 Only one of the following should be true (e.g. you can't use
@@ -122,6 +120,38 @@ position field - as such, it's a simpler version of the `lens`/`n` combination
 name
 * `cwl`: if this is found, it is used to match a filter using the CWL
 (wavelength) field
+
+### Special handling for "lens/n" patterns
+
+We often have filter positions like "L01" but filenames containing "...LWAC01..." or
+"...LWAC1..." with either leading zeroes or without. However, PCOT must consider
+them to be the same.
+
+To make this happen, the comparison function for filter positions first checks
+that both strings - the filename match (e.g. "LWAC1") and the position name ("L01") -
+are a string of letters followed by a string of numbers. If they aren't, the filename
+match must be the same as the filter position.
+
+If the two strings are in the appropriate form, they are split into two parts - the 
+string and number sections. The string sections must be the same, but the number sections
+are compared *after being converted to integers*.
+
+This is best explained by example. Consider the pattern
+```txt
+.*(?P<lens>[LR](WAC(?P<n>[0-9][0-9]).*
+```
+Here, `lens` can be either L or R, `n` is a sequence of digits. As described above,
+these are combined together to form a position, so "LWAC01" would become the position
+"L01". Given the following filenames, here are those which would match the filter position
+"L01":
+
+| filename            |match|notes|
+|---------------------|-----|-----|
+| LWAC01.png          |yes|simplest form of match|
+| 8685-LWAC01-650.png |yes|lens=L, n=01|
+| 8745-LWAC01650.png  |no|lens=L, n=01650|
+|9384-LWAC1-foo.png|yes|lens=L, n=1, numerically equal to 01 in filter name|
+
 
 ## Missing filter data
 
