@@ -73,6 +73,9 @@ colourModes = ["fromROIs", "scheme1", "scheme2"]
 # short names for bandwidth modes used in the dialog
 bandwidthModes = ["none", "errorbar", "vertbar"]
 
+# short names for wavelength annotation modes used in the dialog
+annotateModes = ["none", "line", "linefwhm"]
+
 
 def fixSortList(node):
     # fix the sort list, making sure that only legends for the data we have are present,
@@ -137,7 +140,8 @@ class XFormSpectrum(XFormType):
             colourmode=("Colour mode", str, "fromROIs", colourModes),
             bandwidthmode=("Bandwidth mode", str, "none", bandwidthModes),
             ignorePixSD=("Ignore pixel standard deviation", bool, False),
-            fixedYAxis=("Y axis fixed to [0,1]", bool, False)
+            fixedYAxis=("Y axis fixed to [0,1]", bool, False),
+            annotate=("Wavelength annotation mode", str, "none", annotateModes)
         )
 
         for i in range(NUMINPUTS):
@@ -250,6 +254,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.hideButton.clicked.connect(self.hideClicked)
         self.w.ignorePixSD.checkStateChanged.connect(self.ignorePixSDChanged)
         self.w.fixedYBox.checkStateChanged.connect(self.fixedYAxisChanged)
+        self.w.annotateCombo.currentIndexChanged.connect(self.annotateModeChanged)
         self.nodeChanged()
 
     def replot(self):
@@ -318,6 +323,22 @@ class TabSpectrum(ui.tabs.Tab):
             if self.node.params.fixedYAxis:
                 ax.set_ylim(0,1)
 
+            if self.node.params.annotate != 'none':
+                # full height of the plot, regardless of the y-axis limits - so we use the
+                # x-axis transform, which keeps x in data coordinates but y in axes fraction (0-1).
+                ax.vlines(wavelengths, 0, 1, transform=ax.get_xaxis_transform(),
+                          colors='grey', linewidth=0.5, zorder=0)
+                for wl in wavelengths:
+                    ax.annotate(f"{int(round(wl))}nm", xy=(wl, 0),
+                                xycoords=('data', 'axes fraction'),
+                                xytext=(3, 3), textcoords='offset points',
+                                rotation=90, ha='left', va='bottom',
+                                fontsize=self.node.params.axisFontSize)
+                if self.node.params.annotate == 'linefwhm':
+                    for f in filters:
+                        ax.axvspan(f.cwl - f.fwhm / 2, f.cwl + f.fwhm / 2,
+                                   color='lightgrey', alpha=0.3, zorder=0)
+
             if self.node.params.errorbarmode != 'none':
                 # calculate standard errors from standard deviations
                 stderrs = [std / math.sqrt(pixels) for std, pixels in zip(sds, pixcounts)]
@@ -368,6 +389,11 @@ class TabSpectrum(ui.tabs.Tab):
     def fixedYAxisChanged(self, state):
         self.mark()
         self.node.params.fixedYAxis = (state == Qt.CheckState.Checked)
+        self.changed()
+
+    def annotateModeChanged(self, mode):
+        self.mark()
+        self.node.params.annotate = annotateModes[mode]
         self.changed()
 
     def errorbarmodeChanged(self, mode):
@@ -434,7 +460,8 @@ class TabSpectrum(ui.tabs.Tab):
         with SignalBlocker(self.w.errorbarmode, self.w.bandwidthmode, self.w.colourmode,
                            self.w.stackSepSpin, self.w.bottomSpaceSpin, self.w.rightSpaceSpin,
                            self.w.legendFontSpin, self.w.axisFontSpin, self.w.labelFontSpin,
-                           self.w.ignorePixSD,self.w.fixedYBox):
+                           self.w.ignorePixSD, self.w.fixedYBox,
+                           self.w.annotateCombo):
             self.w.errorbarmode.setCurrentIndex(errorBarModes.index(self.node.params.errorbarmode))
             self.w.bandwidthmode.setCurrentIndex(bandwidthModes.index(self.node.params.bandwidthmode))
             self.w.colourmode.setCurrentIndex(colourModes.index(self.node.params.colourmode))
@@ -446,3 +473,4 @@ class TabSpectrum(ui.tabs.Tab):
             self.w.labelFontSpin.setValue(self.node.params.labelFontSize)
             self.w.ignorePixSD.setChecked(self.node.params.ignorePixSD)
             self.w.fixedYBox.setChecked(self.node.params.fixedYAxis)
+            self.w.annotateCombo.setCurrentIndex(annotateModes.index(self.node.params.annotate))
