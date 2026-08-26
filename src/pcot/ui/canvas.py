@@ -1062,9 +1062,9 @@ class Canvas(QtWidgets.QWidget):
             combo.setMinimumWidth(110)
         hideable.setColumnStretch(1, 1)
 
-        self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
-        hideable.addWidget(self.resetMapButton, 3, 0, 1, 3)
-        self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
+        self.guessRGBButton = QtWidgets.QPushButton("Guess RGB")
+        hideable.addWidget(self.guessRGBButton, 3, 0, 1, 3)
+        self.guessRGBButton.clicked.connect(self.guessRGBButtonClicked)
 
         class GammaSlider(QtWidgets.QSlider):
             # subclass of a slider which zeroes on doubleclick
@@ -1463,7 +1463,7 @@ class Canvas(QtWidgets.QWidget):
         if not hasattr(o, 'persist'):
             o.canvaspersist = PersistBlock()
 
-    def resetMapButtonClicked(self):
+    def guessRGBButtonClicked(self):
         if self.previmg is not None:
             self.previmg.defaultMapping = None  # force a guess even if there is a default mat
             self.previmg.mapping.generateMappingFromDefaultOrGuess(self.previmg)
