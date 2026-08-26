@@ -176,6 +176,9 @@ flats:
     extension: png      # extension of image files (png or bin)
     bitdepth: 10        # how many bits are used in the data - this is 16bit data but only 
                         # the lower 10 bits are used - data will be multiplied up
+    leftjustified: y    # If this is true, the data has the bits given in "bitdepth" but has already
+                        # been left-shifted to fill the container. For example, a fully saturated
+                        # 10 bit value in a 16 bit container would be 1111111111000000.
     key: name           # "name" or "position" - the filter directories can be named for either        
 ```
 If you are creating the data from raw files - and this is typically the case - you will need to
