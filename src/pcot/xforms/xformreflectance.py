@@ -423,7 +423,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def filterChanged(self, i):
         # data unchanged, no need to mark or call changed().
-        self.node.filter_to_plot = self.w.filterCombo.currentText()
+        self.node.filter_to_plot = self.w.filterCombo.currentData()
         self.markReplotReady()
 
     def showPatchesStateChanged(self, state):
@@ -460,8 +460,10 @@ class TabReflectance(pcot.ui.tabs.Tab):
             self.w.filterCombo.clear()
             if self.node.filters:
                 filter_names = [f.name for f in self.node.filters]
-                self.w.filterCombo.addItem("ALL")
-                self.w.filterCombo.addItems(filter_names)
+                self.w.filterCombo.addItem("ALL", "ALL")
+                for f in self.node.filters:
+                    label = f"{f.name} ({int(round(f.cwl))}nm)" if f.cwl else f.name
+                    self.w.filterCombo.addItem(label, f.name)
                 try:
                     # +1 here because of the ALL value
                     self.w.filterCombo.setCurrentIndex(filter_names.index(self.node.filter_to_plot) + 1)
@@ -469,7 +471,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
                     # this filter is not in the image?
                     ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
                     self.w.filterCombo.setCurrentIndex(0)
-                    self.node.filter_to_plot = self.w.filterCombo.currentText()
+                    self.node.filter_to_plot = self.w.filterCombo.currentData()
 
         # reset and populate the warnings table
 
