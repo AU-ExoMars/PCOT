@@ -159,6 +159,19 @@ def createFilters(filter_dict, position_dict=None):
     """
     from pcot.cameras import filters
 
+    # there's a "special" filter called "defaults" that contains default information. First we need to set
+    # up defaults for this default!
+    defaults_dict = {
+        "transmission": 1.0,
+        "order" : 1.0
+    }
+    # and then override it with any values in that defaults section.
+    if "defaults" in filter_dict:
+        defaults_dict.update(filter_dict.get("defaults", {}))
+        # remove the defaults entry from the dict, so we don't consider it to be a filter
+        del filter_dict["defaults"]
+
+
     # we need to reverse the position dictionary from position:name to name:position
     if position_dict is not None:
         # check that the filter_dict does not contain position entries
@@ -169,6 +182,8 @@ def createFilters(filter_dict, position_dict=None):
         position_dict = {v: k for k, v in position_dict.items()}
     fs = {}  # the output dictionary of Filter objects
     for k, d in filter_dict.items():
+        # merge in default items
+        d = dict(defaults_dict, **d)
         if position_dict:
             # if we have a position dict, use that to get the position
             if k not in position_dict:
@@ -198,12 +213,12 @@ def createFilters(filter_dict, position_dict=None):
         f = filters.Filter(
             d["cwl"],
             d["fwhm"],
-            transmission=d.get("transmission", 1.0),
+            transmission=d["transmission"],
             name=k,
             response=response,
             position=pos,
             description=d.get("description", "No description given"),
-            order=d.get("order", 1))
+            order=d["order"])
         fs[k] = f
     return fs
 

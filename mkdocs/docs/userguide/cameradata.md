@@ -55,6 +55,11 @@ description: |
 # Filters organised thus:
 
 filters:
+  defaults:                 # optional default values for entries in each filter
+    order: 1                # for simulated filters, the order of the super-Gaussian.
+                            # used to simulate. 1 is just a Gaussian, higher makes the
+                            # filter more "top-hat-like"
+    
   C01L:                     # filter name
     cwl: 640                # centre wavelength
     fwhm: 100               # full-width at half-maximum

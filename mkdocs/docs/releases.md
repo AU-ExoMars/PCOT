@@ -96,6 +96,23 @@ so changing one changes all three.
 * Calibration target locator nodes *pct* and *colorchecker* have been improved, giving the user the option
 of using the actual patch shape (Shape mode) (which can be scaled) or a flood fill from the centre (the previous
 mode of operation) with a variable fill tolerance. The rectangular patches of the ColorChecker are now fully supported.
+* Calibration target locator nodes have new "White Fill" and "Red Fill" ROI draw modes; single-band reflectance
+plots now always show the fit title. Macros that shadow a built-in node type's name are now ignored with a
+warning, rather than silently causing confusing behaviour.
+* *reflectance* node's filter-to-plot combo now shows each filter's wavelength, e.g. "C01L (640nm)".
+* *spectrum* node: new wavelength annotation modes (none/line/line+FWHM) draw a marker line and rotated
+wavelength label at each plotted point, with an optional pale band showing the filter's FWHM; the node's
+controls panel has been reorganised into tabs (Plot/Layout/Display) to reduce clutter.
+* Plot widgets (histogram, reflectance, spectrum) now have a right-click copy/save context menu; the
+redundant Save buttons have been removed from those tabs.
+* Canvas can now copy the current view to the clipboard, including ROIs, annotations and DQ overlays.
+* Multifile/camera filter position matching is now more forgiving: positions like "L01" and "L1" (with or
+without leading zeroes) are now treated as equivalent.
+* `gencam`: flat field data can now be marked `leftjustified` (bits shifted to fill the container) when
+building camera archives; simulated filter responses now support a super-Gaussian order parameter for more
+realistic filter shapes.
+* Input loading now falls back to the last good input data if a reload fails on save, and no longer resets
+the canvas RGB mapping on save/reload.
 
 Site
 
