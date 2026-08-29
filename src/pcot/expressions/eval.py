@@ -21,26 +21,39 @@ logger = logging.getLogger(__name__)
 
 @parserhook
 def registerBuiltinOperatorSyntax(p):
-    p.registerBinop('+', 10, lambda a, b: binop(Operator.ADD, a, b))
-    p.registerBinop('-', 10, lambda a, b: binop(Operator.SUB, a, b))
-    p.registerBinop('/', 20, lambda a, b: binop(Operator.DIV, a, b))
-    p.registerBinop('*', 20, lambda a, b: binop(Operator.MUL, a, b))
-    p.registerBinop('^', 30, lambda a, b: binop(Operator.POW, a, b))
 
+    # these are already present in the underlying parser as
+    # basic syntax
 
-    # standard fuzzy operators (i.e. Zadeh)
-    p.registerBinop('&', 20, lambda a, b: binop(Operator.AND, a, b))
-    p.registerBinop('|', 20, lambda a, b: binop(Operator.OR, a, b))
+    p.registerBinop('+', lambda a, b: binop(Operator.ADD, a, b))
+    p.registerBinop('-', lambda a, b: binop(Operator.SUB, a, b))
+    p.registerBinop('/', lambda a, b: binop(Operator.DIV, a, b))
+    p.registerBinop('*', lambda a, b: binop(Operator.MUL, a, b))
+    p.registerBinop('^', lambda a, b: binop(Operator.POW, a, b))
+    p.registerUnop('-', lambda a: unop(Operator.NEG, a))
 
-    p.registerBinop('$', 60, lambda a, b: binop(Operator.DOLLAR, a, b))
+    # these are additional operators and so need precedences
+    # defined and registered with the low-level parser.
 
-    # comparison operators
-    p.registerBinop('<', 60, lambda a, b: binop(Operator.LESSTHAN, a, b))
-    p.registerBinop('>', 60, lambda a, b: binop(Operator.GREATERTHAN, a, b))
+    # standard fuzzy operators (i.e. Zadeh). Very low precedence.
+    p.register_infix_left_associative('&', 20)
+    p.register_infix_left_associative('|', 20)
+    p.registerBinop('&', lambda a, b: binop(Operator.AND, a, b))
+    p.registerBinop('|', lambda a, b: binop(Operator.OR, a, b))
 
-    # unary ops bind tight
-    p.registerUnop('-', 70, lambda a: unop(Operator.NEG, a))
-    p.registerUnop('!', 80, lambda a: unop(Operator.NOT, a))
+    # band-extract operator, binds tight
+    p.register_infix_left_associative('$', 250)
+    p.registerBinop('$', lambda a, b: binop(Operator.DOLLAR, a, b))
+
+    # comparison operators, binds loose
+    p.register_infix_left_associative('<', 50)
+    p.register_infix_left_associative('>', 50)
+    p.registerBinop('<', lambda a, b: binop(Operator.LESSTHAN, a, b))
+    p.registerBinop('>', lambda a, b: binop(Operator.GREATERTHAN, a, b))
+
+    p.register_prefix("!", 175)
+    p.registerUnop('!', lambda a: unop(Operator.NOT, a))
+
 
 
 def unboundVar():
@@ -64,7 +77,7 @@ class ExpressionEvaluator(Parser):
     def __init__(self):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
-        super().__init__(True)  # naked identifiers permitted
+        super().__init__()
 
         # we register "none" as a variable for all parsers
         self.registerVar("none", "the null value", lambda: Datum.null)

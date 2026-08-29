@@ -38,8 +38,8 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any]) -> Datum:
     return mknumNum(op(a.get(Datum.NUMBER), b.get(Datum.NUMBER)))
 
 
-def execute(s, nakedIdents=False):
-    p = parse.Parser(nakedIdents=nakedIdents)
+def execute(s):
+    p = parse.Parser()
     p.registerFunc("sqrt", "calculate the square root",
                    [Parameter("angle", "value(s) to input", Datum.NUMBER)],
                    [],
@@ -58,12 +58,12 @@ def execute(s, nakedIdents=False):
                    [],
                    lambda args, optargs: mknumFloat(100.0), False)
 
-    p.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y))
-    p.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y))
-    p.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y))
-    p.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y))
-    p.registerBinop('^', 30, lambda a, b: binop(a, b, lambda x, y: x ** y))
-    p.registerUnop('-', 200, lambda a: mknumFloat(-(a.get(Datum.NUMBER).n)))
+    p.registerBinop('+', lambda a, b: binop(a, b, lambda x, y: x + y))
+    p.registerBinop('-', lambda a, b: binop(a, b, lambda x, y: x - y))
+    p.registerBinop('/', lambda a, b: binop(a, b, lambda x, y: x / y))
+    p.registerBinop('*', lambda a, b: binop(a, b, lambda x, y: x * y))
+    p.registerBinop('^', lambda a, b: binop(a, b, lambda x, y: x ** y))
+    p.registerUnop('-',  lambda a: mknumFloat(-(a.get(Datum.NUMBER).n)))
     p.registerVar('var1', "test var", lambda: variable_1)
     p.registerVar('var2', "test var", lambda: variable_2)
 
@@ -233,12 +233,7 @@ class TestNakedIdents(unittest.TestCase):
     unrecognised identifiers are found (so-called "naked idents")."""
     def test_1(self):
         """Check that naked idents work when the flag is set in execute()"""
-        self.assertEqual(execute('foo', True).get(Datum.IDENT), 'foo')
-
-    def test_2(self):
-        """Check an assertion is raised when we try to use naked idents without
-        the flag"""
-        self.assertRaises(parse.ParseException, lambda: execute('foo'))
+        self.assertEqual(execute('foo').get(Datum.IDENT), 'foo')
 
 
 class TestFunctions(unittest.TestCase):

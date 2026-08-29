@@ -1,8 +1,10 @@
-"""This is the expression parser and VM, which uses a shunting-yard algorithm to
-produce a sequence of instructions for a stack machine. While largely application
-independent, it does use PCOT's Datum type as a variant record, and conntypes to
-handle type checking. Help texts are also generated.
+"""This is the expression parser and VM. Parsing is done by the Pratt parser in
+prattparser.py, which produces a generic syntax tree; that tree is then walked
+(see Visitor) to produce a sequence of instructions for a stack machine. While
+largely application independent, it does use PCOT's Datum type as a variant
+record, and conntypes to handle type checking. Help texts are also generated.
 """
+from __future__ import annotations
 
 import numbers
 import logging
@@ -15,6 +17,7 @@ from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot.datum import Datum
 from pcot.datumtypes import Type, AnyType
+from pcot.expressions.prattparser import PrattParser, TreeVisitor
 from pcot.sources import nullSourceSet, SourceSet
 from pcot.utils.table import Table
 from pcot.value import Value
@@ -276,7 +279,6 @@ class InstVar(Instruction):
     """A VM instruction for stacking a variable.
     This encapsulates a function which should be called by the VM to get the variable's value."""
     var: Variable
-    name: str
 
     def __init__(self, var):
         self.var = var
@@ -288,38 +290,18 @@ class InstVar(Instruction):
         return "VAR {}".format(self.var.name)
 
 
-class InstFunc(Instruction):
-    """A VM instruction for stacking a function.
-    Does not call the function! InstCall does that. Holds the function to be called by the VM, and the
-    name of the function for debugging."""
-    callback: Callable[[List[Any]], Any]
-    name: str
-
-    def __init__(self, name, func: Function):
-        self.func = func
-        self.name = name
-
-    def exec(self, stack: Stack):
-        """actually stack the callback function, don't call it - InstCall does that."""
-        stack.append(Datum(Datum.FUNC, self.func, nullSourceSet))
-
-    def __str__(self):
-        return "FUNC {}".format(self.name)
-
-
 class InstOp(Instruction):
     """A VM instruction for performing a unary (prefix) or binary operation.
     The constructor fetches the function to call from the appropriate
     registry."""
     name: str
     prefix: bool
-    precedence: int
 
     def __init__(self, n: str, pre: bool, parser: 'Parser'):
         if pre and n in parser.unopRegistry:
-            self.precedence, self.callback = parser.unopRegistry[n]
+            self.callback = parser.unopRegistry[n]
         elif not pre and n in parser.binopRegistry:
-            self.precedence, self.callback = parser.binopRegistry[n]
+            self.callback = parser.binopRegistry[n]
         else:
             raise ParseException("unknown {} operator: {}".format('prefix' if pre else 'suffix', n))
         self.name = n
@@ -341,44 +323,20 @@ class InstOp(Instruction):
         return "OP {} {}".format(self.name, "PRE" if self.prefix else "IN")
 
 
-class InstBracket(InstOp):
-    """A VM instruction used internally to process brackets in the shunting yard algorithm;
-    should never be output as part of the instruction stream"""
-
-    def __init__(self, parser: 'Parser', pre=False):
-        # still need the string argument so InstOp knows which precedence to look up
-        super().__init__('(', pre, parser)
-        self.argcount = 0
-
-    def exec(self, stack: Stack):
-        raise Exception("bracket instruction should never be executed")
-
-
-class InstSquareBracket(InstOp):
-    """A VM instruction used internally to process square brackets in the shunting yard algorithm;
-    should never be output as part of the instruction stream"""
-
-    def __init__(self, parser: 'Parser', pre=False):
-        # still need the string argument so InstOp knows which precedence to look up
-        super().__init__('[', pre, parser)
-        self.argcount = 0
-
-    def exec(self, stack: Stack):
-        raise Exception("bracket instruction should never be executed")
-
-
 class InstCall(Instruction):
-    """The VM instruction which calls the function on top of the stack (see InstFunction).
-    If the function wasn't registered, an ident will be stacked instead."""
+    """Stack is arg0,arg1,arg2,func. Caller at top, and it's typically
+    a function name as an ident."""
 
-    def __init__(self, argcount):
+    def __init__(self, parser: Parser, argcount):
+        self.parser = parser    # need this for func lookup at runtime
         self.argcount = argcount
 
     def __str__(self):
         return "CALL  argcount: {}".format(self.argcount)
 
     def exec(self, stack: Stack):
-        """execute: pop off the args, then pop off the function value"""
+        """execute: pop off the func, then the args."""
+        func = stack.pop()
         if self.argcount != 0:
             args = stack[-self.argcount:]
             del stack[-self.argcount:]
@@ -386,16 +344,18 @@ class InstCall(Instruction):
             args = []
         # args.reverse()   # is this faster than just popping them in reverse order?
 
-        v = stack.pop()
-        if v.tp == Datum.IDENT:
-            raise ParseException("unknown function '{}' ".format(v.val))
-        elif v.tp == Datum.FUNC:
+        if func.tp == Datum.IDENT:
+            func = self.parser.funcRegistry.get(func.val)
+            if func is None:
+                raise ParseException("unknown function '{}' ".format(func.val))
+            stack.append(func.call(args))
+        elif func.tp == Datum.FUNC:
             # this executes the function by calling its call method,
             # which will do argument type checking.
-            stack.append(v.val.call(args))
+            stack.append(func.val.call(args))
         else:
             # if we do (say) "a()", we'll get "cannot call a (whatever input A is connected to)..."
-            raise ParseException("cannot call a {} as if it were a function".format(v.tp))
+            raise ParseException("cannot call a {} as if it were a function".format(func.tp))
 
 
 class InstCreateVector(Instruction):
@@ -445,14 +405,14 @@ class InstIndex(Instruction):
         return "INSTINDEX  argcount: {}".format(self.argcount)
 
     def exec(self, stack: Stack):
-        """execute: pop off the args, then pop off the vector value"""
+        """execute: pop off vector, then args"""
+        v = stack.pop()
         if self.argcount != 0:
             args = stack[-self.argcount:]
         else:
             args = []
         for x in range(0, self.argcount):
             stack.pop()
-        v = stack.pop()
 
         # the type should know how to do this.
         r = v.tp.getByIndices(v, args)
@@ -488,39 +448,59 @@ class CompiledExpression:
         return execute(self.instructions, stack)
 
 
-def isOp(t):
-    """Return whether a token is an operator (since we've got some weird ones)"""
-    return t.type in [OP, ERRORTOKEN, PERCENT, DOT]
+class Visitor(TreeVisitor):
+    def __init__(self, parser: Parser):
+        self.parser = parser
+
+    def generate_number(self, data: Any) -> Any:
+        return InstNumber(float(data.value))
+    def generate_string(self, data: Any) -> Any:
+        return InstString(data.value)
+    def generate_name(self, data: Any) -> Any:
+        # names are converted into variable references or bare identifiers
+        # if they are not variables (so that property fetch with "." works)
+        name = data.value
+        if name in self.parser.varRegistry:
+            return InstVar(self.parser.varRegistry[name])
+        else:
+            return InstIdent(data.value)
+    def generate_binop(self, data: Any) -> Any:
+        return InstOp(data, False, self.parser)
+    def generate_unop(self, data: Any) -> Any:
+        return InstOp(data, True, self.parser)
+    def generate_apply(self, data: Any, child_count: int) -> Any:
+        if data=='call':
+            # Needs to lookup the function at runtime, which is annoying.
+            # -1 because stacktop is the caller, which doesn't count!
+            return InstCall(self.parser, child_count-1)
+        elif data=='index':
+            return InstIndex(child_count-1)
+        else:
+            raise ParseException(f"unknown application treenode type: {data}")
+
+    def generate_vector(self, child_count:int) -> Any:
+        if child_count==0:
+            raise ParseException("syntax error - empty vectors not allowed")
+        return InstCreateVector(child_count)
 
 
-def dequote(s):
-    """Remove quotes from a string if it's quoted and the quotes match"""
-    if (len(s) >= 2 and s[0] == s[-1]) and s.startswith(("'", '"')):
-        return s[1:-1]
-    return s
 
-
-class Parser:
+class Parser(PrattParser):
     """Expression parser using the shunting algorithm, also incorporating the virtual machine for evaluation"""
-    list: List[TokenInfo]
-    opstack: List[Instruction]  # compile stack
 
-    ## if true, naked identifiers are stacked as strings.
-    nakedIdents: bool
+    ## binops are names (e.g. '+') mapped to a two-arg fn which returns a value
+    binopRegistry: Dict[str, Callable[[Any, Any], Any]]
 
-    ## binops are names (e.g. '+') mapped to precedence and two-arg fn which return a value
-    binopRegistry: Dict[str, Tuple[int, Optional[Callable[[Any, Any], Any]]]]
-
-    def registerBinop(self, name: str, precedence: int, fn: Callable[[Any, Any], Any]):
+    def registerBinop(self, name: str, fn: Callable[[Any, Any], Any]):
         """Register a binary operation"""
-        self.binopRegistry[name] = (precedence, fn)
+        self.binopRegistry[name] = fn
 
     ## unary ops are names mapped to precedence and single arg function which returns a value
-    unopRegistry: Dict[str, Tuple[int, Optional[Callable[[Any], Any]]]]
+    unopRegistry: Dict[str, Callable[[Any], Any]]
 
-    def registerUnop(self, name: str, precedence: int, fn: Callable[[Any], Any]):
+    def registerUnop(self, name: str, fn: Callable[[Any], Any]):
         """Register a unary operation"""
-        self.unopRegistry[name] = (precedence, fn)
+        self.unopRegistry[name] = fn
 
     ## vars are names mapped to argless fns (wrapped in a class) which
     # return their value
@@ -632,199 +612,31 @@ class Parser:
             t.add("description", " ".join(f.desc.split('\n')))
         return t.markdown()
 
-    def stackOp(self, op: InstOp):
-        """Internal method to put an operator onto the operator stack (part of shunting yard)"""
-        self.opstack.append(op)
+    def __init__(self):
+        """Initialise the parser, clearing all registered vars, funcs and ops."""
+        super().__init__()
 
-    def __init__(self, nakedIdents=False):
-        """Initialise the parser, clearing all registered vars, funcs and ops.
-        If nakedIdents are true, then identifiers which are not in the function
-        or variable registries are compiled as literal strings (InstIdent) """
+        # these are not the same as the registries used inside the PrattParser; those are lower level.
+        # These are used during post-processing of the AST to produce PCOT-level instructions.
         self.binopRegistry = dict()
         self.unopRegistry = dict()
         self.varRegistry = dict()
         self.funcRegistry = dict()
         self.properties = dict()
-        self.toks = []
 
-        self.nakedIdents = nakedIdents
-
-        # preregister the special operators for open bracket
-        self.binopRegistry['('] = (100, None)
-        self.unopRegistry['('] = (100, None)
-        self.binopRegistry['['] = (100, None)
-        self.unopRegistry['['] = (100, None)
-        # getProperty is built into the parser, but can be bound to any operator.
-        self.registerBinop('.', 80, lambda a, b: self.getProperty(a, b))
+        # getProperty is built into the parser. Binds before anything else.
+        self.register_infix_left_associative(".", 1000)
+        self.registerBinop('.', lambda a, b: self.getProperty(a, b))
 
     def parse(self, s: str) -> List[Instruction]:
-        """Parsing function - uses the shunting algorithm. Compiles the expression into
-        a list of VM instructions and returns it. Prefer compile() for a self-contained, reusable result.
-        See also
-        https://stackoverflow.com/questions/16380234/handling-extra-operators-in-shunting-yard/16392115
-        """
-        s = s.replace('\n', '').replace('\r', '')  # remove rogue newlines
-        x = BytesIO(s.encode())
-        self.toks = [x for x in (tokenize(x.readline) or []) if x.type != ENCODING
-                     and x.type != ENDMARKER and
-                     x.type != NEWLINE]
-        self.opstack = []
-        output = []
+        """Parse a string into a list of Instructions"""
+        # step 1 - get the syntax tree (i.e. actually parse, but PCOT-agnostic data)
+        t:TreeNode = super().parse(s)
+        # step 2 - walk this tree to get the actual instructions using a TreeVisitor
+        visitor = Visitor(self)
+        return visitor.visit(t)
 
-        wantOperand = True
 
-        while True:
-            if wantOperand:
-                ######### In this mode, we want an operand next. Otherwise we want an operator.
-                #   read a token. If there are no more tokens, announce an error.
-                t = self.next()
-                if t is None:
-                    raise ParseException("premature end", t)
-                elif isOp(t):
-                    #  if the token is an prefix operator or an open bracket:
-                    #    mark it as prefix and push it onto the operator stack
-                    # Note that the bracket case is different from when we meet it in the
-                    # !wantOperand case. It's just a prefix op here, otherwise we'd end up
-                    # generating a CALL when we don't want one.
-                    if t.string == '(':
-                        self.stackOp(InstBracket(self, pre=True))
-                    elif t.string == '[':
-                        self.stackOp(InstSquareBracket(self, pre=True))
-                    elif t.string in self.unopRegistry:
-                        self.stackOp(InstOp(t.string, True, self))
-                    #  if we meet a ')' or ']' it should be a function/array with no arguments
-                    #  So all the code in these two clauses only applies to [] or (). Sorry.
-                    elif t.string == ']':
-                        if len(self.opstack) == 0:  # we need that left bracket
-                            raise ParseException("syntax error : bad no-arg function - no left bracket", t)
-                        op = self.opstack.pop()
-                        if isinstance(op, InstSquareBracket):
-                            raise ParseException('syntax error: empty square brackets', t)
-                        elif isinstance(op, InstBracket):
-                            raise ParseException("syntax error : open bracket matched with close square bracket?", t)
-                        else:
-                            raise ParseException('syntax error: no-arg function with no name?', t)
-                    elif t.string == ')':
-                        if len(self.opstack) == 0:  # we need that left bracket
-                            raise ParseException("syntax error : bad no-arg function - no left bracket", t)
-                        op = self.opstack.pop()
-                        if isinstance(op, InstBracket):
-                            if not op.prefix:
-                                if op.argcount != 0:
-                                    raise ParseException("syntax error : bad no-arg function - has args!", t)
-                                output.append(InstCall(0))
-                                wantOperand = False
-                        elif isinstance(op, InstSquareBracket):
-                            raise ParseException("syntax error : open square bracket matched with close bracket?", t)
-                        else:
-                            raise ParseException('syntax error: no-arg function with no name?', t)
-                #     add it to the output queue
-                #     goto have_operand
-                elif t.type == NUMBER:
-                    output.append(InstNumber(float(t.string)))
-                    wantOperand = False
-                elif t.type == STRING:
-                    output.append(InstString(dequote(t.string)))
-                    wantOperand = False
-                elif t.type == NAME:
-                    if t.string in self.varRegistry:
-                        output.append(InstVar(self.varRegistry[t.string]))
-                    elif t.string in self.funcRegistry:
-                        fn = self.funcRegistry[t.string]
-                        output.append(InstFunc(t.string, fn))
-                    elif self.nakedIdents:
-                        output.append(InstIdent(t.string))
-                    else:
-                        raise ParseException("unknown variable or function", t)
-                    wantOperand = False
-                else:
-                    #   if the token is anything else, announce an error and stop.
-                    raise ParseException("weird token", t)
-            else:  # wantOperand = false
-                ######### In this mode, we want an operator next. Otherwise we want an operand.
-                #   read a token
-                t = self.next()
-                #   if there are no more tokens:
-                if t is None:
-                    #     pop all operators off the stack, adding each one to the output queue.
-                    while len(self.opstack) > 0:
-                        op = self.opstack.pop()
-                        #     if an open bracket is found on the stack, announce an error and stop.
-                        if isinstance(op, InstOp) and op.name == '(' or op.name == '[':
-                            raise ParseException("syntax error : mismatched bracket left", t)
-                        output.append(op)
-                    return output  # ALL DONE
-                #   if the token is a postfix operator:
-                #   could deal with postfix here, but won't.
-
-                # if the token is a close bracket:
-                if isOp(t) and t.string == ')' or t.string == ']':
-                    #     while the top of the stack is not '(' or '[':
-                    while self.stackTopIsNotLPar():
-                        #       pop an operator off the stack and add it to the output queue
-                        op = self.opstack.pop()
-                        output.append(op)
-                    #     if the stack becomes empty, announce an error and stop.
-                    if len(self.opstack) == 0:
-                        raise ParseException("syntax error : mismatched bracket right", t)
-                    #     if the '(' is marked infix, add a "call" operator to the output queue (*)
-                    #     (using the arg count from the '(' )
-                    op = self.opstack.pop()
-                    if isinstance(op, InstSquareBracket) and t.string == ')':
-                        raise ParseException("syntax error : mismatched bracket, expected ]", t)
-                    if isinstance(op, InstBracket) and t.string == ']':
-                        raise ParseException("syntax error : mismatched bracket, expected )", t)
-                    if op.prefix:
-                        # the open bracket for the close we just got was a prefix op - not a bracket that
-                        # immediately followed an operand. So it was something like the open bracket in
-                        # "4+(2-3)" and not like that in "foo(1,2,3)". We need do nothing if it was a normal
-                        # bracket. Square brackets need to generate a vector.
-                        if isinstance(op, InstSquareBracket):
-                            # We're creating a vector. See below for why the +1.
-                            output.append(InstCreateVector(op.argcount + 1))
-                    else:
-                        # We increment the argument count here because (like ",") closing a bracket marks a
-                        # new argument. That's why we have to deal with no arguments cleverly.
-                        if isinstance(op, InstSquareBracket):
-                            output.append(InstIndex(op.argcount + 1))
-                        elif isinstance(op, InstBracket):
-                            output.append(InstCall(op.argcount + 1))
-                        else:
-                            raise ParseException("syntax error : mismatched bracket right 2", t)
-
-                    #     pop the '(' off the top of the stack
-                    #     goto have_operand (already there)
-
-                elif isOp(t) and t.string == ',':
-                    #   if the token is a ',':
-                    #     while the top of the stack is not a '(' or '[' bracket:
-                    while self.stackTopIsNotLPar():
-                        #       pop an operator off the stack and add it to the output queue
-                        op = self.opstack.pop()
-                        output.append(op)
-                    # top of stack should now be a '(' or '[', which is special - increment the argument count
-                    self.opstack[-1].argcount += 1
-                    #                    output.append(InstComma())  # JCF mod - add comma as actual operator with low precendence
-                    #     if the stack becomes empty, announce an error
-                    if len(self.opstack) == 0:
-                        raise ParseException("syntax error : mismatched bracket left 2", t)
-                    #     goto want_operand
-                    wantOperand = True
-                elif isOp(t):
-                    #   if the token is an infix operator:
-                    if t.string == '(':
-                        op = InstBracket(self)
-                    elif t.string == '[':
-                        op = InstSquareBracket(self)
-                    else:
-                        op = InstOp(t.string, False, self)
-                    while self.stackTopIsOperatorPoppable(op):
-                        output.append(self.opstack.pop())
-                    self.stackOp(op)
-                    wantOperand = True
-                else:
-                    # token is probably an operand.
-                    raise ParseException("syntax error : unexpected operand", t)
 
     def compile(self, s: str) -> CompiledExpression:
         """Parse an expression and return it as a standalone CompiledExpression,
@@ -832,46 +644,3 @@ class Parser:
         see registerVar) without re-parsing."""
         instructions = self.parse(s)
         return CompiledExpression(list(instructions), s)
-
-    def stackTopIsNotLPar(self):
-        """internal method - op stack top is NOT an open bracket"""
-        if len(self.opstack) == 0:
-            return False
-        op = self.opstack[-1]  # peek
-        # must be an operator, and not a left-parenthesis
-        return op.name != '(' and op.name != '['
-
-    def stackTopIsOperatorPoppable(self, curop):
-        """internal method - stack top is poppable to output"""
-        if len(self.opstack) == 0:
-            return False
-        op = self.opstack[-1]  # peek
-        # must not be a left-parenthesis
-        if op.name == '(' or op.name == '[':
-            return False
-        # operator at stack top must have greater precedence, or the same precedence and token is left-assoc
-        # (which they all are)
-        return op.precedence >= curop.precedence
-
-    def next(self) -> TokenInfo:
-        """internal method - get next token"""
-        if self.toksLeft():
-            logger.debug(f"Next token : {self.toks[0]}")
-            return self.toks.pop(0)
-        else:
-            return None
-
-    def rewind(self, tok: TokenInfo):
-        """tokeniser rewinder, unused."""
-        self.toks.insert(0, tok)
-
-    def peek(self) -> TokenInfo:
-        """tokeniser peek, unused"""
-        if self.toksLeft():
-            return self.toks[0]
-        else:
-            return None
-
-    def toksLeft(self) -> bool:
-        """count remaining tokens"""
-        return len(self.toks) > 0
