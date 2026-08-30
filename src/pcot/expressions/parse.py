@@ -9,20 +9,16 @@ from __future__ import annotations
 import numbers
 import logging
 
-from io import BytesIO
-from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT, \
-    STRING
-
 from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot.datum import Datum
-from pcot.datumtypes import Type, AnyType
-from pcot.expressions.prattparser import PrattParser, TreeVisitor
+from pcot.datumtypes import Type
+from pcot.expressions.prattparser import PrattParser, TreeVisitor, TreeNode
 from pcot.sources import nullSourceSet, SourceSet
 from pcot.utils.table import Table
 from pcot.value import Value
 
-Stack = List[Any]
+Stack = List[Datum]
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +47,7 @@ class ParamException(Exception):
 class ParseException(Exception):
     """A generic error in the parser"""
 
-    def __init__(self, msg: str, t: Optional[TokenInfo] = None):
-        if t is not None:
-            msg = "{}: '{}' at chars {}-{}".format(msg, t.string, t.start[1], t.end[1])
+    def __init__(self, msg: str = None):
         super().__init__(msg)
 
 
@@ -115,8 +109,8 @@ class Variable:
 class Function:
     """defines a function callable from an eval string; is called from registerFunc."""
 
-    def __init__(self, name: str, fn: Callable[[List[Any]], Any], description: str,
-                 mandatoryParams: List[Parameter], optParams: List[Parameter], varargs):
+    def __init__(self, name: str, fn: Callable[[List[Datum], List[Datum]], Datum], description: str,
+                 mandatoryParams: Optional[List[Parameter]], optParams: List[Parameter], varargs):
         self.fn = fn
         self.name = name
         self.desc = description
@@ -155,10 +149,9 @@ class Function:
         """Process arguments, returning a pair of lists of Datum items: mandatory and optional args."""
         mandatArgs = []
         optArgs = []
-        lastparam = None
 
         if self.mandatoryParams is None:
-            return args  # no type checking, just pass all args straight through
+            return args, []  # no type checking, just pass all args straight through
 
         try:
             # consume the mandatory arguments, popping them off the front of the list
@@ -290,37 +283,47 @@ class InstVar(Instruction):
         return "VAR {}".format(self.var.name)
 
 
-class InstOp(Instruction):
-    """A VM instruction for performing a unary (prefix) or binary operation.
-    The constructor fetches the function to call from the appropriate
-    registry."""
+class InstUnop(Instruction):
+    """A VM instruction for performing a unary (prefix) operation.
+    The constructor fetches the function to call from the unop registry."""
     name: str
-    prefix: bool
+    callback: Callable[[Any], Any]
 
-    def __init__(self, n: str, pre: bool, parser: 'Parser'):
-        if pre and n in parser.unopRegistry:
-            self.callback = parser.unopRegistry[n]
-        elif not pre and n in parser.binopRegistry:
-            self.callback = parser.binopRegistry[n]
-        else:
-            raise ParseException("unknown {} operator: {}".format('prefix' if pre else 'suffix', n))
+    def __init__(self, n: str, parser: 'Parser'):
+        if n not in parser.unopRegistry:
+            raise ParseException("unknown prefix operator: {}".format(n))
+        self.callback = parser.unopRegistry[n]
         self.name = n
-        self.prefix = pre
 
     def exec(self, stack: Stack):
-        # these are written in a rather long-winded way to ease breakpointing
-        if self.prefix:
-            a = stack.pop()
-            r = self.callback(a)
-            stack.append(r)
-        else:
-            b = stack.pop()
-            a = stack.pop()
-            r = self.callback(a, b)
-            stack.append(r)
+        a = stack.pop()
+        r = self.callback(a)
+        stack.append(r)
 
     def __str__(self):
-        return "OP {} {}".format(self.name, "PRE" if self.prefix else "IN")
+        return "OP {} PRE".format(self.name)
+
+
+class InstBinop(Instruction):
+    """A VM instruction for performing a binary (infix) operation.
+    The constructor fetches the function to call from the binop registry."""
+    name: str
+    callback: Callable[[Any, Any], Any]
+
+    def __init__(self, n: str, parser: 'Parser'):
+        if n not in parser.binopRegistry:
+            raise ParseException("unknown suffix operator: {}".format(n))
+        self.callback = parser.binopRegistry[n]
+        self.name = n
+
+    def exec(self, stack: Stack):
+        b = stack.pop()
+        a = stack.pop()
+        r = self.callback(a, b)
+        stack.append(r)
+
+    def __str__(self):
+        return "OP {} IN".format(self.name)
 
 
 class InstCall(Instruction):
@@ -336,7 +339,7 @@ class InstCall(Instruction):
 
     def exec(self, stack: Stack):
         """execute: pop off the func, then the args."""
-        func = stack.pop()
+        functok = stack.pop()
         if self.argcount != 0:
             args = stack[-self.argcount:]
             del stack[-self.argcount:]
@@ -344,18 +347,18 @@ class InstCall(Instruction):
             args = []
         # args.reverse()   # is this faster than just popping them in reverse order?
 
-        if func.tp == Datum.IDENT:
-            func = self.parser.funcRegistry.get(func.val)
+        if functok.tp == Datum.IDENT:
+            func = self.parser.funcRegistry.get(functok.val)
             if func is None:
-                raise ParseException("unknown function '{}' ".format(func.val))
+                raise ParseException("unknown function '{}' ".format(functok.val))
             stack.append(func.call(args))
-        elif func.tp == Datum.FUNC:
+        elif functok.tp == Datum.FUNC:
             # this executes the function by calling its call method,
             # which will do argument type checking.
-            stack.append(func.val.call(args))
+            stack.append(functok.val.call(args))
         else:
             # if we do (say) "a()", we'll get "cannot call a (whatever input A is connected to)..."
-            raise ParseException("cannot call a {} as if it were a function".format(func.tp))
+            raise ParseException("cannot call a {} as if it were a function".format(functok.tp))
 
 
 class InstCreateVector(Instruction):
@@ -377,7 +380,7 @@ class InstCreateVector(Instruction):
 
         sources = SourceSet()
         for x in args:
-            sources.add(x.sources)
+            sources.add(x.getSources())
 
         args = [x.get(Datum.NUMBER) for x in args]
 
@@ -418,7 +421,7 @@ class InstIndex(Instruction):
         r = v.tp.getByIndices(v, args)
         stack.append(r)
 
-def execute(seq: List[Instruction], stack: Stack) -> float:
+def execute(seq: List[Instruction], stack: Stack) -> Datum:
     """Execute a list of instructions on a given stack"""
     for inst in seq:
         logger.debug(f"EXECUTING {inst}")
@@ -465,9 +468,9 @@ class Visitor(TreeVisitor):
         else:
             return InstIdent(data.value)
     def generate_binop(self, data: Any) -> Any:
-        return InstOp(data, False, self.parser)
+        return InstBinop(data, self.parser)
     def generate_unop(self, data: Any) -> Any:
-        return InstOp(data, True, self.parser)
+        return InstUnop(data, self.parser)
     def generate_apply(self, data: Any, child_count: int) -> Any:
         if data=='call':
             # Needs to lookup the function at runtime, which is annoying.
