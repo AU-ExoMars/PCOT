@@ -298,13 +298,6 @@ class PrattParser:
         self.register("[", ApplicationParselet("index","]"))
         self.register("[", VectorParselet("]"))
 
-        self.register_infix_left_associative("-", 100)
-        self.register_infix_left_associative("+", 100)
-        self.register_infix_left_associative("*", 150)
-        self.register_infix_left_associative("/", 150)
-        self.register_infix_right_associative("^", 200)
-        self.register_prefix("-", 175)
-
     def parse(self, s: str) -> TreeNode:
         """Tokenise the input string into our Token objects and parse it, returning an ADT of TreeNode
         objects we can run a TreeVisitor on."""

@@ -58,12 +58,12 @@ def execute(s):
                    [],
                    lambda args, optargs: mknumFloat(100.0), False)
 
-    p.registerBinop('+', lambda a, b: binop(a, b, lambda x, y: x + y))
-    p.registerBinop('-', lambda a, b: binop(a, b, lambda x, y: x - y))
-    p.registerBinop('/', lambda a, b: binop(a, b, lambda x, y: x / y))
-    p.registerBinop('*', lambda a, b: binop(a, b, lambda x, y: x * y))
-    p.registerBinop('^', lambda a, b: binop(a, b, lambda x, y: x ** y))
-    p.registerUnop('-',  lambda a: mknumFloat(-(a.get(Datum.NUMBER).n)))
+    p.registerBinop('+', 100, lambda a, b: binop(a, b, lambda x, y: x + y))
+    p.registerBinop('-', 100, lambda a, b: binop(a, b, lambda x, y: x - y))
+    p.registerBinop('/', 150, lambda a, b: binop(a, b, lambda x, y: x / y))
+    p.registerBinop('*', 150, lambda a, b: binop(a, b, lambda x, y: x * y))
+    p.registerBinop('^', 200, lambda a, b: binop(a, b, lambda x, y: x ** y))
+    p.registerUnop('-',  175, lambda a: mknumFloat(-(a.get(Datum.NUMBER).n)))
     p.registerVar('var1', "test var", lambda: variable_1)
     p.registerVar('var2', "test var", lambda: variable_2)
 

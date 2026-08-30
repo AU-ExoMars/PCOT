@@ -20,39 +20,33 @@ logger = logging.getLogger(__name__)
 
 
 @parserhook
-def registerBuiltinOperatorSyntax(p):
+def registerBuiltinOperatorSyntax(p:Parser):
 
     # these are already present in the underlying parser as
     # basic syntax
 
-    p.registerBinop('+', lambda a, b: binop(Operator.ADD, a, b))
-    p.registerBinop('-', lambda a, b: binop(Operator.SUB, a, b))
-    p.registerBinop('/', lambda a, b: binop(Operator.DIV, a, b))
-    p.registerBinop('*', lambda a, b: binop(Operator.MUL, a, b))
-    p.registerBinop('^', lambda a, b: binop(Operator.POW, a, b))
-    p.registerUnop('-', lambda a: unop(Operator.NEG, a))
+    p.registerBinop('+', 100, lambda a, b: binop(Operator.ADD, a, b))
+    p.registerBinop('-', 100, lambda a, b: binop(Operator.SUB, a, b))
+    p.registerBinop('/', 150, lambda a, b: binop(Operator.DIV, a, b))
+    p.registerBinop('*', 150, lambda a, b: binop(Operator.MUL, a, b))
+    p.registerBinop('^', 200, lambda a, b: binop(Operator.POW, a, b), right_associative=True)
+    p.registerUnop('-', 175, lambda a: unop(Operator.NEG, a))
 
     # these are additional operators and so need precedences
     # defined and registered with the low-level parser.
 
     # standard fuzzy operators (i.e. Zadeh). Very low precedence.
-    p.register_infix_left_associative('&', 20)
-    p.register_infix_left_associative('|', 20)
-    p.registerBinop('&', lambda a, b: binop(Operator.AND, a, b))
-    p.registerBinop('|', lambda a, b: binop(Operator.OR, a, b))
+    p.registerBinop('&', 20, lambda a, b: binop(Operator.AND, a, b))
+    p.registerBinop('|', 20, lambda a, b: binop(Operator.OR, a, b))
 
     # band-extract operator, binds tight
-    p.register_infix_left_associative('$', 250)
-    p.registerBinop('$', lambda a, b: binop(Operator.DOLLAR, a, b))
+    p.registerBinop('$', 250, lambda a, b: binop(Operator.DOLLAR, a, b))
 
     # comparison operators, binds loose
-    p.register_infix_left_associative('<', 50)
-    p.register_infix_left_associative('>', 50)
-    p.registerBinop('<', lambda a, b: binop(Operator.LESSTHAN, a, b))
-    p.registerBinop('>', lambda a, b: binop(Operator.GREATERTHAN, a, b))
+    p.registerBinop('<', 50, lambda a, b: binop(Operator.LESSTHAN, a, b))
+    p.registerBinop('>', 50, lambda a, b: binop(Operator.GREATERTHAN, a, b))
 
-    p.register_prefix("!", 175)
-    p.registerUnop('!', lambda a: unop(Operator.NOT, a))
+    p.registerUnop('!', 175, lambda a: unop(Operator.NOT, a))
 
 
 

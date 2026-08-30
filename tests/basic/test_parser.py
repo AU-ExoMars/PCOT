@@ -12,7 +12,15 @@ from pcot.expressions.prattparser import PrattParser, TestVisitor, ParserExcepti
 
 
 def rpn(expr: str) -> list:
-    tree = PrattParser().parse(expr)
+    p = PrattParser()
+    p.register_infix_left_associative("-", 100)
+    p.register_infix_left_associative("+", 100)
+    p.register_infix_left_associative("*", 150)
+    p.register_infix_left_associative("/", 150)
+    p.register_infix_right_associative("^", 200)
+    p.register_prefix("-", 175)
+
+    tree = p.parse(expr)
     return TestVisitor().visit(tree)
 
 

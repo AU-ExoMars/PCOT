@@ -87,22 +87,41 @@ class Visitor(TreeVisitor):
         return InstCreateVector(child_count)
 
 
-
 class Parser(PrattParser):
-    """Expression parser using the shunting algorithm, also incorporating the virtual machine for evaluation"""
+    """Expression parser, also incorporating the virtual machine for evaluation"""
 
     ## binops are names (e.g. '+') mapped to a two-arg fn which returns a value
     binopRegistry: Dict[str, Callable[[Any, Any], Any]]
 
-    def registerBinop(self, name: str, fn: Callable[[Any, Any], Any]):
+    def __init__(self):
+        """Initialise the parser, clearing all registered vars, funcs and ops."""
+        super().__init__()
+
+        # these are not the same as the registries used inside the PrattParser; those are lower level.
+        # These are used during post-processing of the AST to produce PCOT-level instructions.
+        self.binopRegistry = dict()
+        self.unopRegistry = dict()
+        self.varRegistry = dict()
+        self.funcRegistry = dict()
+        self.properties = dict()
+
+        # getProperty is built into the parser. Binds before anything else.
+        self.registerBinop('.', 1000, lambda a, b: self.getProperty(a, b))
+
+    def registerBinop(self, name: str, precedence:int , fn: Callable[[Any, Any], Any],right_associative=False):
         """Register a binary operation"""
+        if right_associative:
+            self.register_infix_right_associative(name, precedence)
+        else:
+            self.register_infix_left_associative(name, precedence)
         self.binopRegistry[name] = fn
 
     ## unary ops are names mapped to precedence and single arg function which returns a value
     unopRegistry: Dict[str, Callable[[Any], Any]]
 
-    def registerUnop(self, name: str, fn: Callable[[Any], Any]):
+    def registerUnop(self, name: str, precedence: int, fn: Callable[[Any], Any]):
         """Register a unary operation"""
+        self.register_prefix(name, precedence)
         self.unopRegistry[name] = fn
 
     ## vars are names mapped to argless fns (wrapped in a class) which
@@ -214,22 +233,6 @@ class Parser(PrattParser):
             # remove newlines from the description, even though it breaks the markdown
             t.add("description", " ".join(f.desc.split('\n')))
         return t.markdown()
-
-    def __init__(self):
-        """Initialise the parser, clearing all registered vars, funcs and ops."""
-        super().__init__()
-
-        # these are not the same as the registries used inside the PrattParser; those are lower level.
-        # These are used during post-processing of the AST to produce PCOT-level instructions.
-        self.binopRegistry = dict()
-        self.unopRegistry = dict()
-        self.varRegistry = dict()
-        self.funcRegistry = dict()
-        self.properties = dict()
-
-        # getProperty is built into the parser. Binds before anything else.
-        self.register_infix_left_associative(".", 1000)
-        self.registerBinop('.', lambda a, b: self.getProperty(a, b))
 
     def parse(self, s: str) -> List[Instruction]:
         """Parse a string into a list of Instructions"""
