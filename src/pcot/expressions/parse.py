@@ -108,6 +108,9 @@ class Parser(PrattParser):
         # getProperty is built into the parser. Binds before anything else.
         self.registerBinop('.', 1000, lambda a, b: self.getProperty(a, b))
 
+        # "none" is a generic null-value variable, available to all parsers.
+        self.registerVar("none", "the null value", lambda: Datum.null)
+
     def registerBinop(self, name: str, precedence:int , fn: Callable[[Any, Any], Any],right_associative=False):
         """Register a binary operation"""
         if right_associative:

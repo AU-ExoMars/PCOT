@@ -73,9 +73,6 @@ class ExpressionEvaluator(Parser):
         Caller may add other things (e.g. variables)"""
         super().__init__()
 
-        # we register "none" as a variable for all parsers
-        self.registerVar("none", "the null value", lambda: Datum.null)
-
         # now register things that have been marked with the @parserhook decorator.
         logger.debug("Registering function plugins")
         for x in pcot.config.exprFuncHooks:
