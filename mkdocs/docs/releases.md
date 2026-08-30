@@ -113,6 +113,8 @@ building camera archives; simulated filter responses now support a super-Gaussia
 realistic filter shapes.
 * Input loading now falls back to the last good input data if a reload fails on save, and no longer resets
 the canvas RGB mapping on save/reload.
+* Canvas now has save/load view buttons next to the reset-view button, for quick access to the
+store/load view location feature previously only available from the right-click menu.
 
 Site
 
