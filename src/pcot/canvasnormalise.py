@@ -19,7 +19,6 @@ from typing import Optional, Tuple
 import numpy as np
 
 from pcot import ui
-from pcot.imagecube import ImageCube
 
 # normalisation modes
 from pcot.utils.image import imgsplit, imgmerge
@@ -47,7 +46,7 @@ def normOrZero(img, mn, mx):
         return np.zeros(np.shape(img), dtype=img.dtype)
 
 
-def canvasNormalise(img: ImageCube,
+def canvasNormalise(img: np.ndarray,
                     rgbCropped: np.ndarray,
                     rgbUncropped: np.ndarray,
                     normMode: int,
@@ -57,7 +56,7 @@ def canvasNormalise(img: ImageCube,
     This does normalisation for the canvas. The parameter list may seem rather eccentric, but this
     set of parameters helps things run more smoothly with fewer copies and cuts.
     Arguments:
-        img: image cube for entire image, all channels, not cropped
+        img: numpy array for entire image, all channels, not cropped
         rgbCropped: RGB numpy image array, cropped to view
         rgbUncropped: uncropped RGB image array (need this for normToEntireImage)
         normMode: see above

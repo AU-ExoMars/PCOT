@@ -4,7 +4,7 @@ and each input will know how to generate useful information from that source.
 """
 import math
 from abc import ABC, abstractmethod
-from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple, Dict, Callable
+from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Iterator, Any, Tuple, Dict, Callable
 
 from pcot.documentsettings import DocumentSettings
 from pcot.cameras.filters import Filter
@@ -535,7 +535,7 @@ class MultiBandSource(SourcesObtainable):
     def __len__(self):
         return len(self.sourceSets)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator['SourceSet']:
         return self.sourceSets.__iter__()
 
     def __contains__(self, item):

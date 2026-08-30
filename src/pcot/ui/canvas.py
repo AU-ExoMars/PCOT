@@ -3,14 +3,14 @@ import logging
 import math
 import os
 import platform
-from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
+from typing import TYPE_CHECKING, Optional, Protocol, Union, List, Tuple, Dict, cast
 
 import cv2 as cv
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt, QTimer, QPointF, QRectF
-from PySide6.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent, QPalette
-from PySide6.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel, QPushButton, QLayout, QSizePolicy, QToolButton
+from PySide6.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
+from PySide6.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel, QSizePolicy, QToolButton
 
 import pcot
 import pcot.dq
@@ -28,11 +28,31 @@ from pcot.utils.maths import pooled_sd
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
+    from pcot.imagecube import ImageCube
 
 logger = logging.getLogger(__name__)
 
 # how many DQ overlays we can have
 NUMDQS = 3
+
+
+class PaintHook(Protocol):
+    """an object with a canvasPaintHook(p) method, for doing extra drawing onto a canvas"""
+    def canvasPaintHook(self, p: QPainter) -> None: ...
+
+
+class KeyHook(Protocol):
+    """an object with a canvasKeyPressEvent(e) method for key handling. Should
+    return True if it handled the key, so the canvas's own generic pan/zoom keys don't
+    also act on it - False/None if it didn't."""
+    def canvasKeyPressEvent(self, e: QKeyEvent) -> Optional[bool]: ...
+
+
+class MouseHook(Protocol):
+    """an object with a set of mouse events for handling clicks and moves on a canvas"""
+    def canvasMousePressEvent(self, x: int, y: int, e: QtGui.QMouseEvent) -> None: ...
+    def canvasMouseReleaseEvent(self, x: int, y: int, e: QtGui.QMouseEvent) -> None: ...
+    def canvasMouseMoveEvent(self, x: int, y: int, e: QtGui.QMouseEvent) -> None: ...
 
 
 class SpectrumOverlay(QtWidgets.QWidget):
@@ -142,7 +162,7 @@ class InnerCanvas(QtWidgets.QWidget):
     dispw: int
     disph: int
 
-    cursor: QCursor = None
+    cursor: Optional[QCursor] = None
 
     def __init__(self, canv, parent=None):
         super().__init__(parent)
@@ -345,7 +365,9 @@ class InnerCanvas(QtWidgets.QWidget):
         widgh = self.size().height()
         # here self.img is a numpy image
         tt = Timer("paint", enabled=False)
-        if self.rgb is not None:
+        rgb = self.rgb
+        if rgb is not None:
+            rgb = cast(np.ndarray, rgb)  # help the inspector: guaranteed non-None past this point
             imgh, imgw = self.imgCube.h, self.imgCube.w
 
             # work out the "base scale" so that a zoomscale of 1 fits the entire
@@ -365,7 +387,7 @@ class InnerCanvas(QtWidgets.QWidget):
             cutx = int(self.x)
             cuty = int(self.y)
             # get the viewable section of the RGB
-            rgbcropped = self.rgb[cuty:cuty + cuth, cutx:cutx + cutw]
+            rgbcropped = rgb[cuty:cuty + cuth, cutx:cutx + cutw]
             tt.mark("rgb crop")
 
             # now get the size of the image that was actually cut (some areas may be out of range)
@@ -377,7 +399,7 @@ class InnerCanvas(QtWidgets.QWidget):
             #            print(f"Norm Mode: {self.canv.canvaspersist.normMode} / {self.canv.canvaspersist.normToCropped}")
             rgbcropped = canvasnormalise.canvasNormalise(self.imgCube.img,
                                                          rgbcropped,
-                                                         self.rgb,
+                                                         rgb,
                                                          self.canv.canvaspersist.normMode,
                                                          self.canv.canvaspersist.normToCropped,
                                                          (cutx, cuty, self.cutw, self.cuth))
@@ -554,7 +576,7 @@ class InnerCanvas(QtWidgets.QWidget):
                         # if we're not additive:
                         #   if showing uncertainty we replace the image value when unc>0
                         #   if showing DQ we replace the image value when DQ bit is set
-                        mask = np.dstack([mask, mask, mask]).astype(np.bool8)
+                        mask = np.dstack([mask, mask, mask]).astype(np.bool_)
                         # img is the original image. Mask so only the bits we want to set get changed.
                         img = np.ma.masked_array(img, ~mask)
                         img *= d.trans
@@ -638,7 +660,7 @@ class InnerCanvas(QtWidgets.QWidget):
             Qt.Key.Key_Up: (0, -1),
             Qt.Key.Key_Down: (0, 1),
         }
-        key = e.key()
+        key = Qt.Key(e.key())
         if key in arrowDeltas:
             dx, dy = arrowDeltas[key]
             mods = e.modifiers()
@@ -849,17 +871,17 @@ class Canvas(QtWidgets.QWidget):
 
     ## @var paintHook
     # an object with a paintEvent() which can do extra drawing (or None)
-    paintHook: Optional[object]
+    paintHook: Optional[PaintHook]
 
     ## @var mouseHook
     # an object with a set of mouse events for handling clicks and moves (or None)
-    mouseHook: Optional[object]
+    mouseHook: Optional[MouseHook]
 
     ## @var keyHook
     # an object with a canvasKeyPressEvent(e) method for key handling (or None). Should
     # return True if it handled the key, so the canvas's own generic pan/zoom keys don't
     # also act on it (see InnerCanvas.keyPressEvent) - False/None if it didn't.
-    keyHook: Optional[object]
+    keyHook: Optional[KeyHook]
 
     ## @var graph
     # the graph of which I am a part. Not really optional, but I have to set it after construction.
@@ -900,13 +922,16 @@ class Canvas(QtWidgets.QWidget):
     # List of the DQ section widgets
     dqSections: List[CollapserSection]  #
 
+    # cached source names for each DQ block's channel combo, used to detect when it needs repopulating
+    dqSourceCache: List[Optional[List[str]]]
+
     # warning to indicate the filter data is missing
     missingFilterDataLabel: QtWidgets.QLabel
     # bad pixels warning
     badPixelsLabel: QtWidgets.QLabel
 
     # canvas view rectangle "clipboard"; class variable
-    canvasRect: Tuple[float,float,float] = None
+    canvasRect: Optional[Tuple[float, float, float]] = None
 
     ## constructor
     def __init__(self, parent):
@@ -1348,6 +1373,8 @@ class Canvas(QtWidgets.QWidget):
                 val = 'sumall'
             elif d.stype == canvasdq.STypeChannel:
                 val = d.channel
+            else:
+                val = 'maxall'
             sourceItemIdx = sourcecombo.findData(val)
 
             if sourceItemIdx >= 0:
@@ -1755,16 +1782,16 @@ class Canvas(QtWidgets.QWidget):
         if rgb is not None:
             h, w = rgb.shape[:2]
             # work out the size of the scroll bar from the zoom factor
-            hsize = w * self.canvas.zoomscale
-            vsize = h * self.canvas.zoomscale
+            hsize = int(w * self.canvas.zoomscale)
+            vsize = int(h * self.canvas.zoomscale)
             self.scrollH.setPageStep(hsize)
             self.scrollV.setPageStep(vsize)
             # and set the actual scroll bar size
             self.scrollH.setMaximum(w - hsize)
             self.scrollV.setMaximum(h - vsize)
             # and the position
-            self.scrollH.setValue(self.canvas.x)
-            self.scrollV.setValue(self.canvas.y)
+            self.scrollH.setValue(int(self.canvas.x))
+            self.scrollV.setValue(int(self.canvas.y))
 
     ## vertical scrollbar handler   
     def vertScrollChanged(self, v):

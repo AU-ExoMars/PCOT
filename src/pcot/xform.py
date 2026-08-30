@@ -307,6 +307,15 @@ class XFormType:
         """
         pass
 
+    def getMyROIs(self, node):
+        """override this if the node creates an ROI or ROIs, to return it/them as a list. Otherwise None
+        (not an empty list)."""
+        return None
+
+    def getROIDesc(self, node):
+        """override this if the node creates an ROI, to return a text description of it."""
+        return None
+
     def init(self, xform):
         """override this - initialise any data fields (often to None)"""
         pass
