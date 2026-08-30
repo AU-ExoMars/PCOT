@@ -8,7 +8,6 @@ from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tup
 
 from pcot.documentsettings import DocumentSettings
 from pcot.cameras.filters import Filter
-from pcot.parameters.taggedaggregates import Maybe
 
 
 class SourcesObtainable(ABC):
