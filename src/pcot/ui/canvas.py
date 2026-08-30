@@ -986,6 +986,10 @@ class Canvas(QtWidgets.QWidget):
         splitter.addWidget(innercanvasContainer)
         outerlayout.setContentsMargins(0, 0, 0, 0)
         layout.setContentsMargins(0, 0, 0, 0)
+        # the canvas (row 0) should get all extra vertical space; the scrollbar/button row (row 1)
+        # should stay at its natural minimal height.
+        layout.setRowStretch(0, 1)
+        layout.setRowStretch(1, 0)
 
         # spectrum stuff
 
@@ -1025,14 +1029,40 @@ class Canvas(QtWidgets.QWidget):
 
         self.scrollH = QtWidgets.QScrollBar(Qt.Orientation.Horizontal)
         self.scrollH.valueChanged.connect(self.horzScrollChanged)
-        layout.addWidget(self.scrollH, 1, 0)
 
         icon = pcot.assets.Icons.get("maximize-2")
         self.resetButton = QtWidgets.QPushButton()
         self.resetButton.setIcon(icon)
         self.resetButton.setMaximumWidth(20)
-        layout.addWidget(self.resetButton, 1, 1)
+        self.resetButton.setToolTip("Reset canvas view")
         self.resetButton.clicked.connect(self.reset)
+
+        # store/load the canvas view position and zoom - same action as the context menu's
+        # "Store/Load canvas view location" items, just more convenient.
+        self.saveViewButton = QtWidgets.QPushButton("S")
+        self.saveViewButton.setMaximumWidth(20)
+        self.saveViewButton.setToolTip("Store canvas view location")
+        self.saveViewButton.clicked.connect(self.saveView)
+
+        self.loadViewButton = QtWidgets.QPushButton("L")
+        self.loadViewButton.setMaximumWidth(20)
+        self.loadViewButton.setToolTip("Load stored canvas view location")
+        self.loadViewButton.setEnabled(Canvas.canvasRect is not None)
+        self.loadViewButton.clicked.connect(self.loadView)
+
+        # the scrollbar and the view buttons share a single row, so the buttons eat into the
+        # scrollbar's own space rather than widening the (otherwise scrollbar-width) right-hand
+        # column and leaving dead space above them next to the vertical scrollbar.
+        bottomRow = QtWidgets.QWidget()
+        bottomRowLayout = QtWidgets.QHBoxLayout()
+        bottomRowLayout.setContentsMargins(0, 0, 0, 0)
+        bottomRowLayout.setSpacing(2)
+        bottomRow.setLayout(bottomRowLayout)
+        bottomRowLayout.addWidget(self.scrollH, 1)
+        bottomRowLayout.addWidget(self.saveViewButton)
+        bottomRowLayout.addWidget(self.loadViewButton)
+        bottomRowLayout.addWidget(self.resetButton)
+        layout.addWidget(bottomRow, 1, 0, 1, 2)
 
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
@@ -1300,6 +1330,19 @@ class Canvas(QtWidgets.QWidget):
         self.canvas.setOverlayRadius()
         self.redisplay()
 
+    def saveView(self):
+        """Store this canvas's view position and zoom, for later loading with loadView()
+        (also available from the context menu, and the "S" button by the canvas reset button)"""
+        Canvas.canvasRect = (self.canvas.x, self.canvas.y, self.canvas.zoomscale)
+        self.loadViewButton.setEnabled(True)
+
+    def loadView(self):
+        """Load a view position and zoom previously stored with saveView()
+        (also available from the context menu, and the "L" button by the canvas reset button)"""
+        if Canvas.canvasRect is not None:
+            self.canvas.x, self.canvas.y, self.canvas.zoomscale = Canvas.canvasRect
+            self.redisplay()
+
     def contextMenuEvent(self, ev: QtGui.QContextMenuEvent) -> None:
         super().contextMenuEvent(ev)  # run the super's menu, which will run any item's menu
         if not ev.isAccepted():  # if the event wasn't accepted, run our menu
@@ -1310,6 +1353,8 @@ class Canvas(QtWidgets.QWidget):
             loadRect = menu.addAction("Load canvas view location")
             if Canvas.canvasRect is None:
                 loadRect.setDisabled(True)
+            # this canvas's button may be stale if another canvas saved a view, so resync it here too
+            self.loadViewButton.setEnabled(Canvas.canvasRect is not None)
 
             a = menu.exec(ev.globalPos())
             if a == save:
@@ -1317,10 +1362,9 @@ class Canvas(QtWidgets.QWidget):
             elif a == copyToClipboard:
                 self.canvas.copyToClipboard()
             elif a == saveRect:
-                Canvas.canvasRect = (self.canvas.x,self.canvas.y,self.canvas.zoomscale)
+                self.saveView()
             elif a == loadRect:
-                self.canvas.x, self.canvas.y, self.canvas.zoomscale = Canvas.canvasRect
-                self.redisplay()
+                self.loadView()
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
