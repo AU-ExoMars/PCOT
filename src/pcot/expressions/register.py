@@ -251,7 +251,7 @@ class datumfunc:
                 for i, x in enumerate(zip(vals, self.paramTypes)):
                     # is the type of the argument in the list of acceptable types?
                     if x[0].tp not in x[1]:
-                        from pcot.expressions.parse import ArgsException
+                        from pcot.expressions.types import ArgsException
                         raise ArgsException(f"Function {self.name} parameter {i} is of the wrong type")
 
             rv = func(*vals, **kwargs)

@@ -7,7 +7,7 @@ from pcot.dq import NOUNCERTAINTY, ERROR
 from pcot.expressions import ExpressionEvaluator
 from pcot.datumfuncs import testimg
 from pcot.expressions.register import datumfunc
-from pcot.expressions.parse import ArgsException
+from pcot.expressions.types import ArgsException
 from pcot.sources import nullSourceSet
 from pcot.value import Value
 
