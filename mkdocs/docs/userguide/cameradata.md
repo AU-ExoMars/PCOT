@@ -35,6 +35,10 @@ To create a camera data file, run the `pcot gencam` command:
 pcot gencam cameraname.yaml cameraname.parc
 ```
 
+The output filename is optional; if omitted, it defaults to the input YAML filename's
+basename with the extension changed to `.parc` (so `cameraname.yaml` becomes `cameraname.parc`
+in the current directory).
+
 ## Format of the YAML file
 
 The camera parameter file should have the following form at minimum:
@@ -240,7 +244,8 @@ Note that every filter position must be listed in the `directory_map` dictionary
 ## Reflectance data
 
 Reflectance data is also stored in `.parc` files, and these are created by the `pcot genrefl` command in a similar
-manner, from a YAML file and some extra data.
+manner, from a YAML file and some extra data. As with `gencam`, the output filename is optional and defaults to
+the input YAML filename's basename with the extension changed to `.parc`.
 
 ### Simple reflectances
 Simple reflectance data records the spectrum of each patch at a single angle only. We typically use it

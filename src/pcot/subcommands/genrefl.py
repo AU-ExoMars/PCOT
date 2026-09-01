@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import yaml
 import logging
@@ -52,11 +53,15 @@ def load_simple_format(d:dict):
 
 @subcommand([
     argument('input', type=str, metavar='YAML_FILENAME', help="Input YAML file describing reflectance data"),
-    argument('output', type=str, metavar='PARC_FILENAME', help="Output PARC filename"),
+    argument('output', type=str, nargs='?', default=None, metavar='PARC_FILENAME',
+             help="Output PARC filename (default: input filename with .parc extension)"),
 ],
     shortdesc="Process a YAML reflectance file and associated data into a PARC file")
 def genrefl(args):
     pcot.setup()
+
+    if args.output is None:
+        args.output = os.path.splitext(os.path.basename(args.input))[0] + ".parc"
 
     with open(args.input) as f:
         # load the YAML file. Produces a dict, of course.

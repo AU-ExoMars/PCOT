@@ -65,7 +65,8 @@ def get_raw_loader(d):
 
 @subcommand([
     argument('params', type=str, metavar='YAML_FILENAME', help="Input YAML file with parameters"),
-    argument('output', type=str, metavar='PARC_FILENAME', help="Output PARC filename"),
+    argument('output', type=str, nargs='?', default=None, metavar='PARC_FILENAME',
+             help="Output PARC filename (default: input filename with .parc extension)"),
     argument("--nocalib",
              help="Do not store extra calibration data (flats, darks etc.) and add '_NOCALIB' to the camera name",
              action="store_true")
@@ -79,6 +80,9 @@ def gencam(args):
     import pcot
     from pcot.cameras import camdata
     import yaml
+
+    if args.output is None:
+        args.output = os.path.splitext(os.path.basename(args.params))[0] + ".parc"
 
     print(f"PCOT gencam generating {args.output} from {args.params}")
 
