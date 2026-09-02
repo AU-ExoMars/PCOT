@@ -10,7 +10,10 @@ description, decorating a function that takes a single `args` namespace object
 It also preserves the "dual dispatch" behaviour of `pcot`: if the first
 non-option token on the command line is a recognised subcommand name, that
 subcommand runs; otherwise the fallback command (registered via
-`maincommand()`) runs, so `pcot somefile.pcot` still opens the GUI.
+`maincommand()`) runs, so `pcot somefile.pcot` still opens the GUI. This is
+done with `PCOTGroup.resolve_command()` below, click's own (documented)
+extension point for customising how a group picks a subcommand - the same
+approach used by the `click-default-group` package.
 """
 
 import argparse
@@ -97,10 +100,9 @@ def _build_param(name_or_flags, kwargs):
         kwargs['type'] = click.Choice(choices)
 
     if _is_option(name_or_flags):
-        # options can share a single "dest" across several argument() calls
-        # (e.g. --debug/-d and --verbose/-v both feeding "loglevel"); click
-        # does this by including the bare parameter name in the declarations,
-        # the same trick argparse's `dest` performs.
+        # a bare (non-dash) entry in the declarations tells click to use that
+        # as the parameter name instead of deriving one from the flag - the
+        # same thing argparse's `dest` does.
         decls = list(name_or_flags)
         if dest:
             decls = decls + [dest]
@@ -141,12 +143,33 @@ def _make_callback(func):
     return callback
 
 
+class PCOTGroup(click.Group):
+    """
+    A click Group that falls back to a designated command (`open`, registered
+    via maincommand()) when the first token on the command line isn't a
+    recognised subcommand name - so `pcot somefile.pcot` dispatches to `open`
+    the same way `pcot gencam ...` dispatches to `gencam`. Overriding
+    resolve_command() is click's own extension point for this; unlike a
+    from-scratch argv rewrite it composes properly with click's own option
+    parsing (so e.g. `pcot --log-level DEBUG somefile.pcot` isn't confused
+    into thinking "DEBUG" is the file to open), and with --help.
+    """
+
+    fallback_command_name = None
+
+    def resolve_command(self, ctx, args):
+        if self.fallback_command_name and args and args[0] not in self.commands:
+            cmd = self.commands[self.fallback_command_name]
+            return self.fallback_command_name, cmd, args
+        return super().resolve_command(ctx, args)
+
+
 # The top-level command group. Subcommands are registered into this via
 # subcommand()/maincommand(); common (global) options are added via
-# set_common_args(). Its callback is assigned by whoever calls
-# set_common_args()'s caller (main.py) once all the shared options are known.
-cli = click.Group(name="pcot", invoke_without_command=True,
-                   context_settings={"help_option_names": ["-h", "--help"]})
+# set_common_args(). Its callback is assigned by main.py once all the shared
+# options are known.
+cli = PCOTGroup(name="pcot", invoke_without_command=True, no_args_is_help=False,
+                 context_settings={"help_option_names": ["-h", "--help"]})
 
 
 def subcommand(args=None, shortdesc="", parent=None):
@@ -194,6 +217,7 @@ def maincommand(args=None):
         cmd = PCOTCommand(name=FALLBACK_COMMAND_NAME, params=params, callback=_make_callback(func),
                            help=func.__doc__, short_help=_short_help(func.__doc__))
         cli.add_command(cmd)
+        cli.fallback_command_name = FALLBACK_COMMAND_NAME
         subcommands[FALLBACK_COMMAND_NAME] = cmd
         return func
 
@@ -209,16 +233,3 @@ def set_common_args(args):
     for name_or_flags, kwargs in args:
         param, _ = _build_param(name_or_flags, kwargs)
         cli.params.append(param)
-
-
-def peek_remainder(argv):
-    """
-    Leniently parse just the common (group-level) options out of argv,
-    returning whatever's left over - mirrors argparse's parse_known_args, and
-    is used by main.py to work out whether the next token is a recognised
-    subcommand name, or should fall back to the main command.
-    """
-    peek_cmd = click.Command(name=cli.name, params=list(cli.params),
-                              context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
-    ctx = peek_cmd.make_context(cli.name, list(argv), resilient_parsing=True)
-    return ctx.args

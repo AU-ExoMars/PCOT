@@ -4,23 +4,20 @@
 import logging
 import sys
 
+import click
+
 from pcot.subcommands.subcommands import \
-    cli, maincommand, argument, set_common_args, peek_remainder, FALLBACK_COMMAND_NAME
+    cli, maincommand, argument, set_common_args
 
 # This command line system specifies the "main command", which you get if you
 # just give "pcot" on the command line. If the next item is a recognised subcommand
 # name, that subcommand will be done instead. The main command and each subcommand
 # are defined, with their arguments, by decorators. These are in subcommands.py.
-# "Recognised subcommand" is decided by peek_remainder() below, which leniently
-# strips the common options (this section) out of argv first, so that e.g.
-# `pcot --log-level DEBUG somefile.pcot` isn't confused into thinking "DEBUG" is
-# the file to open.
+# The dispatch itself is PCOTGroup.resolve_command(), in subcommands.py.
 
 set_common_args([
-    argument('--debug', '-d', dest='loglevel', help="set log level to debug", action="store_const",
-             const=logging.DEBUG),
-    argument('--verbose', '-v', dest='loglevel', help="set log level to verbose (i.e. INFO)", action="store_const",
-             const=logging.INFO),
+    argument('--debug', '-d', help="set log level to debug", action="store_true"),
+    argument('--verbose', '-v', help="set log level to verbose (i.e. INFO)", action="store_true"),
     argument("--log-level", dest="loglevel_name", help='set log level',
              choices=["ERROR", "WARN", "INFO", "DEBUG", "CRITICAL"]),
     argument("--show-imports", action="store_true", help="show module imports for debugging"),
@@ -45,17 +42,33 @@ def _install_import_monitor():
 # _install_import_monitor()
 
 
-def _common_args_callback(loglevel, loglevel_name, show_imports, ignore_version):
+def _common_args_callback(debug, verbose, loglevel_name, show_imports, ignore_version):
     """Runs before any subcommand (or the main command) - applies the common
     options that used to be merged into every subcommand's args namespace."""
     logger = logging.getLogger("pcot")
-    logger.setLevel(loglevel_name if loglevel_name is not None else (loglevel or logging.WARNING))
+    if loglevel_name is not None:
+        level = loglevel_name
+    elif debug:
+        level = logging.DEBUG
+    elif verbose:
+        level = logging.INFO
+    else:
+        level = logging.WARNING
+    logger.setLevel(level)
 
     import pcot.config
     pcot.config.ignore_version = ignore_version
 
     if show_imports:
         _install_import_monitor()
+
+    # invoke_without_command means we also get called with nothing following
+    # (bare "pcot") - in that case run the fallback (GUI) command ourselves,
+    # the same command resolve_command() would have picked for an unrecognised
+    # first token.
+    ctx = click.get_current_context()
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(cli.commands[cli.fallback_command_name])
 
 
 cli.callback = _common_args_callback
@@ -74,29 +87,8 @@ def mainfunc(args):
     pcot.app.run(args)
 
 
-#
-# The main function, which works out whether the user is invoking a
-# recognised subcommand or not, and if not inserts the fallback command name
-# (FALLBACK_COMMAND_NAME) so that click dispatches to the main/GUI command -
-# this is what lets "pcot somefile.pcot" open the GUI, and "pcot gencam ..."
-# run a subcommand, from the same top-level command.
-#
 def main():
-    argv = sys.argv[1:]
-    remainder = peek_remainder(argv)
-    if remainder and remainder[0].startswith('-'):
-        # an option we don't recognise here - most commonly -h/--help with no
-        # subcommand - leave argv untouched and let click's own top-level
-        # option handling deal with it (so "pcot -h" shows the top-level
-        # help/command listing, not the fallback command's help).
-        pass
-    elif not remainder or remainder[0] not in cli.commands:
-        # the common options are always a prefix of argv (they must come
-        # before the subcommand name), so whatever peek_remainder() stripped
-        # out was exactly that prefix.
-        idx = len(argv) - len(remainder)
-        argv = argv[:idx] + [FALLBACK_COMMAND_NAME] + argv[idx:]
-    cli.main(args=argv, prog_name="pcot")
+    cli.main(prog_name="pcot")
 
 
 if __name__ == "__main__":
