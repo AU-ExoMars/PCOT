@@ -11,7 +11,15 @@ inputs into the graph.
 
 You can pan the canvas using the scroll bars at the edge, by holding down the middle
 mouse button and dragging, or with the keyboard (see below). You can zoom with the mouse
-wheel or the keyboard. The button at bottom right will reset to show the entire image.
+wheel or the keyboard.
+
+### Canvas corner buttons
+
+The "two arrows" button at bottom right will reset to show the entire image.
+
+The S button will save the coordinates of the current view, while the L button will
+load saved coordinates into the current view. This can be very useful when you are looking
+at a small part of an image, and wish to look at the same part of the image in another node.
 
 ### Keyboard control
 
