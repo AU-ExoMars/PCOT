@@ -145,7 +145,8 @@ def _make_callback(func):
 # subcommand()/maincommand(); common (global) options are added via
 # set_common_args(). Its callback is assigned by whoever calls
 # set_common_args()'s caller (main.py) once all the shared options are known.
-cli = click.Group(name="pcot", invoke_without_command=True)
+cli = click.Group(name="pcot", invoke_without_command=True,
+                   context_settings={"help_option_names": ["-h", "--help"]})
 
 
 def subcommand(args=None, shortdesc="", parent=None):

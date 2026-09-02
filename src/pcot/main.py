@@ -84,7 +84,13 @@ def mainfunc(args):
 def main():
     argv = sys.argv[1:]
     remainder = peek_remainder(argv)
-    if not remainder or remainder[0] not in cli.commands:
+    if remainder and remainder[0].startswith('-'):
+        # an option we don't recognise here - most commonly -h/--help with no
+        # subcommand - leave argv untouched and let click's own top-level
+        # option handling deal with it (so "pcot -h" shows the top-level
+        # help/command listing, not the fallback command's help).
+        pass
+    elif not remainder or remainder[0] not in cli.commands:
         # the common options are always a prefix of argv (they must come
         # before the subcommand name), so whatever peek_remainder() stripped
         # out was exactly that prefix.
