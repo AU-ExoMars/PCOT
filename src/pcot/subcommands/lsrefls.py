@@ -1,28 +1,24 @@
-import pydoc
-
-import numpy as np
+import click
 
 import pcot.cameras
 from pcot.cameras import reflectances
-from pcot.subcommands import argument, subcommand
+from pcot.subcommands.subcommands import cli
 
 
-@subcommand([
-    argument("--long","-l", help="Show long descriptions", action="store_true"),
-    argument("--plot","-p", help="Plot the responses (first target only)", action="store_true"),
-    argument("--file","-F", help="Read from a PARC file instead of the loaded reflectances", action="store_true"),
-    argument("reflectance", metavar="REFLECTANCE_TARGET_NAME", help="Reflectance target name", nargs="?")
-    ],
-    shortdesc="List the available reflectance targets"
-)
-def lsrefls(args):
+@cli.command(short_help="List the available reflectance targets")
+@click.option("-l", "--long", "long_", is_flag=True, help="Show long descriptions")
+@click.option("-p", "--plot", is_flag=True, help="Plot the responses (first target only)")
+@click.option("-F", "--file", "file_", is_flag=True,
+              help="Read from a PARC file instead of the loaded reflectances")
+@click.argument("reflectance", metavar="REFLECTANCE_TARGET_NAME", required=False)
+def lsrefls(long_, plot, file_, reflectance):
     """List the available reflectance targets in the reflectances directory."""
     from pcot import config
     from pcot.cameras import reflectances
-    if args.file:
+    if file_:
         # we'll try to load a file directly here
-        refl = reflectances.load(args.reflectance)
-        show(refl, args)
+        refl = reflectances.load(reflectance)
+        show(refl, long_, plot)
     else:
         # otherwise we're looking at loaded reflectances.
         if config.getDefaultDir("reflectances") is None:
@@ -33,20 +29,20 @@ def lsrefls(args):
         # the system won't have started up fully, so we do this.
         config.loadReflectances()
 
-        if args.reflectance:
-            refl = pcot.cameras.getReflectance(args.reflectance)
+        if reflectance:
+            refl = pcot.cameras.getReflectance(reflectance)
             if refl is None:
-                print(f"Reflectance target {args.reflectance} not found")
+                print(f"Reflectance target {reflectance} not found")
             else:
-                show(refl, args)
+                show(refl, long_, plot)
         else:
             for name in pcot.cameras.getReflectanceNames():
-                show(pcot.cameras.getReflectance(name), args)
-                if args.plot:
+                show(pcot.cameras.getReflectance(name), long_, plot)
+                if plot:
                     break  # we only do the first one if plotting
 
 
-def show(r, args):
+def show(r, long_, plot):
     import os.path
     if r.path is None:
         base_file_name = "(unsaved)"
@@ -55,7 +51,7 @@ def show(r, args):
 
     print(f"{r.metadata.name:20} {base_file_name}: {r.typename}, {r.metadata.short}")
 
-    if args.long:
+    if long_:
         print(f"Compilation date: {r.metadata.date}")
         print(r.metadata.description)
         for p in r.get_patches():
@@ -63,7 +59,7 @@ def show(r, args):
             print(f" {p}: Phi [{phi_range[0]}:{phi_range[1]}], Theta [{theta_range[0]}:{theta_range[1]}], Wavelength [{wvl_range[0]}:{wvl_range[1]}]")
         print()
 
-    if args.plot:
+    if plot:
         import matplotlib.pyplot as plt
         for p in r.get_patches():
             phi_range, theta_range, wvl_range = r.get_range(p)
@@ -76,4 +72,3 @@ def show(r, args):
         plt.ylabel("Reflectance")
         plt.legend()
         plt.show()
-

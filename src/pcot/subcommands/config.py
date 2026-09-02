@@ -1,17 +1,16 @@
 import sys
 
 from PySide6 import QtWidgets
+import click
 
 from pcot.parameters.taggedaggregates import TaggedDict, TaggedList
-from pcot.subcommands import subcommand,argument
+from pcot.subcommands.subcommands import cli
 from pcot.ui.taggedaggregates import AggregateEditorDialog
 
 
-@subcommand([
-    argument("key", metavar="KEY", help="Name of config item to get", nargs="?"),
-    ],
-    shortdesc="Get a value (or all values) from the config file.")
-def getconfig(args):
+@cli.command(short_help="Get a value (or all values) from the config file.")
+@click.argument("key", required=False)
+def getconfig(key):
     """
     Get a value from the config file. If no key is given, all values are shown. Values will be shown as
     section.key = value (which isn't quite how they appear in the .ini file).
@@ -35,31 +34,28 @@ def getconfig(args):
                 else:
                     print(f"{path} = {v}")
 
-    if args.key is None:
+    if key is None:
         dump(pcot.config.data)
     else:
         # split the provided path into elements
-        path = args.key.split(".")
+        path = key.split(".")
         d = pcot.config.data
         while len(path) > 0:
-            key = path[0]
-            if key not in d:
-                raise KeyError(f"Key '{args.key}' not found in config file")
-            d = d[key]
+            k = path[0]
+            if k not in d:
+                raise KeyError(f"Key '{key}' not found in config file")
+            d = d[k]
             path = path[1:]
         if isinstance(d, TaggedDict or TaggedList):
-            dump(d, args.key)
+            dump(d, key)
         else:
             print(d)
 
 
-
-@subcommand([
-    argument("key", metavar="KEY", help="Name of config item to set"),
-    argument("value", metavar="VALUE", help="Value to set the config item to"),
-    ],
-    shortdesc="Set a value in the config file")
-def setconfig(args):
+@cli.command(short_help="Set a value in the config file")
+@click.argument("key")
+@click.argument("value")
+def setconfig(key, value):
     """
     Set a value in the config file. This is a simple key-value store for the application.
     You can also edit the config file directly - it will be called .pcot.ini in your home
@@ -68,47 +64,46 @@ def setconfig(args):
     """
     import pcot.config
 
-    keys = args.key.split(".")
+    keys = key.split(".")
     current = pcot.config.data
-    v = args.value
+    v = value
 
-    for i, key in enumerate(keys):
+    for i, k in enumerate(keys):
         is_last = (i == len(keys) - 1)
 
-        if key not in current:
-            raise KeyError(f"Key '{key}' not found at path: " f"{'.'.join(keys[:i]) or ''}")
+        if k not in current:
+            raise KeyError(f"Key '{k}' not found at path: " f"{'.'.join(keys[:i]) or ''}")
 
         if is_last:
             print("SET")
-            tp = current.tag(key).type
+            tp = current.tag(k).type
             if tp == float:
                 v = float(v)
             elif tp == int:
                 v = int(v)
-            current[key] = v
+            current[k] = v
             pcot.config.save()
             return
 
         # Not last: must be a dict
-        if not isinstance(current[key], (TaggedDict, TaggedList)):
+        if not isinstance(current[k], (TaggedDict, TaggedList)):
             raise KeyError("Item at "
                 f"Item at '{'.'.join(keys[:i+1])}' is not a dict or list, "
-                f"but a {type(current[key]).__name__}"
+                f"but a {type(current[k]).__name__}"
             )
 
-        if isinstance(current[key], TaggedDict):
-            current = current[key]
-        elif isinstance(current[key], TaggedList):
+        if isinstance(current[k], TaggedDict):
+            current = current[k]
+        elif isinstance(current[k], TaggedList):
             try:
-                key = int(key)
+                k = int(k)
             except:
-                raise KeyError(f"Could not convert '{key}' to int at {'.'.join(keys[:i+1])}")
-            current = current[key]
+                raise KeyError(f"Could not convert '{k}' to int at {'.'.join(keys[:i+1])}")
+            current = current[k]
 
 
-@subcommand(args=[],
-    shortdesc="Run the configuration UI")
-def config(args):
+@cli.command(short_help="Run the configuration UI")
+def config():
     import pcot.config
     app = QtWidgets.QApplication(sys.argv)
 
@@ -120,4 +115,3 @@ def config(args):
         print("Saved")
     else:
         print("You rejected the changes")
-

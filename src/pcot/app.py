@@ -66,7 +66,7 @@ def checkApp():
         app = QtWidgets.QApplication()
 
 
-def run(args):
+def run(file):
     """the main function: loads any file specified, opens a mainwindow and runs its code.
     Command line parsing is done in main, which calls this."""
 
@@ -94,14 +94,14 @@ def run(args):
     pcot.config.main_app_running = True
     pcot.setup()
 
-    # create a document either ab initio or from a file, depending on args and config.
-    if args.file is not None:
-        path = Path(args.file)
+    # create a document either ab initio or from a file, depending on file and config.
+    if file is not None:
+        path = Path(file)
         if not path.is_file() or path.suffix != ".pcot":
-            logger.error(f"'{args.file}' is not a PCOT file or subcommand - type 'pcot -h' for help")
+            logger.error(f"'{file}' is not a PCOT file or subcommand - type 'pcot -h' for help")
             sys.exit(1)
         else:
-            doc = Document(args.file)
+            doc = Document(file)
     else:
         loadfile = pcot.config.data.loadfile
         if loadfile and loadfile != "" and loadfile != ".": # "." because it's a Path which can't be empty

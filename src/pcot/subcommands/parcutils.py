@@ -1,26 +1,25 @@
-from pcot.subcommands import subcommand,argument
+import click
+
+from pcot.subcommands.subcommands import cli
 from pcot.utils.table import Table
 
-@subcommand(
-    [
-        argument("filename", metavar="FILENAME", help="Name of the PARC file to list"),
-        argument("--meta", help="Only show the metadata", action="store_true"),
-        argument("--nometa", help="Do not show the metadata", action="store_true"),
-        argument("--history", help="Show the archive's history metadata", action="store_true")
-    ],
-    shortdesc="List the contents and metadata of a PARC file"
-)
-def lsparc(args):
+
+@cli.command(short_help="List the contents and metadata of a PARC file")
+@click.argument("filename")
+@click.option("--meta", is_flag=True, help="Only show the metadata")
+@click.option("--nometa", is_flag=True, help="Do not show the metadata")
+@click.option("--history", is_flag=True, help="Show the archive's history metadata")
+def lsparc(filename, meta, nometa, history):
     """
-    List the contents of a PARC datum store and its metadata
+    List the contents of a PARC datum store and its metadata.
     """
     from pcot.utils.archive import FileArchive
     from pcot.utils.datumstore import DatumStore
     import datetime
 
-    a = FileArchive(args.filename)
-    
-    if not args.nometa:
+    a = FileArchive(filename)
+
+    if not nometa:
         if a.metadata.is_loaded():
             for k in ['name','type','author','date','pcotversion','short']:
                 print(f"{k:20} {getattr(a.metadata,k)}")
@@ -30,7 +29,7 @@ def lsparc(args):
                 print("Description:")
                 print(desc)
 
-            if args.history:
+            if history:
                 t = Table()
                 for e in a.metadata.history:
                     t.newRow()
@@ -41,9 +40,9 @@ def lsparc(args):
                 print("\n"+t.text("HISTORY"))
         else:
             print("No metadata (old archive?)")
-        
 
-    if not args.meta:
+
+    if not meta:
         # show contents as well as metadata
         print("Contents:")
         ds = DatumStore(a)
@@ -51,20 +50,16 @@ def lsparc(args):
         if len(manifest)==0:
             print(f"No datum items found; archive type is {a.metadata.type}")
         for k in manifest:
-            meta = manifest[k]
-            created = meta.created.strftime("%Y-%m-%d")
-    
-            print(f"{k:>20} : {meta.datumtype:12} {created:11} {meta.description}")
+            m = manifest[k]
+            created = m.created.strftime("%Y-%m-%d")
+
+            print(f"{k:>20} : {m.datumtype:12} {created:11} {m.description}")
 
 
-@subcommand(
-    [
-        argument("filename", metavar="FILENAME", help="Name of the PARC file"),
-        argument("itemname", metavar="ITEMNAME", help="Name of the item")
-    ],
-    shortdesc="Print a Datum stored in a PARC to stdout"
-)
-def viewparc(args):
+@cli.command(short_help="Print a Datum stored in a PARC to stdout")
+@click.argument("filename")
+@click.argument("itemname")
+def viewparc(filename, itemname):
     """
     Output the text representation of a Datum stored in a PARC to stdout.
     """
@@ -74,8 +69,8 @@ def viewparc(args):
     import datetime
 
     pcot.setup() # need this to get datum types setup
-    a = FileArchive(args.filename)
+    a = FileArchive(filename)
     ds = DatumStore(a)
-    
-    d = ds.get(args.itemname)
+
+    d = ds.get(itemname)
     print(d.tp.view(d))

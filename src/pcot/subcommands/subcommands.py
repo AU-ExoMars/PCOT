@@ -1,235 +1,77 @@
 """
-This is the subcommand processing system, built on top of Click.
+The `pcot` command line group. Individual subcommands attach themselves
+directly to `cli` using ordinary click decorators (see gencam.py for an
+example) - this module only owns the root group: its common options
+(--debug, --log-level etc.) and the "dual dispatch" behaviour where
+`pcot somefile.pcot` opens the GUI the same way `pcot gencam ...` runs gencam.
 
-It preserves the calling convention of the previous hand-rolled, argparse-based
-system (originally adapted from Adrian Sampson's "beets"): subcommand modules
-call `subcommand([...])` with a list of `argument(...)` specs and a short
-description, decorating a function that takes a single `args` namespace object
-(so `gencam.py`, `genrefl.py` etc. did not need to change at all).
-
-It also preserves the "dual dispatch" behaviour of `pcot`: if the first
-non-option token on the command line is a recognised subcommand name, that
-subcommand runs; otherwise the fallback command (registered via
-`maincommand()`) runs, so `pcot somefile.pcot` still opens the GUI. This is
-done with `PCOTGroup.resolve_command()` below, click's own (documented)
-extension point for customising how a group picks a subcommand - the same
-approach used by the `click-default-group` package.
+Dual dispatch is implemented by overriding Group.resolve_command(), click's
+own extension point for choosing which subcommand to run (the same approach
+the `click-default-group` package uses): if the first token on the command
+line isn't a recognised subcommand name, it's treated as arguments to the
+`open` command (defined in main.py) instead of failing with "no such
+command". This composes properly with click's own option parsing, so e.g.
+`pcot --log-level DEBUG somefile.pcot` isn't confused into thinking "DEBUG" is
+the file to open.
 """
 
-import argparse
 import logging
+import sys
 
 import click
 
 logger = logging.getLogger(__name__)
 
-# name -> click.Command, kept for parity with the old system and for introspection.
-subcommands = {}
-
-# The name under which the "main command" (the GUI, opened via maincommand())
-# is registered as an ordinary click subcommand, so that dispatch can fall
-# back to it.
-FALLBACK_COMMAND_NAME = "open"
-
-
-class PCOTArgument(click.Argument):
-    """
-    A click Argument that still brackets its metavar as "[OPTIONAL]" in the
-    usage line when it's not required, even though a custom metavar was
-    given - click's own make_metavar() only does this when it computes the
-    metavar itself (see click.Argument.make_metavar), so a plain
-    click.Argument with an explicit `metavar=` loses that visual cue.
-    """
-
-    def make_metavar(self, ctx):
-        var = super().make_metavar(ctx)
-        if self.metavar is not None and not self.required and not var.startswith("["):
-            var = f"[{var}]"
-        return var
-
-
-class PCOTCommand(click.Command):
-    """
-    A click Command that also remembers help text for its positional arguments.
-    Click's Argument (unlike Option) has no `help` text of its own - only a
-    metavar in the usage line - so we keep the descriptions supplied via
-    `argument()` on the side and render them as an "Arguments" section, the
-    way the old argparse-based help did.
-    """
-
-    def __init__(self, *args, arg_help=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.arg_help = arg_help or []
-
-    def format_options(self, ctx, formatter):
-        if self.arg_help:
-            with formatter.section("Arguments"):
-                formatter.write_dl(self.arg_help)
-        super().format_options(ctx, formatter)
-
-
-def argument(*name_or_flags, **kwargs):
-    """
-    Convenience function to properly format arguments to pass to the
-    subcommand decorator - same calling convention as the old argparse-based
-    system: `argument('name', ...)` for a positional, `argument('--flag', '-f',
-    ...)` for an option, with argparse-style kwargs (type, metavar, help,
-    nargs, action, choices, dest, default, const).
-    """
-    return list(name_or_flags), dict(kwargs)
-
-
-def _is_option(name_or_flags):
-    return any(f.startswith('-') for f in name_or_flags)
-
-
-def _build_param(name_or_flags, kwargs):
-    """Translate one argument() spec into a click Parameter, plus an optional
-    (metavar, help) pair for PCOTCommand's "Arguments" section if it's a
-    positional with help text."""
-    kwargs = dict(kwargs)
-    help_text = kwargs.pop('help', None)
-    metavar = kwargs.get('metavar')
-    dest = kwargs.pop('dest', None)
-    action = kwargs.pop('action', None)
-    nargs = kwargs.pop('nargs', None)
-    choices = kwargs.pop('choices', None)
-    const = kwargs.pop('const', None)
-
-    if choices is not None:
-        kwargs['type'] = click.Choice(choices)
-
-    if _is_option(name_or_flags):
-        # a bare (non-dash) entry in the declarations tells click to use that
-        # as the parameter name instead of deriving one from the flag - the
-        # same thing argparse's `dest` does.
-        decls = list(name_or_flags)
-        if dest:
-            decls = decls + [dest]
-        if action == 'store_true':
-            kwargs['is_flag'] = True
-        elif action == 'store_const':
-            kwargs.setdefault('is_flag', True)
-            kwargs['flag_value'] = const
-        if help_text is not None:
-            kwargs['help'] = help_text
-        return click.Option(decls, **kwargs), None
-    else:
-        decls = list(name_or_flags)
-        if nargs == '*':
-            kwargs['nargs'] = -1
-            kwargs.setdefault('required', False)
-        elif nargs == '?':
-            kwargs.setdefault('required', False)
-        else:
-            kwargs.setdefault('required', True)
-        param = PCOTArgument(decls, **kwargs)
-        label = metavar or param.human_readable_name.upper()
-        arg_help_entry = (label, help_text) if help_text else None
-        return param, arg_help_entry
-
-
-def _short_help(doc):
-    return (doc or "").strip().splitlines()[0] if doc else ""
-
-
-def _make_callback(func):
-    def callback(**kwargs):
-        # click gives nargs=-1/'*' arguments back as tuples; the old system
-        # (and the subcommand bodies) expect a list, as argparse produced.
-        ns = argparse.Namespace(**{k: (list(v) if isinstance(v, tuple) else v)
-                                    for k, v in kwargs.items()})
-        func(ns)
-    return callback
-
 
 class PCOTGroup(click.Group):
-    """
-    A click Group that falls back to a designated command (`open`, registered
-    via maincommand()) when the first token on the command line isn't a
-    recognised subcommand name - so `pcot somefile.pcot` dispatches to `open`
-    the same way `pcot gencam ...` dispatches to `gencam`. Overriding
-    resolve_command() is click's own extension point for this; unlike a
-    from-scratch argv rewrite it composes properly with click's own option
-    parsing (so e.g. `pcot --log-level DEBUG somefile.pcot` isn't confused
-    into thinking "DEBUG" is the file to open), and with --help.
-    """
-
-    fallback_command_name = None
+    fallback_command_name = "open"
 
     def resolve_command(self, ctx, args):
-        if self.fallback_command_name and args and args[0] not in self.commands:
+        if args and args[0] not in self.commands:
             cmd = self.commands[self.fallback_command_name]
             return self.fallback_command_name, cmd, args
         return super().resolve_command(ctx, args)
 
 
-# The top-level command group. Subcommands are registered into this via
-# subcommand()/maincommand(); common (global) options are added via
-# set_common_args(). Its callback is assigned by main.py once all the shared
-# options are known.
-cli = PCOTGroup(name="pcot", invoke_without_command=True, no_args_is_help=False,
-                 context_settings={"help_option_names": ["-h", "--help"]})
+def _install_import_monitor():
+    print("adding import monitor")
+
+    class ImportMonitor:
+        def find_spec(self, fullname, path, target=None):
+            print(f"Loading module: {fullname}")
+            return None  # Continue normal import process
+
+    sys.meta_path.insert(0, ImportMonitor())
 
 
-def subcommand(args=None, shortdesc="", parent=None):
-    """
-    Decorator to define a new subcommand. `args` is a list of argument()
-    specs, `shortdesc` is shown in the top-level command listing.
-    """
-    group = parent or cli
+@click.group(cls=PCOTGroup, name="pcot", invoke_without_command=True, no_args_is_help=False,
+             context_settings={"help_option_names": ["-h", "--help"]})
+@click.option('-d', '--debug', is_flag=True, help="set log level to debug")
+@click.option('-v', '--verbose', is_flag=True, help="set log level to verbose (i.e. INFO)")
+@click.option('--log-level', 'loglevel_name', help='set log level',
+              type=click.Choice(["ERROR", "WARN", "INFO", "DEBUG", "CRITICAL"]))
+@click.option('--show-imports', is_flag=True, help="show module imports for debugging")
+@click.option('--ignore-version', is_flag=True, help="don't do a version check when loading PCOT documents")
+@click.pass_context
+def cli(ctx, debug, verbose, loglevel_name, show_imports, ignore_version):
+    """PCOT - the PanCam Operations Toolkit."""
+    if loglevel_name is not None:
+        level = loglevel_name
+    elif debug:
+        level = logging.DEBUG
+    elif verbose:
+        level = logging.INFO
+    else:
+        level = logging.WARNING
+    logging.getLogger("pcot").setLevel(level)
 
-    def decorator(func):
-        params = []
-        arg_help = []
-        for name_or_flags, kwargs in (args or []):
-            param, entry = _build_param(name_or_flags, kwargs)
-            params.append(param)
-            if entry:
-                arg_help.append(entry)
+    import pcot.config
+    pcot.config.ignore_version = ignore_version
 
-        cmd = PCOTCommand(name=func.__name__, params=params, callback=_make_callback(func),
-                           help=func.__doc__, short_help=shortdesc, arg_help=arg_help)
-        group.add_command(cmd)
-        subcommands[func.__name__] = cmd
-        return func
+    if show_imports:
+        _install_import_monitor()
 
-    return decorator
-
-
-def maincommand(args=None):
-    """
-    Decorator for the "main command" - what runs when no recognised
-    subcommand name is given on the command line (e.g. `pcot somefile.pcot`).
-    Registered as an ordinary subcommand under FALLBACK_COMMAND_NAME so that
-    the dispatch wrapper in main.py can invoke it by name.
-    """
-
-    def decorator(func):
-        params = []
-        arg_help = []
-        for name_or_flags, kwargs in (args or []):
-            param, entry = _build_param(name_or_flags, kwargs)
-            params.append(param)
-            if entry:
-                arg_help.append(entry)
-
-        cmd = PCOTCommand(name=FALLBACK_COMMAND_NAME, params=params, callback=_make_callback(func),
-                           help=func.__doc__, short_help=_short_help(func.__doc__))
-        cli.add_command(cmd)
-        cli.fallback_command_name = FALLBACK_COMMAND_NAME
-        subcommands[FALLBACK_COMMAND_NAME] = cmd
-        return func
-
-    return decorator
-
-
-def set_common_args(args):
-    """
-    Add options common to every subcommand (and the main command) - things
-    like --debug/-v/--log-level. These must be given before the subcommand
-    name on the command line, e.g. `pcot -d gencam ...`.
-    """
-    for name_or_flags, kwargs in args:
-        param, _ = _build_param(name_or_flags, kwargs)
-        cli.params.append(param)
+    if ctx.invoked_subcommand is None:
+        # bare "pcot" - run the same fallback command an unrecognised first
+        # token would have dispatched to, so a plain "pcot" opens the GUI.
+        ctx.invoke(ctx.command.commands[ctx.command.fallback_command_name])

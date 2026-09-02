@@ -1,26 +1,27 @@
 import numpy as np
+import click
 
 from pcot.cameras.filters import Filter
-from pcot.subcommands import subcommand, argument
+from pcot.subcommands.subcommands import cli
 
 
-@subcommand([
-    argument("--long","-l", help="Show long descriptions", action="store_true"),
-    argument("--plot","-p", help="Plot the filter profiles (first camera only)", action="store_true"),
-    argument("--filters","-f", help="Show filters", action="store_true"),
-    argument("--file","-F", help="Read from a PARC file instead of the loaded PCOT cameras", action="store_true"),
-    argument("camera", metavar="CAMERA_NAME", help="Camera name", nargs="?")
-    ],
-    shortdesc="List the available cameras")
-def lscams(args):
-    """List the available cameras in the camera directory. If a camera name is given, just show that camera.
+@cli.command(short_help="List the available cameras")
+@click.option("-l", "--long", "long_", is_flag=True, help="Show long descriptions")
+@click.option("-p", "--plot", is_flag=True, help="Plot the filter profiles (first camera only)")
+@click.option("-f", "--filters", is_flag=True, help="Show filters")
+@click.option("-F", "--file", "file_", is_flag=True,
+              help="Read from a PARC file instead of the loaded PCOT cameras")
+@click.argument("camera", metavar="CAMERA_NAME", required=False)
+def lscams(long_, plot, filters, file_, camera):
+    """
+    List the available cameras in the camera directory. If CAMERA_NAME is given, just show that camera.
     """
     import pcot.cameras
-    if args.file:
+    if file_:
         # we'll try to load a camera file directly here
         from pcot.cameras.camdata import CameraData
-        camera = CameraData(args.camera)
-        show(camera, args)
+        cam = CameraData(camera)
+        show(cam, long_, filters, plot)
     else:
         # we're looking at the loaded cameras, not directly inside a file.
         # first, see if there is a camera directory
@@ -33,22 +34,22 @@ def lscams(args):
         # the system will not have started up fully, so we need to do this.
         pcot.config.loadCameras()
 
-        if args.camera:
-            camera = pcot.cameras.getCamera(args.camera)
-            if camera is None:
-                print(f"Camera {args.camera} not found")
+        if camera:
+            cam = pcot.cameras.getCamera(camera)
+            if cam is None:
+                print(f"Camera {camera} not found")
             else:
-                show(camera, args)
+                show(cam, long_, filters, plot)
         else:
             for name in pcot.cameras.getCameraNames():
-                show(pcot.cameras.getCamera(name),args)
+                show(pcot.cameras.getCamera(name), long_, filters, plot)
                 # this is a hack - we only want to show one camera if we're plotting, because
                 # otherwise we get a plot for each camera.
-                if args.plot:
+                if plot:
                     break
 
 
-def show(camera, args):
+def show(camera, long_, filters, plot):
     import os.path
     base_file_name = os.path.basename(camera.fileName)
     p = camera.params.params
@@ -56,7 +57,7 @@ def show(camera, args):
     if p.has_flats:
         flag_string += "F"
     print(f"{p.name:20} {base_file_name} {flag_string:>3}: {p.short}")
-    if args.long:
+    if long_:
         print(f"{p.description}")
         print(f" Date from YAML file: {p.date or 'No date provided'}")
         print(f" Compilation date: {p.compilation_time or 'No date provided (earlier than 05/06/2025)'}")
@@ -64,7 +65,7 @@ def show(camera, args):
         if p.has_flats:
             print(" Has flats")
 
-    if args.filters:
+    if filters:
         print(f"  Filters:")
         print(f"    {'Name':<5} {'Pos':<5} {'CWL':<5} {'FWHM':<5} {'transmission':14} {'more info':10}")
         for _, f in camera.params.filters.items():
@@ -78,7 +79,7 @@ def show(camera, args):
             else:
                 print(f"    {f} (not a filter??)")
 
-    if args.plot:
+    if plot:
         import matplotlib.pyplot as plt
         for _, f in camera.params.filters.items():
             # get the response for a range of wavelengths
