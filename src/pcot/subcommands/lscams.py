@@ -11,8 +11,8 @@ from pcot.subcommands.subcommands import cli
 @click.option("-f", "--filters", is_flag=True, help="Show filters")
 @click.option("-F", "--file", "file_", is_flag=True,
               help="Read from a PARC file instead of the loaded PCOT cameras")
-@click.argument("camera", metavar="CAMERA_NAME", required=False)
-def lscams(long_, plot, filters, file_, camera):
+@click.argument("camera_name", required=False)
+def lscams(long_, plot, filters, file_, camera_name):
     """
     List the available cameras in the camera directory. If CAMERA_NAME is given, just show that camera.
     """
@@ -20,7 +20,7 @@ def lscams(long_, plot, filters, file_, camera):
     if file_:
         # we'll try to load a camera file directly here
         from pcot.cameras.camdata import CameraData
-        cam = CameraData(camera)
+        cam = CameraData(camera_name)
         show(cam, long_, filters, plot)
     else:
         # we're looking at the loaded cameras, not directly inside a file.
@@ -34,10 +34,10 @@ def lscams(long_, plot, filters, file_, camera):
         # the system will not have started up fully, so we need to do this.
         pcot.config.loadCameras()
 
-        if camera:
-            cam = pcot.cameras.getCamera(camera)
+        if camera_name:
+            cam = pcot.cameras.getCamera(camera_name)
             if cam is None:
-                print(f"Camera {camera} not found")
+                print(f"Camera {camera_name} not found")
             else:
                 show(cam, long_, filters, plot)
         else:

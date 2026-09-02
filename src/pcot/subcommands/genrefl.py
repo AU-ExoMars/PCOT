@@ -53,9 +53,9 @@ def load_simple_format(d:dict):
 
 
 @cli.command(short_help="Process a YAML reflectance file and associated data into a PARC file")
-@click.argument('input_file', metavar='YAML_FILENAME')
-@click.argument('output', metavar='PARC_FILENAME', required=False, default=None)
-def genrefl(input_file, output):
+@click.argument('yaml_filename')
+@click.argument('parc_filename', required=False, default=None)
+def genrefl(yaml_filename, parc_filename):
     """
     Process a YAML reflectance file describing reflectance data, and its associated data, into a PARC file.
 
@@ -64,10 +64,10 @@ def genrefl(input_file, output):
     """
     pcot.setup()
 
-    if output is None:
-        output = os.path.splitext(os.path.basename(input_file))[0] + ".parc"
+    if parc_filename is None:
+        parc_filename = os.path.splitext(os.path.basename(yaml_filename))[0] + ".parc"
 
-    with open(input_file) as f:
+    with open(yaml_filename) as f:
         # load the YAML file. Produces a dict, of course.
         d = yaml.safe_load(f)
 
@@ -104,5 +104,5 @@ def genrefl(input_file, output):
     logger.info(f"Metadata:\n{meta}")
 
     # and write to an archive
-    with archive.FileArchive(output, "w",metadata=meta) as a:
+    with archive.FileArchive(parc_filename, "w",metadata=meta) as a:
         a.writeJson("data", t)

@@ -10,14 +10,14 @@ from pcot.subcommands.subcommands import cli
 @click.option("-p", "--plot", is_flag=True, help="Plot the responses (first target only)")
 @click.option("-F", "--file", "file_", is_flag=True,
               help="Read from a PARC file instead of the loaded reflectances")
-@click.argument("reflectance", metavar="REFLECTANCE_TARGET_NAME", required=False)
-def lsrefls(long_, plot, file_, reflectance):
+@click.argument("reflectance_target_name", required=False)
+def lsrefls(long_, plot, file_, reflectance_target_name):
     """List the available reflectance targets in the reflectances directory."""
     from pcot import config
     from pcot.cameras import reflectances
     if file_:
         # we'll try to load a file directly here
-        refl = reflectances.load(reflectance)
+        refl = reflectances.load(reflectance_target_name)
         show(refl, long_, plot)
     else:
         # otherwise we're looking at loaded reflectances.
@@ -29,10 +29,10 @@ def lsrefls(long_, plot, file_, reflectance):
         # the system won't have started up fully, so we do this.
         config.loadReflectances()
 
-        if reflectance:
-            refl = pcot.cameras.getReflectance(reflectance)
+        if reflectance_target_name:
+            refl = pcot.cameras.getReflectance(reflectance_target_name)
             if refl is None:
-                print(f"Reflectance target {reflectance} not found")
+                print(f"Reflectance target {reflectance_target_name} not found")
             else:
                 show(refl, long_, plot)
         else:

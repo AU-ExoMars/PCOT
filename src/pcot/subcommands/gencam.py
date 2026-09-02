@@ -66,11 +66,11 @@ def get_raw_loader(d):
 
 
 @cli.command(short_help="Process a YAML camera file into a PARC file")
-@click.argument('params', metavar='YAML_FILENAME')
-@click.argument('output', metavar='PARC_FILENAME', required=False, default=None)
+@click.argument('yaml_filename')
+@click.argument('parc_filename', required=False, default=None)
 @click.option("--nocalib", is_flag=True,
               help="Do not store extra calibration data (flats, darks etc.) and add '_NOCALIB' to the camera name")
-def gencam(params, output, nocalib):
+def gencam(yaml_filename, parc_filename, nocalib):
     """
     Given camera data in the current directory, create a .parc file from that data for use as camera parameter data.
     The file format is documented in the PCOT documentation, but is essentially a YAML file with a specific structure.
@@ -82,13 +82,13 @@ def gencam(params, output, nocalib):
     from pcot.cameras import camdata
     import yaml
 
-    if output is None:
-        output = os.path.splitext(os.path.basename(params))[0] + ".parc"
+    if parc_filename is None:
+        parc_filename = os.path.splitext(os.path.basename(yaml_filename))[0] + ".parc"
 
-    print(f"PCOT gencam generating {output} from {params}")
+    print(f"PCOT gencam generating {parc_filename} from {yaml_filename}")
 
     pcot.setup()
-    with open(params) as f:
+    with open(yaml_filename) as f:
         # load the YAML file and process the filter information in the "filters" key
         d = yaml.safe_load(f)
         fs = createFilters(d["filters"], d.get("filter_positions"))
@@ -106,7 +106,7 @@ def gencam(params, output, nocalib):
         p.params.author = d["author"]
         p.params.description = d["description"]
         p.params.short = d["short"]
-        p.params.source_filename = params
+        p.params.source_filename = yaml_filename
 
         if "filter_aliases" in d:
             logger.error("Filter aliases are provided, but these are no longer supported (it's part of the old reflectance system")
@@ -129,8 +129,8 @@ def gencam(params, output, nocalib):
             logger.info("Flats processing disabled by --nocalib option")
 
         # Write the parameter data to the output file.
-        store = camdata.CameraData.openStoreAndWrite(output, p)
-        logger.info(f"camera data written to {output}")
+        store = camdata.CameraData.openStoreAndWrite(parc_filename, p)
+        logger.info(f"camera data written to {parc_filename}")
 
         # Now we can process the flats, if they are enabled and present. We have to do this after opening
         # the store and writing the initial data.
