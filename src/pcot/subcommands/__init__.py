@@ -4,7 +4,7 @@ put them into a separate module and please use local imports within the function
 """
 
 from pcot.subcommands.subcommands import \
-    maincommand, subcommand, argument, process, set_common_args
+    maincommand, subcommand, argument, set_common_args
 
 # import the subcommand modules - these should only import from other modules locally.
 import pcot.subcommands.lscams

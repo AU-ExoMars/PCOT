@@ -1,244 +1,223 @@
 """
-This is the subcommand processing system.
+This is the subcommand processing system, built on top of Click.
 
-Code from https://gist.github.com/mivade/384c2c41c3a29c637cb6c603d4197f9f
+It preserves the calling convention of the previous hand-rolled, argparse-based
+system (originally adapted from Adrian Sampson's "beets"): subcommand modules
+call `subcommand([...])` with a list of `argument(...)` specs and a short
+description, decorating a function that takes a single `args` namespace object
+(so `gencam.py`, `genrefl.py` etc. did not need to change at all).
 
-which was released into the public domain.
-
-This wraps the argparse code with some nice decorators. I've also made some 
-nasty modifications so that 
-
-(a) the null subcommand exists (i.e. no subcommand given)
-(b) information on the subcommands is given in usage and help
-(c) a set of common options is present, which is added to the help
-    for both the main and subcommands.
+It also preserves the "dual dispatch" behaviour of `pcot`: if the first
+non-option token on the command line is a recognised subcommand name, that
+subcommand runs; otherwise the fallback command (registered via
+`maincommand()`) runs, so `pcot somefile.pcot` still opens the GUI.
 """
 
-from argparse import ArgumentParser
-from dataclasses import dataclass
+import argparse
 import logging
 
+import click
 
-class SubArgumentParser(ArgumentParser):
-    """This is a parser which also adds the common arguments to each help/usage output"""
+logger = logging.getLogger(__name__)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def _getacts(self):
-        return common_parser._actions + self._actions
-
-    def _getactgroups(self):
-        return common_parser._action_groups + self._action_groups
-
-    def add_subcommand_info(self, formatter):
-        """Optionally add info on ALL subcommands; only done in the main parser"""
-        pass
-
-    def format_usage(self):
-        formatter = self._get_formatter()
-        formatter.add_usage(self.usage, self._getacts(),
-                            self._mutually_exclusive_groups)
-        self.add_subcommand_info(formatter)
-        return formatter.format_help()
-
-    def format_help(self):
-        formatter = self._get_formatter()
-
-        # usage
-        formatter.add_usage(self.usage, self._getacts(),
-                            self._mutually_exclusive_groups)
-
-        # description
-        formatter.add_text(self.description)
-
-        # positionals, optionals and user-defined groups
-        for action_group in self._getactgroups():
-            formatter.start_section(action_group.title)
-            formatter.add_text(action_group.description)
-            formatter.add_arguments(action_group._group_actions)
-            formatter.end_section()
-
-            # epilog
-            formatter.add_text(self.epilog)
-
-        self.add_subcommand_info(formatter)
-
-        # determine help from format above
-        return formatter.format_help()
-
-
-subcommand_parser = SubArgumentParser()
-subparsers = subcommand_parser.add_subparsers(dest="subcommand")
+# name -> click.Command, kept for parity with the old system and for introspection.
 subcommands = {}
-main_command = None
-mainfunc = None
 
-# This parser parses the common arguments to both main and subcommands
-# We don't want to add a help argument to avoid the common parser parsing
-# it and exiting early.
-common_parser = ArgumentParser(add_help=False)
+# The name under which the "main command" (the GUI, opened via maincommand())
+# is registered as an ordinary click subcommand, so that dispatch can fall
+# back to it.
+FALLBACK_COMMAND_NAME = "open"
 
 
-def set_common_args(args, **kwargs):
-    """Provide common arguments and defaults (the latter as keyword args
-    like set_defaults() in argparse"""
-    for arg in args:
-        common_parser.add_argument(*arg[0], **arg[1])
-    common_parser.set_defaults(**kwargs)
+class PCOTArgument(click.Argument):
+    """
+    A click Argument that still brackets its metavar as "[OPTIONAL]" in the
+    usage line when it's not required, even though a custom metavar was
+    given - click's own make_metavar() only does this when it computes the
+    metavar itself (see click.Argument.make_metavar), so a plain
+    click.Argument with an explicit `metavar=` loses that visual cue.
+    """
+
+    def make_metavar(self, ctx):
+        var = super().make_metavar(ctx)
+        if self.metavar is not None and not self.required and not var.startswith("["):
+            var = f"[{var}]"
+        return var
 
 
-@dataclass
-class CommandInfo:
-    parser: ArgumentParser
-    shortdesc: str
+class PCOTCommand(click.Command):
+    """
+    A click Command that also remembers help text for its positional arguments.
+    Click's Argument (unlike Option) has no `help` text of its own - only a
+    metavar in the usage line - so we keep the descriptions supplied via
+    `argument()` on the side and render them as an "Arguments" section, the
+    way the old argparse-based help did.
+    """
+
+    def __init__(self, *args, arg_help=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.arg_help = arg_help or []
+
+    def format_options(self, ctx, formatter):
+        if self.arg_help:
+            with formatter.section("Arguments"):
+                formatter.write_dl(self.arg_help)
+        super().format_options(ctx, formatter)
 
 
 def argument(*name_or_flags, **kwargs):
-    """Convenience function to properly format arguments to pass to the
-    subcommand decorator.
-
     """
-    return list(name_or_flags), kwargs
-
-
-def subcommand(args=None, shortdesc="", parent=subparsers):
-    """Decorator to define a new subcommand in a sanity-preserving way.
-
-    Usage example::
-
-        # set up a common argument and default for it - these come before the subcommand,
-        # e.g. prog -d mysubcommand foo
-        #   * prog is main program
-        #   * -d is a common argument
-        #   * mysubcommand is a subcommand
-        *   * foo is an argument to that subcommand        
- 
-        set_common_args([
-            argument('--debug','-d',help="set log level to debug",action="store_const",
-                dest="loglevel",const=logging.DEBUG)],
-            loglevel=logging.WARNING)
-    
-        @maincommand([argument("zog", help="Argument for main command",type=str)])
-        def mainfunc(args):
-            print(args.zog)
-
-        @subcommand([argument("-d", help="Enable debug mode", action="store_true")],"does a thing")
-        def mysubcommand(args):
-            # insert a longer description in triple-quotes here!
-            print(args)
-            
-        def main():
-            # get the function to run and arguments to parse
-            func, args = process()
-            # process the common args (an example)
-            logger.setLevel(args.loglevel)
-            # run the function
-            func(args)
+    Convenience function to properly format arguments to pass to the
+    subcommand decorator - same calling convention as the old argparse-based
+    system: `argument('name', ...)` for a positional, `argument('--flag', '-f',
+    ...)` for an option, with argparse-style kwargs (type, metavar, help,
+    nargs, action, choices, dest, default, const).
     """
-
-    def decorator(func):
-        parser = parent.add_parser(func.__name__, description=func.__doc__)
-        if args:
-            for arg in args:
-                parser.add_argument(*arg[0], **arg[1])
-        parser.set_defaults(func=func)
-        subcommands[func.__name__] = CommandInfo(parser, shortdesc)
-
-    return decorator
+    return list(name_or_flags), dict(kwargs)
 
 
-class MainArgumentParser(SubArgumentParser):
-    """
-    This is pretty grim. It overrides the formatting code to add information on
-    subcommands, and it does so using a lot of argparse internals."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def add_subcommand_info(self, formatter):
-        formatter.start_section("The following subcommands also exist")
-        # first, assemble pairs of strings that will be put into columns
-        columns = []
-        for k, i in subcommands.items():
-            p = i.parser
-            # nasty hackery to get the usage string out of the subcommand
-            ff = i.parser._get_formatter()
-            ff._prog = f"{self.prog} {k}"
-            ff.add_usage(p.usage, common_parser._actions + p._actions, p._mutually_exclusive_groups, "")
-            ss = ff.format_help().strip()
-            # first column is usage, second is shortdescription
-            columns.append((ss, i.shortdesc))
-        # find the maximum width of the first column            
-        maxw = max([len(x[0]) for x in columns])
-        # now output
-
-        for x, y in columns:
-            # we add the columns to the formatter, but we pass it through
-            # an identity function to format it so no wrapping or filling
-            # will happen.
-            ss = f"{x.ljust(maxw)}   :   {y}\n"
-            formatter._add_item((lambda x: x), (ss,))
-
-        formatter.end_section()
+def _is_option(name_or_flags):
+    return any(f.startswith('-') for f in name_or_flags)
 
 
-def maincommand(args=[]):
-    def decorator(func):
-        global main_command
-        global mainfunc
-        p = MainArgumentParser()
-        p.description = func.__doc__
-        main_command = CommandInfo(p, func.__doc__)
-        mainfunc = func
-        for arg in args:
-            main_command.parser.add_argument(*arg[0], **arg[1])
+def _build_param(name_or_flags, kwargs):
+    """Translate one argument() spec into a click Parameter, plus an optional
+    (metavar, help) pair for PCOTCommand's "Arguments" section if it's a
+    positional with help text."""
+    kwargs = dict(kwargs)
+    help_text = kwargs.pop('help', None)
+    metavar = kwargs.get('metavar')
+    dest = kwargs.pop('dest', None)
+    action = kwargs.pop('action', None)
+    nargs = kwargs.pop('nargs', None)
+    choices = kwargs.pop('choices', None)
+    const = kwargs.pop('const', None)
 
-    return decorator
+    if choices is not None:
+        kwargs['type'] = click.Choice(choices)
 
-
-def update_args(args, args_to_add):
-    # add the args_to_add to the args Namespace
-    for k, v in vars(args_to_add).items():
-        setattr(args, k, v)
-
-
-def process():
-    """Process the arguments.
-    Return value: a tuple of
-        * command function to call
-        * argument list for the function (with common arguments merged in)
-    This is so that we can process the common args in a common way before calling the
-    function."""
-
-    import sys
-    global subcommand_help
-    logger = logging.getLogger("pcot")
-
-    # parse the common arguments and get the remaining args
-    # return value is remaining args, args namespace.
-
-    (common_args, argv) = common_parser.parse_known_args()
-    # if the first non-dash argument is a command, and there a main function,
-    # use that.
-
-    lst = [x for x in argv if x[0] != '-']
-
-    if mainfunc and (len(lst) < 1 or lst[0] not in subcommands):
-        # parse main program args
-        args = main_command.parser.parse_args(argv)
-        # merge in the common args
-        update_args(args, common_args)
-        func = mainfunc
+    if _is_option(name_or_flags):
+        # options can share a single "dest" across several argument() calls
+        # (e.g. --debug/-d and --verbose/-v both feeding "loglevel"); click
+        # does this by including the bare parameter name in the declarations,
+        # the same trick argparse's `dest` performs.
+        decls = list(name_or_flags)
+        if dest:
+            decls = decls + [dest]
+        if action == 'store_true':
+            kwargs['is_flag'] = True
+        elif action == 'store_const':
+            kwargs.setdefault('is_flag', True)
+            kwargs['flag_value'] = const
+        if help_text is not None:
+            kwargs['help'] = help_text
+        return click.Option(decls, **kwargs), None
     else:
-        # parse common args
-        args = subcommand_parser.parse_args(argv)
-        # merge in the common args
-        update_args(args, common_args)
-        if args.subcommand is None:  # ???? WHY MIGHT THIS HAPPEN
-            print("Null subcommand")
-            subcommand_parser.print_help()
+        decls = list(name_or_flags)
+        if nargs == '*':
+            kwargs['nargs'] = -1
+            kwargs.setdefault('required', False)
+        elif nargs == '?':
+            kwargs.setdefault('required', False)
         else:
-            func = args.func
+            kwargs.setdefault('required', True)
+        param = PCOTArgument(decls, **kwargs)
+        label = metavar or param.human_readable_name.upper()
+        arg_help_entry = (label, help_text) if help_text else None
+        return param, arg_help_entry
 
-    return func, args
+
+def _short_help(doc):
+    return (doc or "").strip().splitlines()[0] if doc else ""
+
+
+def _make_callback(func):
+    def callback(**kwargs):
+        # click gives nargs=-1/'*' arguments back as tuples; the old system
+        # (and the subcommand bodies) expect a list, as argparse produced.
+        ns = argparse.Namespace(**{k: (list(v) if isinstance(v, tuple) else v)
+                                    for k, v in kwargs.items()})
+        func(ns)
+    return callback
+
+
+# The top-level command group. Subcommands are registered into this via
+# subcommand()/maincommand(); common (global) options are added via
+# set_common_args(). Its callback is assigned by whoever calls
+# set_common_args()'s caller (main.py) once all the shared options are known.
+cli = click.Group(name="pcot", invoke_without_command=True)
+
+
+def subcommand(args=None, shortdesc="", parent=None):
+    """
+    Decorator to define a new subcommand. `args` is a list of argument()
+    specs, `shortdesc` is shown in the top-level command listing.
+    """
+    group = parent or cli
+
+    def decorator(func):
+        params = []
+        arg_help = []
+        for name_or_flags, kwargs in (args or []):
+            param, entry = _build_param(name_or_flags, kwargs)
+            params.append(param)
+            if entry:
+                arg_help.append(entry)
+
+        cmd = PCOTCommand(name=func.__name__, params=params, callback=_make_callback(func),
+                           help=func.__doc__, short_help=shortdesc, arg_help=arg_help)
+        group.add_command(cmd)
+        subcommands[func.__name__] = cmd
+        return func
+
+    return decorator
+
+
+def maincommand(args=None):
+    """
+    Decorator for the "main command" - what runs when no recognised
+    subcommand name is given on the command line (e.g. `pcot somefile.pcot`).
+    Registered as an ordinary subcommand under FALLBACK_COMMAND_NAME so that
+    the dispatch wrapper in main.py can invoke it by name.
+    """
+
+    def decorator(func):
+        params = []
+        arg_help = []
+        for name_or_flags, kwargs in (args or []):
+            param, entry = _build_param(name_or_flags, kwargs)
+            params.append(param)
+            if entry:
+                arg_help.append(entry)
+
+        cmd = PCOTCommand(name=FALLBACK_COMMAND_NAME, params=params, callback=_make_callback(func),
+                           help=func.__doc__, short_help=_short_help(func.__doc__))
+        cli.add_command(cmd)
+        subcommands[FALLBACK_COMMAND_NAME] = cmd
+        return func
+
+    return decorator
+
+
+def set_common_args(args):
+    """
+    Add options common to every subcommand (and the main command) - things
+    like --debug/-v/--log-level. These must be given before the subcommand
+    name on the command line, e.g. `pcot -d gencam ...`.
+    """
+    for name_or_flags, kwargs in args:
+        param, _ = _build_param(name_or_flags, kwargs)
+        cli.params.append(param)
+
+
+def peek_remainder(argv):
+    """
+    Leniently parse just the common (group-level) options out of argv,
+    returning whatever's left over - mirrors argparse's parse_known_args, and
+    is used by main.py to work out whether the next token is a recognised
+    subcommand name, or should fall back to the main command.
+    """
+    peek_cmd = click.Command(name=cli.name, params=list(cli.params),
+                              context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
+    ctx = peek_cmd.make_context(cli.name, list(argv), resilient_parsing=True)
+    return ctx.args
