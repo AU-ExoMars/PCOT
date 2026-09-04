@@ -1,244 +1,77 @@
 """
-This is the subcommand processing system.
+The `pcot` command line group. Individual subcommands attach themselves
+directly to `cli` using ordinary click decorators (see gencam.py for an
+example) - this module only owns the root group: its common options
+(--debug, --log-level etc.) and the "dual dispatch" behaviour where
+`pcot somefile.pcot` opens the GUI the same way `pcot gencam ...` runs gencam.
 
-Code from https://gist.github.com/mivade/384c2c41c3a29c637cb6c603d4197f9f
-
-which was released into the public domain.
-
-This wraps the argparse code with some nice decorators. I've also made some 
-nasty modifications so that 
-
-(a) the null subcommand exists (i.e. no subcommand given)
-(b) information on the subcommands is given in usage and help
-(c) a set of common options is present, which is added to the help
-    for both the main and subcommands.
+Dual dispatch is implemented by overriding Group.resolve_command(), click's
+own extension point for choosing which subcommand to run (the same approach
+the `click-default-group` package uses): if the first token on the command
+line isn't a recognised subcommand name, it's treated as arguments to the
+`open` command (defined in main.py) instead of failing with "no such
+command". This composes properly with click's own option parsing, so e.g.
+`pcot --log-level DEBUG somefile.pcot` isn't confused into thinking "DEBUG" is
+the file to open.
 """
 
-from argparse import ArgumentParser
-from dataclasses import dataclass
 import logging
+import sys
+
+import click
+
+logger = logging.getLogger(__name__)
 
 
-class SubArgumentParser(ArgumentParser):
-    """This is a parser which also adds the common arguments to each help/usage output"""
+class PCOTGroup(click.Group):
+    fallback_command_name = "open"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def _getacts(self):
-        return common_parser._actions + self._actions
-
-    def _getactgroups(self):
-        return common_parser._action_groups + self._action_groups
-
-    def add_subcommand_info(self, formatter):
-        """Optionally add info on ALL subcommands; only done in the main parser"""
-        pass
-
-    def format_usage(self):
-        formatter = self._get_formatter()
-        formatter.add_usage(self.usage, self._getacts(),
-                            self._mutually_exclusive_groups)
-        self.add_subcommand_info(formatter)
-        return formatter.format_help()
-
-    def format_help(self):
-        formatter = self._get_formatter()
-
-        # usage
-        formatter.add_usage(self.usage, self._getacts(),
-                            self._mutually_exclusive_groups)
-
-        # description
-        formatter.add_text(self.description)
-
-        # positionals, optionals and user-defined groups
-        for action_group in self._getactgroups():
-            formatter.start_section(action_group.title)
-            formatter.add_text(action_group.description)
-            formatter.add_arguments(action_group._group_actions)
-            formatter.end_section()
-
-            # epilog
-            formatter.add_text(self.epilog)
-
-        self.add_subcommand_info(formatter)
-
-        # determine help from format above
-        return formatter.format_help()
+    def resolve_command(self, ctx, args):
+        if args and args[0] not in self.commands:
+            cmd = self.commands[self.fallback_command_name]
+            return self.fallback_command_name, cmd, args
+        return super().resolve_command(ctx, args)
 
 
-subcommand_parser = SubArgumentParser()
-subparsers = subcommand_parser.add_subparsers(dest="subcommand")
-subcommands = {}
-main_command = None
-mainfunc = None
+def _install_import_monitor():
+    print("adding import monitor")
 
-# This parser parses the common arguments to both main and subcommands
-# We don't want to add a help argument to avoid the common parser parsing
-# it and exiting early.
-common_parser = ArgumentParser(add_help=False)
+    class ImportMonitor:
+        def find_spec(self, fullname, path, target=None):
+            print(f"Loading module: {fullname}")
+            return None  # Continue normal import process
 
-
-def set_common_args(args, **kwargs):
-    """Provide common arguments and defaults (the latter as keyword args
-    like set_defaults() in argparse"""
-    for arg in args:
-        common_parser.add_argument(*arg[0], **arg[1])
-    common_parser.set_defaults(**kwargs)
+    sys.meta_path.insert(0, ImportMonitor())
 
 
-@dataclass
-class CommandInfo:
-    parser: ArgumentParser
-    shortdesc: str
-
-
-def argument(*name_or_flags, **kwargs):
-    """Convenience function to properly format arguments to pass to the
-    subcommand decorator.
-
-    """
-    return list(name_or_flags), kwargs
-
-
-def subcommand(args=None, shortdesc="", parent=subparsers):
-    """Decorator to define a new subcommand in a sanity-preserving way.
-
-    Usage example::
-
-        # set up a common argument and default for it - these come before the subcommand,
-        # e.g. prog -d mysubcommand foo
-        #   * prog is main program
-        #   * -d is a common argument
-        #   * mysubcommand is a subcommand
-        *   * foo is an argument to that subcommand        
- 
-        set_common_args([
-            argument('--debug','-d',help="set log level to debug",action="store_const",
-                dest="loglevel",const=logging.DEBUG)],
-            loglevel=logging.WARNING)
-    
-        @maincommand([argument("zog", help="Argument for main command",type=str)])
-        def mainfunc(args):
-            print(args.zog)
-
-        @subcommand([argument("-d", help="Enable debug mode", action="store_true")],"does a thing")
-        def mysubcommand(args):
-            # insert a longer description in triple-quotes here!
-            print(args)
-            
-        def main():
-            # get the function to run and arguments to parse
-            func, args = process()
-            # process the common args (an example)
-            logger.setLevel(args.loglevel)
-            # run the function
-            func(args)
-    """
-
-    def decorator(func):
-        parser = parent.add_parser(func.__name__, description=func.__doc__)
-        if args:
-            for arg in args:
-                parser.add_argument(*arg[0], **arg[1])
-        parser.set_defaults(func=func)
-        subcommands[func.__name__] = CommandInfo(parser, shortdesc)
-
-    return decorator
-
-
-class MainArgumentParser(SubArgumentParser):
-    """
-    This is pretty grim. It overrides the formatting code to add information on
-    subcommands, and it does so using a lot of argparse internals."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def add_subcommand_info(self, formatter):
-        formatter.start_section("The following subcommands also exist")
-        # first, assemble pairs of strings that will be put into columns
-        columns = []
-        for k, i in subcommands.items():
-            p = i.parser
-            # nasty hackery to get the usage string out of the subcommand
-            ff = i.parser._get_formatter()
-            ff._prog = f"{self.prog} {k}"
-            ff.add_usage(p.usage, common_parser._actions + p._actions, p._mutually_exclusive_groups, "")
-            ss = ff.format_help().strip()
-            # first column is usage, second is shortdescription
-            columns.append((ss, i.shortdesc))
-        # find the maximum width of the first column            
-        maxw = max([len(x[0]) for x in columns])
-        # now output
-
-        for x, y in columns:
-            # we add the columns to the formatter, but we pass it through
-            # an identity function to format it so no wrapping or filling
-            # will happen.
-            ss = f"{x.ljust(maxw)}   :   {y}\n"
-            formatter._add_item((lambda x: x), (ss,))
-
-        formatter.end_section()
-
-
-def maincommand(args=[]):
-    def decorator(func):
-        global main_command
-        global mainfunc
-        p = MainArgumentParser()
-        p.description = func.__doc__
-        main_command = CommandInfo(p, func.__doc__)
-        mainfunc = func
-        for arg in args:
-            main_command.parser.add_argument(*arg[0], **arg[1])
-
-    return decorator
-
-
-def update_args(args, args_to_add):
-    # add the args_to_add to the args Namespace
-    for k, v in vars(args_to_add).items():
-        setattr(args, k, v)
-
-
-def process():
-    """Process the arguments.
-    Return value: a tuple of
-        * command function to call
-        * argument list for the function (with common arguments merged in)
-    This is so that we can process the common args in a common way before calling the
-    function."""
-
-    import sys
-    global subcommand_help
-    logger = logging.getLogger("pcot")
-
-    # parse the common arguments and get the remaining args
-    # return value is remaining args, args namespace.
-
-    (common_args, argv) = common_parser.parse_known_args()
-    # if the first non-dash argument is a command, and there a main function,
-    # use that.
-
-    lst = [x for x in argv if x[0] != '-']
-
-    if mainfunc and (len(lst) < 1 or lst[0] not in subcommands):
-        # parse main program args
-        args = main_command.parser.parse_args(argv)
-        # merge in the common args
-        update_args(args, common_args)
-        func = mainfunc
+@click.group(cls=PCOTGroup, name="pcot", invoke_without_command=True, no_args_is_help=False,
+             context_settings={"help_option_names": ["-h", "--help"]})
+@click.option('-d', '--debug', is_flag=True, help="set log level to debug")
+@click.option('-v', '--verbose', is_flag=True, help="set log level to verbose (i.e. INFO)")
+@click.option('--log-level', 'loglevel_name', help='set log level',
+              type=click.Choice(["ERROR", "WARN", "INFO", "DEBUG", "CRITICAL"]))
+@click.option('--show-imports', is_flag=True, help="show module imports for debugging")
+@click.option('--ignore-version', is_flag=True, help="don't do a version check when loading PCOT documents")
+@click.pass_context
+def cli(ctx, debug, verbose, loglevel_name, show_imports, ignore_version):
+    """PCOT - the PanCam Operations Toolkit."""
+    if loglevel_name is not None:
+        level = loglevel_name
+    elif debug:
+        level = logging.DEBUG
+    elif verbose:
+        level = logging.INFO
     else:
-        # parse common args
-        args = subcommand_parser.parse_args(argv)
-        # merge in the common args
-        update_args(args, common_args)
-        if args.subcommand is None:  # ???? WHY MIGHT THIS HAPPEN
-            print("Null subcommand")
-            subcommand_parser.print_help()
-        else:
-            func = args.func
+        level = logging.WARNING
+    logging.getLogger("pcot").setLevel(level)
 
-    return func, args
+    import pcot.config
+    pcot.config.ignore_version = ignore_version
+
+    if show_imports:
+        _install_import_monitor()
+
+    if ctx.invoked_subcommand is None:
+        # bare "pcot" - run the same fallback command an unrecognised first
+        # token would have dispatched to, so a plain "pcot" opens the GUI.
+        ctx.invoke(ctx.command.commands[ctx.command.fallback_command_name])

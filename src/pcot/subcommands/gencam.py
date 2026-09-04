@@ -3,10 +3,12 @@ import datetime
 import glob
 import os
 
+import click
+
 from pcot.cameras import filtresponse
 from pcot.cameras.filtresponse import FilterResponse
 from pcot.imagecube import CannotLoadImageBadFormatException
-from pcot.subcommands import subcommand, argument
+from pcot.subcommands.subcommands import cli
 from dataclasses import dataclass
 import logging
 
@@ -63,31 +65,30 @@ def get_raw_loader(d):
     return rawloader
 
 
-@subcommand([
-    argument('params', type=str, metavar='YAML_FILENAME', help="Input YAML file with parameters"),
-    argument('output', type=str, nargs='?', default=None, metavar='PARC_FILENAME',
-             help="Output PARC filename (default: input filename with .parc extension)"),
-    argument("--nocalib",
-             help="Do not store extra calibration data (flats, darks etc.) and add '_NOCALIB' to the camera name",
-             action="store_true")
-],
-    shortdesc="Process a YAML camera file into a PARC file")
-def gencam(args):
+@cli.command(short_help="Process a YAML camera file into a PARC file")
+@click.argument('yaml_filename')
+@click.argument('parc_filename', required=False, default=None)
+@click.option("--nocalib", is_flag=True,
+              help="Do not store extra calibration data (flats, darks etc.) and add '_NOCALIB' to the camera name")
+def gencam(yaml_filename, parc_filename, nocalib):
     """
     Given camera data in the current directory, create a .parc file from that data for use as camera parameter data.
     The file format is documented in the PCOT documentation, but is essentially a YAML file with a specific structure.
+
+    YAML_FILENAME is the input YAML parameter file. PARC_FILENAME is the output PARC file; if omitted, it
+    defaults to YAML_FILENAME's basename with the extension changed to .parc.
     """
     import pcot
     from pcot.cameras import camdata
     import yaml
 
-    if args.output is None:
-        args.output = os.path.splitext(os.path.basename(args.params))[0] + ".parc"
+    if parc_filename is None:
+        parc_filename = os.path.splitext(os.path.basename(yaml_filename))[0] + ".parc"
 
-    print(f"PCOT gencam generating {args.output} from {args.params}")
+    print(f"PCOT gencam generating {parc_filename} from {yaml_filename}")
 
     pcot.setup()
-    with open(args.params) as f:
+    with open(yaml_filename) as f:
         # load the YAML file and process the filter information in the "filters" key
         d = yaml.safe_load(f)
         fs = createFilters(d["filters"], d.get("filter_positions"))
@@ -95,7 +96,7 @@ def gencam(args):
         p = camdata.CameraParams(fs)
         # Now fill in the rest of the data from the YAML file
         p.params.name = d["name"]
-        if args.nocalib:
+        if nocalib:
             logger.info("Adding _NOCALIB to camera name")
             p.params.name += "_NOCALIB"
         # this is the date that the author writes in the YAML file
@@ -105,7 +106,7 @@ def gencam(args):
         p.params.author = d["author"]
         p.params.description = d["description"]
         p.params.short = d["short"]
-        p.params.source_filename = args.params
+        p.params.source_filename = yaml_filename
 
         if "filter_aliases" in d:
             logger.error("Filter aliases are provided, but these are no longer supported (it's part of the old reflectance system")
@@ -117,7 +118,7 @@ def gencam(args):
         # --nocalib option, which won't save calib data AND will add "_NOCALIB" to the camera name.
 
         p.params.has_flats = False
-        if not args.nocalib:
+        if not nocalib:
             if "flats" in d:
                 logger.info("Flats section found")
                 if "disabled" in d["flats"] and d["flats"]["disabled"]:
@@ -128,8 +129,8 @@ def gencam(args):
             logger.info("Flats processing disabled by --nocalib option")
 
         # Write the parameter data to the output file.
-        store = camdata.CameraData.openStoreAndWrite(args.output, p)
-        logger.info(f"camera data written to {args.output}")
+        store = camdata.CameraData.openStoreAndWrite(parc_filename, p)
+        logger.info(f"camera data written to {parc_filename}")
 
         # Now we can process the flats, if they are enabled and present. We have to do this after opening
         # the store and writing the initial data.

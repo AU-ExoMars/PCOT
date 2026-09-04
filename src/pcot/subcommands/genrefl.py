@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
+import click
 import yaml
 import logging
 
 import pcot
 from pcot.cameras import reflectances
-from pcot.subcommands import subcommand, argument
+from pcot.subcommands.subcommands import cli
 from pcot.utils import archive
 
 logger = logging.getLogger(__name__)
@@ -51,19 +52,22 @@ def load_simple_format(d:dict):
     return out
 
 
-@subcommand([
-    argument('input', type=str, metavar='YAML_FILENAME', help="Input YAML file describing reflectance data"),
-    argument('output', type=str, nargs='?', default=None, metavar='PARC_FILENAME',
-             help="Output PARC filename (default: input filename with .parc extension)"),
-],
-    shortdesc="Process a YAML reflectance file and associated data into a PARC file")
-def genrefl(args):
+@cli.command(short_help="Process a YAML reflectance file and associated data into a PARC file")
+@click.argument('yaml_filename')
+@click.argument('parc_filename', required=False, default=None)
+def genrefl(yaml_filename, parc_filename):
+    """
+    Process a YAML reflectance file describing reflectance data, and its associated data, into a PARC file.
+
+    YAML_FILENAME is the input YAML file. PARC_FILENAME is the output PARC file; if omitted, it defaults
+    to YAML_FILENAME's basename with the extension changed to .parc.
+    """
     pcot.setup()
 
-    if args.output is None:
-        args.output = os.path.splitext(os.path.basename(args.input))[0] + ".parc"
+    if parc_filename is None:
+        parc_filename = os.path.splitext(os.path.basename(yaml_filename))[0] + ".parc"
 
-    with open(args.input) as f:
+    with open(yaml_filename) as f:
         # load the YAML file. Produces a dict, of course.
         d = yaml.safe_load(f)
 
@@ -80,7 +84,7 @@ def genrefl(args):
         if patch_format == 'jack':
             out = load_jack_format(d)
         elif patch_format == 'simple':
-            
+
             out = load_simple_format(d)
         else:
             raise Exception(f"Patch format {patch_format} unknown")
@@ -100,7 +104,5 @@ def genrefl(args):
     logger.info(f"Metadata:\n{meta}")
 
     # and write to an archive
-    with archive.FileArchive(args.output, "w",metadata=meta) as a:
+    with archive.FileArchive(parc_filename, "w",metadata=meta) as a:
         a.writeJson("data", t)
-
-
