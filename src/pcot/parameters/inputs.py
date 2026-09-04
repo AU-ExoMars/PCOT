@@ -137,7 +137,10 @@ def modifyInput(inputDict, inp: Input):
             # the method was modified, so we need to select it and force reload
             logger.debug(f"Selecting input method {method}")
             inp.selectMethod(method)
-            method.invalidate()
+            # force=True: we're setting an explicit new filename from the parameter file, so a
+            # missing file must fail loudly here rather than silently keeping stale cached data
+            # from whatever was previously loaded (see InputMethod.invalidate()).
+            method.invalidate(force=True)
             method.get()
             if inp.exception is not None:
                 # if there was an exception, we need to stop

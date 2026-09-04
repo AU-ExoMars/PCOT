@@ -5,6 +5,7 @@ import logging
 import pcot.dq
 from pcot import rois, operations, dq
 from pcot.assets import getAssetPath
+from pcot.colour_correction.correct import ColourCorrection
 from pcot.datum import Datum
 from pcot.dq import NODATA
 from pcot.expressions.register import datumfunc
@@ -1310,3 +1311,20 @@ def eval(img, expr):
     img = img.get(Datum.IMG)
     expr = expr.get(Datum.STRING)
     return evaluateOnImage(img,expr)
+
+
+@datumfunc
+def colourcorrect(img):
+    """
+    Perform colour correction on an HRC image
+    @param img:img:the image
+    """
+    from pcot.colour_correction.correct import ColourCorrection
+    img = img.get(Datum.IMG)
+    if img is None:
+        return Datum.null
+    cc = ColourCorrection()
+    outimg = cc.process(img.img)
+
+    out = ImageCube(outimg, uncertainty=None, dq=img.dq, sources=img.sources)
+    return Datum(Datum.IMG, out)
