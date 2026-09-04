@@ -115,6 +115,10 @@ realistic filter shapes.
 the canvas RGB mapping on save/reload.
 * Canvas now has save/load view buttons next to the reset-view button, for quick access to the
 store/load view location feature previously only available from the right-click menu.
+* `expr` node's expression parser has been rewritten as a Pratt parser (was shunting-yard) - no
+change to expression syntax, but should be easier to extend.
+* Command-line subcommands (`gencam`, `genrefl`, `lscams`, `lsrefls`, `config`, etc.) now use
+Click instead of a homebrew argparse dispatcher; `-h` works as a short form of `--help` again.
 
 Site
 
