@@ -317,6 +317,12 @@ class Archive:
         a = np.load(bio)
         return a
 
+    def __contains__(self, name) -> bool:
+        if self.zip is None:
+            raise Exception("Archive is not open")
+        self.assert_read()
+        return self.zip.__contains__(name)
+
     def readStr(self, name: str) -> str:
         if self.zip is None:
             raise Exception("Archive is not open")

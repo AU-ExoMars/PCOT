@@ -569,7 +569,7 @@ class ImageCube(SourcesObtainable):
 
 
     def process_negatives_for_demosaic(self, neg_method="Leave"):
-        # handle debayer postprocessing (i.e. negatives that result from HMC/DDFAPD on iffy data)
+        # handle debayer postprocessing (i.e. negatives that result from MHC/DDFAPD on iffy data)
         neg_method = neg_method.lower()
         if neg_method != "leave" or neg_method is None:
             # first, mark.

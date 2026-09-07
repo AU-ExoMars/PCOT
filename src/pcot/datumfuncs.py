@@ -1078,11 +1078,31 @@ def getflats(img):
     # and we can get the flats - which should be images.
     flats = [pcot.cameras.getCamera(x.camera_name).getFlat(x.name) for x in filters]
 
+    # make sure they're all Datum or None, and that they're all images.
+    for x in flats:
+        if x is not None:
+            if not isinstance(x, Datum):
+                raise XFormException('DATA', 'flats be Datum objects')
+            if not x.get(Datum.IMG):
+                raise XFormException('DATA', 'flats must be image data')
+
+    # Now, some might be None. If that's so, generate an image of magnitude 1 for that band that is
+    # the same size as the first non-None image. If they're all None, that's a problem.
+    present_flats = list(filter(lambda x: x is not None, flats))
+    if len(present_flats) == 0:
+        raise XFormException('DATA', 'no flats found in camera file')
+    if len(present_flats) != len(flats):
+        # there are holes we need to replace
+        dummy_flat = np.ones(present_flats[0].get(Datum.IMG).img.shape, dtype=np.float32)
+        dummy_flat = Datum(Datum.IMG,ImageCube(dummy_flat, sources=MultiBandSource([nullSourceSet])))
+        flats = [dummy_flat if x is None else x for x in flats]
+
+    # confirm all flats are the same shape
+    ss = set([x.get(Datum.IMG).img.shape for x in flats])
+    if len(ss) != 1:
+        raise XFormException('DATA', 'flats must have the same shape')
+
     # these should all be single-channel images; we can check that.
-    if any([x is None for x in flats]):
-        raise XFormException('DATA', 'could not find flatfield images for all bands')
-    if any([x.get(Datum.IMG) is None for x in flats]):
-        raise XFormException('DATA', 'flatfield images must be images')
     if any([x.get(Datum.IMG).channels != 1 for x in flats]):
         raise XFormException('DATA', 'flatfield images must be single-channel')
 

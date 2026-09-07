@@ -183,6 +183,9 @@ class DatumStore:
         """Get the entire menifest of metadata objects"""
         return self.manifest
 
+    def __contains__(self, name: str) -> bool:
+        return name in self.manifest
+
     def get(self, name) -> Optional[Datum]:
         """
         Get an item from the archive. If it's already in the cache, return it from there. Otherwise, read it from

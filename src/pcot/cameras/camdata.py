@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import Optional
 
 from pcot.cameras.filters import DUMMY_FILTER
 from pcot.cameras.filtresponse import FilterResponse
@@ -243,6 +244,10 @@ class CameraData:
         else:
             return DUMMY_FILTER
 
-    def getFlat(self, filtname) -> Datum:
-        """Get the flatfield for the given filter and position."""
-        return self.archive.get(f"flat_{filtname}")
+    def getFlat(self, filtname) -> Optional[Datum]:
+        """Get the flatfield for the given filter and position. Returns None on failure."""
+        name = f"flat_{filtname}"
+        if name in self.archive:
+            return self.archive.get(f"flat_{filtname}")
+        else:
+            return None

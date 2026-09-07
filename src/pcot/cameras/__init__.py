@@ -86,4 +86,4 @@ def loadAllReflectances(path: str):
         data = reflectances.load(Path(file))
         # this is where having a TaggedDict called "params" *inside* the CameraParams object is a bit grim.
         _reflectances[data.metadata.name] = data
-        logger.info(f"Loaded camera {data.metadata.name} from {file}")
+        logger.info(f"Loaded reflectance target {data.metadata.name} from {file}")
