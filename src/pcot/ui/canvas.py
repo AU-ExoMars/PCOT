@@ -927,6 +927,8 @@ class Canvas(QtWidgets.QWidget):
 
     # warning to indicate the filter data is missing
     missingFilterDataLabel: QtWidgets.QLabel
+    # list of files with missing filter data, shown under missingFilterDataLabel when non-empty
+    missingFilterDataList: QtWidgets.QListWidget
     # bad pixels warning
     badPixelsLabel: QtWidgets.QLabel
 
@@ -1162,6 +1164,11 @@ class Canvas(QtWidgets.QWidget):
         self.missingFilterDataLabel.setVisible(False)
         layout.addWidget(self.missingFilterDataLabel)
         # layout.setAlignment(self.missingFilterDataLabel, Qt.AlignmentFlag.AlignHCenter)
+
+        # list of the files responsible for the missing filter data, normally hidden
+        self.missingFilterDataList = QtWidgets.QListWidget()
+        self.missingFilterDataList.setVisible(False)
+        layout.addWidget(self.missingFilterDataList)
 
         self.badPixelsLabel = QtWidgets.QLabel('')
         self.badPixelsLabel.setStyleSheet(theme.warningLabelStyle())
@@ -1802,10 +1809,15 @@ class Canvas(QtWidgets.QWidget):
 
         # check the filter data
         if self.previmg is not None:
-            badfilterdata = self.previmg.sources.hasMissingFilterData()
-            self.missingFilterDataLabel.setVisible(badfilterdata)
+            missingFiles = self.previmg.sources.getMissingFilterDataFiles()
+            self.missingFilterDataLabel.setVisible(len(missingFiles) > 0)
+            self.missingFilterDataList.clear()
+            self.missingFilterDataList.addItems(missingFiles)
+            self.missingFilterDataList.setVisible(len(missingFiles) > 0)
         else:
             self.missingFilterDataLabel.setVisible(False)
+            self.missingFilterDataList.clear()
+            self.missingFilterDataList.setVisible(False)
 
         self.canvas.display(self.previmg, self.isPremapped)
         self.setDQWidgetState()

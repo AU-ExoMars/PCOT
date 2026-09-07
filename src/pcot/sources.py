@@ -221,6 +221,15 @@ class Source(SourcesObtainable):
         """Returns true if this source has a filter with no data"""
         return isinstance(self.band, Filter) and self.band.hasMissingData()
 
+    def missingFilterDataFile(self) -> Optional[str]:
+        """If this source has a filter with missing data, return a string identifying where the
+        data came from (typically a file path) for use in warnings. Returns None otherwise."""
+        if not self.hasMissingFilterData():
+            return None
+        if self.external is not None:
+            return self.external.long()
+        return self.brief() or "(unknown source)"
+
     def long(self) -> Optional[str]:
         """Return a longer text, possibly with line breaks"""
         s = f"{self.secondary_name} " if self.secondary_name else ""
@@ -403,6 +412,11 @@ class SourceSet(SourcesObtainable):
         """Returns true if any source has a filter with missing data"""
         return any(s.hasMissingFilterData() for s in self.sourceSet)
 
+    def getMissingFilterDataFiles(self) -> List[str]:
+        """Returns a list of descriptions (typically file paths) of sources in this set which have
+        a filter with missing data"""
+        return [f for s in self.sourceSet if (f := s.missingFilterDataFile()) is not None]
+
 
 class MultiBandSource(SourcesObtainable):
     """This is an array of source sets for a single image with multiple bands; each set  is indexed by the band"""
@@ -526,6 +540,11 @@ class MultiBandSource(SourcesObtainable):
     def hasMissingFilterData(self):
         """Returns true if any source set has filters with no data"""
         return self.getSources().hasMissingFilterData()
+
+    def getMissingFilterDataFiles(self) -> List[str]:
+        """Returns a sorted list of unique descriptions (typically file paths) of sources across all
+        bands which have a filter with missing data"""
+        return sorted(set(self.getSources().getMissingFilterDataFiles()))
 
     @classmethod
     def deserialise(cls, lst):
