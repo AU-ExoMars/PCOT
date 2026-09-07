@@ -349,7 +349,7 @@ def process_filters_for_flats(callback, data: FlatFileData):
         else:
             mm = 1.0
 
-        logger.info(f"Flatfield for {debug_name} range is {np.min(mean)}-{np.max(mean)}")
+        logger.info(f"Flatfield for {debug_name}: mean={np.mean(mean)}, range={np.min(mean)}-{np.max(mean)}")
         # now we have to process uncertainty. There is no uncertainty in each input channel,
         # so we just need to calculate the SD across the input pixels for the masked
         # data. If all the bands were saturated we set this to zero.
