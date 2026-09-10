@@ -11,6 +11,7 @@ class ColourCorrection:
         # sensor's opto-electronic response curve.
         spl_o_coeffs = np.load(cali_dir / 'pc_th_spl_o.npz')
         self.spline = BSpline(spl_o_coeffs['t'], spl_o_coeffs['c'], int(spl_o_coeffs['k'][0]))
+        self.offset = spl_o_coeffs['o'] # unused
         # Load the calibrated colour correction matrix (camera RGB -> CIE XYZ).
         th_ccm_path = cali_dir / 'pc_th_ccm.csv'
         self.th_ccm = np.loadtxt(th_ccm_path, delimiter=',')
