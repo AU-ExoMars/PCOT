@@ -115,6 +115,18 @@ class Runner:
         jinja_env.filters['stripext'] = lambda xx: os.path.splitext(xx)[0]  # remove extension: foo.bar -> foo
         jinja_env.filters['extension'] = lambda xx: os.path.splitext(xx)[1]  # get extension: foo.bar -> .bar
 
+        def _loadlist(filename):
+            # load a list of strings from a file, one string per line. Strip comments that start with '#',
+            # strip leading and trailing whitespace, filter out empty lines.
+            with open(filename) as f:
+                d = [x.split('#', 1)[0].strip() for x in f.readlines()]
+                d = [x for x in d if len(x)>0]
+                return d
+
+        # AGAIN, IF YOU CHANGE THIS, REMEMBER TO CHANGE mkdocs/docs/userguide/batch/params.md
+
+        jinja_env.globals['loadlist'] = _loadlist
+
         self.jinja_env = jinja_env
 
     def _build_param_dict(self):
