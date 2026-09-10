@@ -468,7 +468,7 @@ class ImageCube(SourcesObtainable):
 
         # first, check the dtype is valid
         if img.dtype != np.float32:
-            raise Exception("Images must be 32-bit floating point")
+            raise Exception(f"Images must be 32-bit floating point, not {img.dtype}")
         img = cvt1channel(img)  # convert (h,w,1) to (h,w)
         if rois is None:
             self.rois = []  # no ROI
