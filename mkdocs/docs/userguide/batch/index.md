@@ -95,6 +95,20 @@ Here, we are running the graph once as above and then making some changes:
 * changing the gradient's appearance with a preset
 * changing the output to write to a different filename
 
+## Full description of parameter file format
+
+* [Parameter file format](params.md)
+
+
+
+## Jinja 2 templates
+
+All batch files are processed through the Jinja templating engine,
+which gives a lot of power and flexibility - see 
+[Using Jinja2 templates](params.md#using-jinja2-templates) in the parameter
+file format, and [this more complex example](complex.md).
+
+
 @@@todo
 Write more on how the inputs work - intro here, more in params.md or
 elsewhere. Write more in general. Note [autodocs](../../autodocs/index.md).
@@ -102,6 +116,5 @@ elsewhere. Write more in general. Note [autodocs](../../autodocs/index.md).
 Finish.
 @@@
 
-* [Parameter file format](params.md)
 
 

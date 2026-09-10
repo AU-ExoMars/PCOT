@@ -195,7 +195,7 @@ run
 ```
 This is particularly useful when using templates, as we will see below.
 
-### Using Jinja2 templates
+## Using Jinja2 templates
 
 Before they are run, each parameter file is processed using the
 [Jinja2 templating engine](https://jinja.palletsprojects.com/en/stable/templates/), more typically
@@ -229,6 +229,8 @@ run
 # it will be here.
 ```
 
+### Jinja2 extensions
+
 PCOT automatically sets up the following Jinja2 variables for you to use:
 
 |variable name|description|
@@ -256,6 +258,14 @@ as a prefix to any text output, but strip off any directory elements:
 ```txt
 output.0.prefix = {{paramfile | basename}}
 ```
+
+There are also some functions:
+
+|function|return value|
+|---------|---------|
+|loadlist(filename)|the contents of the file as a list, with trailing comments, white space and blank lines removed|
+
+
 
 ### Using outputs (and other lists) in a loop
 
@@ -293,6 +303,12 @@ inputs.0.envi.filename = input{{i}}.hdr     # change input 0
 outputs.0.filename = output{{i}}.png        # and change the output filename
 {{ endfor }}
 ```
+
+## A more complex example
+
+[This page](complex.md) describes a much more complex example which uses Jinja2 to read a list
+of files from another file, and run a document on each file.
+
 
 
 
