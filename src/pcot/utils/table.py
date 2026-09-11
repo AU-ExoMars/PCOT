@@ -162,9 +162,13 @@ class Table:
         return out
     def text(self,titletext=None):
         """output as columns of text, each wide enough for its widest item"""
+        # convert every value to its printable string form up front, so widths and
+        # justification both work on strings rather than raw ints/floats/np.float32
+        strRows = [[str(self._printable(v)) for v in r] for r in self]
+
         # calculate column content widths
         colwidths = { k: len(k) for k in self._keys }
-        for r in self:
+        for r in strRows:
             for k,v in zip(self._keys,r):
                 colwidths[k] = max(colwidths[k],len(v))
 
@@ -177,14 +181,14 @@ class Table:
             return " | ".join(outs)
 
         # output header
-        str = "="*totalwidth+"\n"
+        out = "="*totalwidth+"\n"
         if titletext is not None:
             titletext = "==="+titletext
-            str = titletext+str[len(titletext):]
-        str += colformat(self._keys)+"\n"
-        str += "="*totalwidth+"\n"
+            out = titletext+out[len(titletext):]
+        out += colformat(self._keys)+"\n"
+        out += "="*totalwidth+"\n"
 
         # and data
-        for r in self:
-            str += colformat(r)+"\n"
-        return str
+        for r in strRows:
+            out += colformat(r)+"\n"
+        return out
