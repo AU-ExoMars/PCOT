@@ -71,6 +71,8 @@ def genrefl(yaml_filename, parc_filename):
         # load the YAML file. Produces a dict, of course.
         d = yaml.safe_load(f)
 
+        full_name = os.path.abspath(f.name)
+
         # get basic metadata fields
         t = {k:d[k] for k in ('description','author','date','name','short')}
         # turn the date into a string
@@ -89,20 +91,21 @@ def genrefl(yaml_filename, parc_filename):
         else:
             raise Exception(f"Patch format {patch_format} unknown")
 
-    # serialise the resulting reflectance object into the dict we already have
-    t["data"]=out.serialise()
+        # serialise the resulting reflectance object into the dict we already have
+        t["data"]=out.serialise()
 
-    # get extra metadata that's in the dict; there's some kinda duplication here because the author and
-    # date stored in the metadata will be automatically generated from the system and won't be the values
-    # stored in the YAML file. I think that might be a good idea - the metadata on the archive is about
-    # the file, but the metadata in the data itself is about that data.
-    meta = archive.Metadata(type=archive.ArchiveType.REFLDATA,
-                            name=t['name'],
-                            description=t['description'],
-                            short=t['short'])
+        # get extra metadata that's in the dict; there's some kinda duplication here because the author and
+        # date stored in the metadata will be automatically generated from the system and won't be the values
+        # stored in the YAML file. I think that might be a good idea - the metadata on the archive is about
+        # the file, but the metadata in the data itself is about that data.
+        meta = archive.Metadata(type=archive.ArchiveType.REFLDATA,
+                                name=t['name'],
+                                description=t['description'],
+                                short=t['short'],
+                                full_source_filename=full_name)
 
-    logger.info(f"Metadata:\n{meta}")
+        logger.info(f"Metadata:\n{meta}")
 
-    # and write to an archive
-    with archive.FileArchive(parc_filename, "w",metadata=meta) as a:
-        a.writeJson("data", t)
+        # and write to an archive
+        with archive.FileArchive(parc_filename, "w",metadata=meta) as a:
+            a.writeJson("data", t)

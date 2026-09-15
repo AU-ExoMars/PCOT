@@ -21,7 +21,7 @@ def lsparc(filename, meta, nometa, history):
 
     if not nometa:
         if a.metadata.is_loaded():
-            for k in ['name','type','author','date','pcotversion','short']:
+            for k in ['name','type','author','date','pcotversion','short','full_source_filename']:
                 print(f"{k:20} {getattr(a.metadata,k)}")
 
             desc = a.metadata.description

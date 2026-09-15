@@ -163,7 +163,7 @@ class CameraData:
             x.camera_name = self.params.params.name
 
     @classmethod
-    def openStoreAndWrite(self, fileName, params: CameraParams):
+    def openStoreAndWrite(self, fileName, params: CameraParams, full_source_filename):
         """To avoid writing a weird init, we construct a new DatumStore archive here and write a CameraParams
         datum to it. We return the store  so we can write flatfields etc. later. Remember to close the archive!
         This is called from the gencam command.
@@ -181,7 +181,8 @@ class CameraData:
         meta = Metadata(type=ArchiveType.CAMERADATA,
                                 description=params.params.description,
                                 name=params.params.name,
-                                short=params.params.short)
+                                short=params.params.short,
+                                full_source_filename=full_source_filename)
         archive = FileArchive(fileName, "w", metadata=meta)
         archive.open()
         ds = DatumStore(archive)

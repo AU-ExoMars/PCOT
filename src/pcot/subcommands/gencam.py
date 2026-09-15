@@ -91,6 +91,7 @@ def gencam(yaml_filename, parc_filename, nocalib):
     with open(yaml_filename) as f:
         # load the YAML file and process the filter information in the "filters" key
         d = yaml.safe_load(f)
+        full_name = os.path.abspath(f.name)
         fs = createFilters(d["filters"], d.get("filter_positions"))
         # create a new Params object and pass in the filter.
         p = camdata.CameraParams(fs)
@@ -129,7 +130,7 @@ def gencam(yaml_filename, parc_filename, nocalib):
             logger.info("Flats processing disabled by --nocalib option")
 
         # Write the parameter data to the output file.
-        store = camdata.CameraData.openStoreAndWrite(parc_filename, p)
+        store = camdata.CameraData.openStoreAndWrite(parc_filename, p, full_name)
         logger.info(f"camera data written to {parc_filename}")
 
         # Now we can process the flats, if they are enabled and present. We have to do this after opening

@@ -70,9 +70,12 @@ class Metadata:
     description: str = ""
     short: str = ""
 
+    # full source filename if appropriate (cams, refls etc).
+    full_source_filename: str = ""
+
     # If we are overwriting loaded metadata with new information (i.e. we are rewriting a file),
     # these will need to be updated from the new data.
-    UPDATE_FROM_PROVIDED_ITEMS = ["name", "short", "description"]
+    UPDATE_FROM_PROVIDED_ITEMS = ["name", "short", "description", "full_source_filename"]
     
     def is_loaded(self):
         """If the metadata is "fresh" data that's not yet written to an archive,
