@@ -90,8 +90,14 @@ class Metadata:
     @staticmethod
     def deserialise(d):
         """Create a metadata item from a dict; again this needs to have gone through
-        our deserialiser hook to make sure the ArchiveType is correct"""
-        return Metadata(**d)
+        our deserialiser hook to make sure the ArchiveType is correct. Keys not
+        recognised by this version's Metadata (e.g. fields added by a newer version
+        of PCOT) are dropped rather than causing a crash."""
+        known = {f.name for f in dataclasses.fields(Metadata)}
+        unknown = d.keys() - known
+        if unknown:
+            logger.warning(f"Ignoring unknown metadata fields (from a newer PCOT version?): {sorted(unknown)}")
+        return Metadata(**{k: v for k, v in d.items() if k in known})
         
     def save_history(self):
         """adds some of the metadata's current data to the history list of dicts"""
