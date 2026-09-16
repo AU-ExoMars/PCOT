@@ -159,25 +159,25 @@ def genNodes():
         name=realname.replace(' ', '_')
         out += f"* [{realname}]({name}.md)\n"
         print(name)
-        with open(f"docs/autodocs/{name}.md","w") as f:
+        with open(f"docs/autodocs/{name}.md","w",encoding="utf-8") as f:
             s = pcot.ui.help.getHelpMarkdown(x)
             f.write(s)
             f.write(postscript)
     return out
     
-with open("docs/autodocs/batchinputs.md","w") as f:
+with open("docs/autodocs/batchinputs.md","w",encoding="utf-8") as f:
     f.write(inputprefix)
     s=generate_inputs_documentation()
     f.write(s)
     f.write(postscript)
 
-with open("docs/autodocs/batchoutputs.md","w") as f:
+with open("docs/autodocs/batchoutputs.md","w",encoding="utf-8") as f:
     f.write(outputprefix)
     s=generate_outputs_documentation()
     f.write(s)
     f.write(postscript)
             
-with open("docs/autodocs/index.md","w") as idxfile:
+with open("docs/autodocs/index.md","w",encoding="utf-8") as idxfile:
     str = template.format(nodes=genNodes(),
         funcs=parser.listFuncs(),
         props=parser.listProps())
