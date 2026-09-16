@@ -205,6 +205,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#the-right-click-menu" class="nav-link">The right-click menu</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -219,9 +223,26 @@ it. It is worth discussing in some detail. A canvas is shown below as the
 entire control area for an  <em>input</em> node, which brings one of the four
 inputs into the graph.</p>
 <p><figure class="text-center"><a data-lightbox="inputnode.png" href="../inputnode.png" name="inputnode"><img alt="An open *input 0* node" src="../inputnode.png" /></a><figcaption class="figure-caption text-center">Figure: An open *input 0* node. Click on image to expand.</figcaption></figure></p>
-<p>You can pan the canvas using the scroll bars at the edge, and zoom with
-the mouse wheel. The button at bottom right will reset to show the entire
-image.</p>
+<p>You can pan the canvas using the scroll bars at the edge, by holding down the middle
+mouse button and dragging, or with the keyboard (see below). You can zoom with the mouse
+wheel or the keyboard.</p>
+<h3 id="canvas-corner-buttons">Canvas corner buttons</h3>
+<p>The "two arrows" button at bottom right will reset to show the entire image.</p>
+<p>The S button will save the coordinates of the current view, while the L button will
+load saved coordinates into the current view. This can be very useful when you are looking
+at a small part of an image, and wish to look at the same part of the image in another node.</p>
+<h3 id="keyboard-control">Keyboard control</h3>
+<p>If the canvas has focus (click on it first), you can also pan and zoom using the keyboard -
+handy if you're on a laptop without a scroll wheel or middle mouse button:</p>
+<ul>
+<li><strong>Arrow keys</strong> pan the view. Hold <strong>Shift</strong> for a finer pan, or <strong>Ctrl</strong> for a coarser one.</li>
+<li><strong>+</strong>/<strong>=</strong> and <strong>-</strong> zoom in and out.</li>
+<li><strong>0</strong> resets the zoom and pan to show the entire image (the same as the reset button).</li>
+</ul>
+<p>Some nodes use the arrow keys for their own purposes when their tab is showing the canvas -
+for example, <em>stitch</em> uses plain/Shift/Ctrl + arrow keys to fine-tune the position of the
+selected input image - so keyboard panning isn't available on those particular tabs. Zoom
+keys (<code>+</code>/<code>-</code>/<code>0</code>) are unaffected and still work everywhere.</p>
 <p>To the left of the canvas image itself is the canvas control area. This has quite a lot
 in it, so is scrollable with collapsible sections, rather like the palette.</p>
 <p>At the top - and not collapsible - are three combo boxes which determine
@@ -310,7 +331,20 @@ uncertainty is below a threshold (see below).</li>
 <li><strong>contrast</strong> may help improve visibility (it is a simple power function)</li>
 <li><strong>thresh</strong> is the threshold for the threshold DATA modes</li>
 <li><strong>additive</strong> indicates that the data quality layers should be added to the RGB image rather than blended.</li>
-</ul></div>
+</ul>
+<h2 id="the-right-click-menu">The right-click menu</h2>
+<p>There are several useful functions available in this menu, which pops up when you click the right mouse button.</p>
+<h3 id="saving-an-image">Saving an image</h3>
+<p>Canvas images can be saved in several formats by selecting <strong>Save as image, PDF, SVG or PARC</strong></p>
+<h3 id="storeload-view-location">Store/load view location</h3>
+<p>It is often useful to be able to view the same small area in different nodes. You can capture a canvas
+view's centre point and zoom and then load it in another node using the right-click context menu:</p>
+<ul>
+<li><strong>Store canvas view location</strong> will store the centre point and zoom</li>
+<li><strong>Load canvas view location</strong> when run in another canvas will load it, so you have the same view as the canvas
+in which you stored. </li>
+</ul>
+<p>The loaded view may be slightly different because different nodes often have different canvas sizes.</p></div>
             </div>
         </div>
 

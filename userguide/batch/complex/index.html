@@ -1,0 +1,434 @@
+<!DOCTYPE html><html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>A more complex example - PCOT Documentation</title>
+    
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../../css/brands.min.css" rel="stylesheet">
+        <link href="../../../css/solid.min.css" rel="stylesheet">
+        <link href="../../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+    <link rel="stylesheet" href="../../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../../css/site.css">
+
+    
+
+        <script src="../../../js/lightbox-plus-jquery.min.js" defer></script>
+        <script src="../../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
+    <script src="../../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container ">
+                <a class="navbar-brand" href="../../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User Guide</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
+    <a href="../../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                    
+<li>
+    <a href="../../favesandmacros/" class="dropdown-item">Favorites and macros</a>
+</li>
+                                    
+<li>
+    <a href="../../settings/" class="dropdown-item">Settings dialog</a>
+</li>
+                                    
+<li>
+    <a href="../../devbranch/" class="dropdown-item">Using the development branch</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer's Guide</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
+</li>
+                                    
+<li>
+    <a href="../../../devguide/guppy/" class="dropdown-item">GUPPY, the Guide to Uncertainty in PCOT Python</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container ">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#a-more-complex-example" class="nav-link">A more complex example</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#jinja-basics" class="nav-link">Jinja basics</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#the-walkthrough" class="nav-link">The walkthrough</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#input-file-format" class="nav-link">Input file format</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#the-whole-batch-file" class="nav-link">The whole batch file</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="a-more-complex-example">A more complex example</h1>
+<p>Here's a slightly more complex example that makes use of 
+<a href="https://jinja.palletsprojects.com/en/stable/templates/">Jinja2</a>
+templates. Jinja is usually used to generate web pages, but it can
+also be used to manipulate batch files before they are actually run.</p>
+<p>Here, we use it to loop through a set of filenames stored in a
+separate file, so we can run a PCOT document on each one.
+I'll go through the code line by line (more or less) and then show
+it all at the end.</p>
+<h2 id="jinja-basics">Jinja basics</h2>
+<p>Jinja is a templating system. It uses special codes embedded in
+the batch file to manipulate it and change its contents, before
+the file is actually interpreted by the batch system.</p>
+<ul>
+<li>
+<p>Codes of the form <code>{%...%}</code> are Jinja "statements", which control
+the flow of what Jinja is doing and set variables.</p>
+</li>
+<li>
+<p>Codes of the form <code>{{...}}</code> are "expressions" - Jinja calculates the
+expression's value and inserts it into the document. The expression
+is often just a variable name, and in this case Jinja will replace the
+code with that variable's value.</p>
+</li>
+</ul>
+<p>There's a lot more detail in <a href="https://jinja.palletsprojects.com/en/stable/templates/">the Jinja2 docs</a>
+but bear in mind they are written very much from the point of view
+of web design.</p>
+<h2 id="the-walkthrough">The walkthrough</h2>
+<p>We start by setting up our input. We're going to use a single input -
+input 0 - and it's going to load and debayer an RGB image.
+This sets up input 0 to use the RGB method, and says that it should
+use Malvar-He-Cutler debayering:</p>
+<pre><code class="language-txt">inputs.0.rgb.debayer_algo = MHC
+</code></pre>
+<p>Still on input 0's RGB method, we tell it to use the GRGB debayer pattern.
+Remember that if we start with a leading <code>.</code>, that means we are setting
+a parameter in the subsystem in which we last set a parameter,
+in this case <code>inputs.0.rgb</code>:</p>
+<pre><code class="language-txt">.debayer_pattern = GRBG
+</code></pre>
+<p>We now add a new output (output 0) using the <code>+</code> operator, telling it
+that it should generate the output from a node called "sink":</p>
+<pre><code class="language-txt">outputs.+.node=sink
+</code></pre>
+<p>and we tell this output that's it's OK to overwrite existing files:</p>
+<pre><code class="language-txt">.clobber = y
+</code></pre>
+<p>So far, this should all be familiar to you from the rest of the batch
+file documentation. Now we'll use the Jinja templating system to
+load a list of files from another file called <code>list.txt</code>, 
+and we'll loop through them. This is done with 
+Jinja's <code>{% for.. %}</code> / <code>{% endfor %}</code> statements in association with
+the <code>loadlist</code> function, which loads lines of text from a file (stripping
+comments and blank lines):</p>
+<pre><code class="language-txt">{% for name in loadlist(&quot;list.txt&quot;) %}
+</code></pre>
+<p>Within the loop we create the input and output filenames, storing
+them as Jinja variables. We do this using <code>{% set var = expression %}</code>
+statements. </p>
+<p>First, we create the input name by just copying the <code>name</code> variable.</p>
+<pre><code class="language-txt">    {% set input = name %}
+</code></pre>
+<p>We then generate the output name by using
+Jinja's built-in <code>replace</code> 
+<a href="https://jinja.palletsprojects.com/en/stable/templates/#filters" target="&quot;_blank">filter</a>
+to replace the <code>.png</code> at
+with <code>_corrected.png</code>:</p>
+<pre><code class="language-txt">    {% set output = name | replace(&quot;.png&quot;,&quot;_corrected.png&quot;) %}
+</code></pre>
+<p>Now we can set the input filename within the input we set up
+earlier:</p>
+<pre><code class="language-txt">    inputs.0.rgb.filename = d:\PCOTdata\HRCdata\{{input}}
+</code></pre>
+<p>Naturally your full filename will be different; it doesn't have
+to be a full path, I'm just showing here what's possible. As noted
+above, putting
+a name inside <code>{{..}}</code> tells Jinja to substitute that variable's
+value into the batch file.</p>
+<p>Similarly we tell output 0 where to put the result, which we've already
+specified will come from the sink node:</p>
+<pre><code class="language-txt">    outputs.0.file = {{output}}
+</code></pre>
+<p>Finally we actually do the work, using the batch system's <code>print</code> statement
+to output messages and the <code>run</code> statement to actually run the PCOT document
+with the modified settings:</p>
+<pre><code class="language-txt">    print {{input}} read
+    run
+    print {{output}} written
+</code></pre>
+<p>And finally finally, we end the loop we started earlier</p>
+<pre><code class="language-txt">{% endfor %}
+</code></pre>
+<h2 id="input-file-format">Input file format</h2>
+<p>For reference, the input file might look something like this;</p>
+<pre><code class="language-txt"># some files (this is a comment)
+file1.png
+file2.png # another comment
+</code></pre>
+<p>Anything after a <code>#</code> is ignored by <code>loadlist</code>, as are blank lines and 
+leading and trailing whitespace.</p>
+<h2 id="the-whole-batch-file">The whole batch file</h2>
+<pre><code class="language-txt">{# Set the RGB input method on input 0, and tell it 
+   to use the Malvar He Cutler debayering method. #}
+
+inputs.0.rgb.debayer_algo = MHC
+
+{# Still on input 0's RGB method, tell it to use the GRGB debayer pattern. #}
+
+.debayer_pattern = GRBG
+
+{# Add a new output (which will be output 0), and tell it to read
+   from the node called &quot;sink&quot; #}
+
+outputs.+.node=sink
+
+{# Tell that output that's it's OK to overwrite existing files #}
+
+.clobber = y
+
+{# Now use Jinja to go over the filename list, which we load from
+   another file. #}
+
+{% for name in loadlist(&quot;list.txt&quot;) %}
+
+        {# create the input and output filenames #}
+
+    {% set input = name %}
+    {% set output = name | replace(&quot;.png&quot;,&quot;_corrected.png&quot;) %}
+
+        {# set the input filename in the input method #}
+
+    inputs.0.rgb.filename = d:\PCOTdata\HRCdata\{{input}}
+
+        {# set the output name in the output #}
+
+    outputs.0.file = {{output}}
+
+        {# run the PCOT document with those settings, printing out
+           some logging information #}
+
+    print {{input}} read
+    run
+    print {{output}} written
+
+{% endfor %}
+</code></pre></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

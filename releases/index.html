@@ -191,6 +191,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#100-beta-2026-09-16-little-dennis" class="nav-link">1.0.0-beta 2026-09-16 LITTLE DENNIS</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#0130-beta-2026-07-03-kenwyn-four-burrows" class="nav-link">0.13.0-beta 2026-07-03 KENWYN FOUR BURROWS</a>
               <ul class="nav flex-column">
               </ul>
@@ -233,13 +237,137 @@ bit of info. You can look them up on the Megalithic Portal for more.</p>
 <h2 id="production-releases">Production releases</h2>
 <p>None</p>
 <h2 id="beta-releases">Beta releases</h2>
+<h2 id="100-beta-2026-09-16-little-dennis">1.0.0-beta 2026-09-16 LITTLE DENNIS</h2>
+<p>The big one: PCOT has been migrated from PySide2 (Qt5) to PySide6 (Qt6), which is why this is
+the first major version bump. Most of the migration is invisible to users - it's the same UI -
+but there's a long tail of small Qt6-shaped fixes alongside it, and a couple of unrelated fixes
+that were sitting on <code>dev</code> at the same time.</p>
+<h3 id="important-pythonpyside-version-change">Important: Python/Pyside version change</h3>
+<p><strong>This major version change (PySide2 to PySide6) also requires a more recent Python version (3.11),
+so you will need to rebuild any existing Conda environment completely.</strong></p>
+<p>Follow these instructions while inside the PCOT directory:</p>
+<ul>
+<li><code>git pull</code> to pull the latest version (if you haven't done so already)</li>
+<li><code>conda deactivate</code> to deactivate any existing environment</li>
+<li><code>conda env remove -n pcot</code> to delete the old environment</li>
+<li><code>conda create -n pcot python=3.11 poetry</code> to create a new environment with Poetry and the right Python version</li>
+<li><code>conda activate pcot</code> to switch to the new environment</li>
+<li><code>poetry install</code> to install PCOT</li>
+</ul>
+<p>Aside from pulling the update and deleting the old environment, this is very similar to the install process given
+in the <a href="https://github.com/AU-ExoMars/PCOT">README on the main site</a>.</p>
+<p>You may find you get a lot of errors when you run <code>poetry install</code>. What they look like very much depends
+on your system. This can be caused by Python picking up bits of your system's Python installation instead of your
+Anaconda "sandbox." To fix this, make sure conda doesn't look at your system install at all:</p>
+<pre><code>conda env config vars set PYTHONNOUSERSITE=1 -n pcot
+conda deactivate
+conda activate pcot
+</code></pre>
+<p>and try running <code>poetry install</code> again.</p>
+<p>Changes</p>
+<ul>
+<li><strong>Migrated to PySide6/Qt6</strong> throughout the application (was PySide2/Qt5).</li>
+<li>Dark mode support (follows the OS theme).</li>
+<li>Windows now uses the Fusion style rather than the OS-native one, for consistency.</li>
+<li>Workaround for a GNOME/Wayland dialog decoration bug, and a config-editor checkbox crash, both
+found during the migration.</li>
+<li>Canvas cursor hotspot and mouse-to-image mapping precision fixed at HiDPI scale factors.</li>
+<li>Canvas mouse-wheel zoom now actually zooms to the cursor position rather than drifting towards
+the centre of the view, and middle-button panning now tracks the cursor properly instead of
+moving at half speed.</li>
+<li>Fixes to circle ROI shift/ctrl-drag behaviour, the palette collapse/expand-all button, PDF
+export, and a DQDelegate crash - all regressions found during the Qt6 migration.</li>
+<li>Multifile loader: left-justified bit-depth handling, and preset handling consolidated into a
+single implementation (fixes a bug where presets could be double-applied).</li>
+<li>RGB and Multifile inputs now show the raw DN (digital number) range found in each loaded file,
+before scaling; the Multifile file list is now a resizable/reorderable table.</li>
+<li>New <code>pix()</code> datumfunc to get a pixel value directly.</li>
+<li>Fixed <code>Value.out</code> to correctly use <code>config.data.sigfigs</code> (was a mutable default argument bug).</li>
+<li>Fixed a crash on undo/redo in documents containing macros.</li>
+<li><em>crop</em> node no longer leaves a redundant full-image rectangular ROI behind after cropping.</li>
+<li>PDS4 directory scan now skips invalid files instead of aborting the whole scan.</li>
+<li>Pan/zoom with keyboard in canvas</li>
+<li><code>clamp()</code> datumfunc now takes optional min/max arguments (was fixed to 0-1).</li>
+<li>Canvas right-click menu can store and load a view's centre/zoom, to sync the view between canvases.</li>
+<li><code>expr</code> node: subtracting an ROI from an image (<code>A - B</code>) now "cuts a hole", producing an image whose
+ROI is everything <em>outside</em> the given ROI (e.g. to exclude a calibration target from an operation).</li>
+<li><code>expr</code> node: <code>a$N</code> now selects band index <code>N</code> directly when <code>N</code> is under 20, rather than always
+being interpreted as a wavelength; the old <code>a$_N</code> index syntax is kept for compatibility.</li>
+<li>New <code>.all</code> property on images, giving an ROI covering the entire image.</li>
+<li>Input methods (Multifile, RGB, ENVI, PDS4, PARC) no longer read files or pop up warning dialogs
+for inactive/unvisited tabs; missing source files/directories are now shown as a quiet in-tab
+marker and banner instead, cached data is preserved rather than silently discarded, and a "Retry
+missing inputs" button lets you re-check without reopening the document.</li>
+<li>RGB/ENVI input file tree panel is now resizable via a splitter.</li>
+<li>New global <code>--ignore-version</code> command line option to bypass PCOT file version checks.</li>
+<li>New <code>eval()</code> datumfunc for evaluating an expression string against an image passed in as <code>a</code>.</li>
+<li><em>reflectance</em> node: fit table and plots now show each filter's CWL; dubious fits (negative or
+very small gradient, line far from the origin) are flagged in a new warnings table; the controls
+panel can be hidden/shown to give the plot more room; icons are now dark-mode-aware; per-patch plot
+annotations now show the sample count used for each point.</li>
+<li>New (early/experimental) <em>spectral parameter</em> node: applies a named, pre-defined expression
+(e.g. a band ratio or index) from a spectral parameter group to an image, selected via group/parameter
+dropdowns. Ships with builtin AUPE LWAC, AUPE RWAC and PanCam parameter groups.</li>
+<li><code>mean()</code>/<code>sum()</code>/<code>sd()</code>/<code>min()</code>/<code>max()</code> on a band with no unmasked pixels (e.g. entirely excluded
+by ROI or bad-pixel DQ) now correctly return NODATA rather than leaking a numpy masked constant;
+these functions also now correctly propagate DQ bits from their input into their result.</li>
+<li>Canvas RGB channel selectors now have a link button to lock the three channel combos together,
+so changing one changes all three.</li>
+<li>Calibration target locator nodes <em>pct</em> and <em>colorchecker</em> have been improved, giving the user the option
+of using the actual patch shape (Shape mode) (which can be scaled) or a flood fill from the centre (the previous
+mode of operation) with a variable fill tolerance. The rectangular patches of the ColorChecker are now fully supported.</li>
+<li>Calibration target locator nodes have new "White Fill" and "Red Fill" ROI draw modes; single-band reflectance
+plots now always show the fit title. </li>
+<li>Macros that shadow a built-in node type's name are now ignored with a
+warning, rather than silently causing confusing behaviour.</li>
+<li><em>reflectance</em> node's filter-to-plot combo now shows each filter's wavelength, e.g. "C01L (640nm)".</li>
+<li><em>spectrum</em> node: new wavelength annotation modes (none/line/line+FWHM) draw a marker line and rotated
+wavelength label at each plotted point, with an optional pale band showing the filter's FWHM; the node's
+controls panel has been reorganised into tabs (Plot/Layout/Display) to reduce clutter.</li>
+<li>Plot widgets (histogram, reflectance, spectrum) now have a right-click copy/save context menu; the
+redundant Save buttons have been removed from those tabs.</li>
+<li>Canvas can now copy the current view to the clipboard, including ROIs, annotations and DQ overlays.</li>
+<li>Multifile/camera filter position matching is now more forgiving: positions like "L01" and "L1" (with or
+without leading zeroes) are now treated as equivalent.</li>
+<li><code>gencam</code>: flat field data can now be marked <code>leftjustified</code> (bits shifted to fill the container) when
+building camera archives; simulated filter responses now support a super-Gaussian order parameter for more
+realistic filter shapes.</li>
+<li>Input loading now falls back to the last good input data if a reload fails on save, and no longer resets
+the canvas RGB mapping on save/reload.</li>
+<li>Canvas now has save/load view buttons next to the reset-view button, for quick access to the
+store/load view location feature previously only available from the right-click menu.</li>
+<li><code>expr</code> node's expression parser has been rewritten as a Pratt parser (was shunting-yard) - no
+change to expression syntax, but should be easier to extend.</li>
+<li>Command-line subcommands (<code>gencam</code>, <code>genrefl</code>, <code>lscams</code>, <code>lsrefls</code>, <code>config</code>, etc.) now use
+Click instead of a homebrew argparse dispatcher; <code>-h</code> works as a short form of <code>--help</code> again.</li>
+<li><code>getflats</code>: bands with no flatfield data in the camera file are now substituted with a unity
+flatfield instead of raising an error, so images can still be processed with partial calibration data.</li>
+<li>Canvas's missing-filter-data warning now lists the actual source files responsible, rather than
+just showing a bare warning label.</li>
+<li>Batch parameter files: new Jinja2 <code>loadlist()</code> function to load a list of strings (comments,
+blank lines and surrounding whitespace stripped) from a file for use in templates; documentation
+of the Jinja2 templating system has been expanded, including a
+<a href="../userguide/batch/complex/">more complex example</a>.</li>
+<li>New (early/placeholder) <em>colourcorrect</em> node and <code>colourcorrect()</code> datum function, performing
+non-linearity correction, white balance and chromatic adaptation to convert a camera's native RGB
+to sRGB. Currently supports AUPE (daylight) and HRC (tungsten) cameras/illuminants, selected via
+separate camera+scene and illuminant parameters; more cameras and illuminants will follow.</li>
+</ul>
+<p>Site</p>
+<ul>
+<li><a href="https://maps.app.goo.gl/shgZTDwdUYhsvo3s9">Google maps</a></li>
+<li><a href="https://maps.nls.uk/geo/explore/#zoom=17.0&amp;lat=50.09010&amp;lon=-5.09618&amp;layers=168&amp;b=osm&amp;o=100&amp;marker=50.089616,-5.094837">NLS Map</a></li>
+<li>A promontory fort (cliff castle), probably Iron Age, on a headland at St Anthony-in-Meneage
+on the Lizard - the earthworks cutting off the headland show up well on LIDAR, though on the
+ground it's mostly reduced to crop marks and a bank on the sloping southern side.</li>
+</ul>
 <h2 id="0130-beta-2026-07-03-kenwyn-four-burrows">0.13.0-beta 2026-07-03 KENWYN FOUR BURROWS</h2>
 <p>Quite a lot in this one. We don't have HRC colour correction yet, but it's
 being worked on - it's a difficult problem (more accurately, getting it
 into PCOT without pulling in a library that's 20 times bigger than PCOT itself
 is difficult).</p>
 <ul>
-<li><a href="/userguide/favesandmacros">Favourites and macros</a> - save nodes with
+<li><a href="../userguide/favesandmacros/">Favourites and macros</a> - save nodes with
 particular settings and also collections of nodes which work like a single node.
 Both favourites and macros can be saved to archives which can be loaded on startup.</li>
 <li>PCOT now also has Malvar-He-Cutler and Menon (DDFAPD) demosaicing algorithms.</li>
@@ -249,12 +377,12 @@ not the rather weird OpenCV names.</li>
 stretches, and does so on all bands (not just the RGB representation).</li>
 <li><strong><em>decorrstretch</em> node deprecated</strong> - use <em>PCA</em> instead</li>
 <li>Search box for palette!</li>
-<li><a href="userguide/settings">Settings dialog</a> should make life easier for changing settings quickly.</li>
+<li><a href="../userguide/settings/">Settings dialog</a> should make life easier for changing settings quickly.</li>
 <li>Unconnected <em>expr</em> inputs give a null datum rather than raising an
 exception.</li>
 <li><em>reflectance</em> node supports angle data (filter angle and <span class="arithmatex"><span class="MathJax_Preview">\phi</span><script type="math/tex">\phi</script></span>, <span class="arithmatex"><span class="MathJax_Preview">\theta</span><script type="math/tex">\theta</script></span> for target).</li>
 <li>Raw loader crops overlong data and warns.</li>
-<li><a href="/devguide/guppy">GUPPY</a>, the Guide to Uncertainty in PCOT Python - how to write code that
+<li><a href="../devguide/guppy/">GUPPY</a>, the Guide to Uncertainty in PCOT Python - how to write code that
 propagates uncertainty.</li>
 <li>
 <p><code>TabData</code> is now <code>TabGeneric</code>, and if you use TaggedAggregate parameters

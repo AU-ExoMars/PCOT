@@ -339,8 +339,9 @@ save it as an ENVI file (assuming it is an image - error checking
 is left as an exercise for the reader).</p>
 <pre><code class="language-python">import pcot
 import os
-from PySide2 import QtWidgets
-from PySide2.QtWidgets import QAction, QMessageBox
+from PySide6 import QtWidgets
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMessageBox
 from pcot.dataformats import envi
 
 def saveEnvi(w):
@@ -408,7 +409,7 @@ palette), and version. It will add the input and output connectors.</li>
 Often, this can be a <code>TabGeneric</code> which will look at the node's <code>out</code>
 attribute, which should be a <code>Datum.</code>
 This tab class will also provide an editor for your node's parameters
-if those parameters are <a href="/devguide/nodeser/#using-taggedaggregates-to-serialise-nodes">TaggedAggregate parameters</a>.</li>
+if those parameters are <a href="../nodeser/#using-taggedaggregates-to-serialise-nodes">TaggedAggregate parameters</a>.</li>
 <li><strong>perform(self, node)</strong> will actually perform the node's action, reading inputs 
 and setting outputs.</li>
 </ul>

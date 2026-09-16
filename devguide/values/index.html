@@ -211,7 +211,7 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="how-values-work">How Values work</h1>
-<p>Note - read this in conjunction with <a href="/devguide/guppy">GUPPY</a>.</p>
+<p>Note - read this in conjunction with <a href="../guppy/">GUPPY</a>.</p>
 <p>Value is PCOT's fundamental type for working with uncertain numerical data.
 Values are triplets of:</p>
 <ul>
@@ -236,17 +236,17 @@ relying on Numpy's broadcasting to do the "right thing" with what it's given.</l
 <li>pass the three results into Value's constructor to get a new value</li>
 </ul>
 <p>Examples - the multiplication operator:</p>
-<pre><code class="language-python">    def __mul__(self, other):
-        return Value(self.n * other.n, mul_unc(self.n, self.u, other.n, other.u),
-                     combineDQs(self, other))
+<pre><code class="language-python">def __mul__(self, other):
+    return Value(self.n * other.n, mul_unc(self.n, self.u, other.n, other.u),
+                 combineDQs(self, other))
 </code></pre>
 <p>The AND operator:</p>
-<pre><code class="language-python">    def __and__(self, other):
-        &quot;&quot;&quot;The &amp; operator actually finds the minimum (Zadeh fuzzy op)&quot;&quot;&quot;
-        n = np.where(self.n &gt; other.n, other.n, self.n)
-        u = np.where(self.n &gt; other.n, other.u, self.u)
-        d = np.where(self.n &gt; other.n, other.dq, self.dq)
-        return Value(n, u, d)
+<pre><code class="language-python">def __and__(self, other):
+    &quot;&quot;&quot;The &amp; operator actually finds the minimum (Zadeh fuzzy op)&quot;&quot;&quot;
+    n = np.where(self.n &gt; other.n, other.n, self.n)
+    u = np.where(self.n &gt; other.n, other.u, self.u)
+    d = np.where(self.n &gt; other.n, other.dq, self.dq)
+    return Value(n, u, d)
 </code></pre>
 <h2 id="binary-and-unary-operations-on-datum-objects">Binary and unary operations on <em>Datum</em> objects</h2>
 <p>This is for binops - unary operations are much the same, but a lot simpler (although
@@ -281,15 +281,15 @@ returned, we just wrap that in a Datum.</li>
 </ol>
 <p>For other types - not Datum.NUMBER or Datum.IMG - other semantics methods will have been written. For example,
 the ROI types have binary operators which construct ROIBinop objects using dunder methods:</p>
-<pre><code class="language-python">    def regROIBinopSemantics(op, fn):
-        &quot;&quot;&quot;Used to register binops for ROIs, which support a subset of ops.&quot;&quot;&quot;
-        registerBinopSemantics(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
+<pre><code class="language-python">def regROIBinopSemantics(op, fn):
+    &quot;&quot;&quot;Used to register binops for ROIs, which support a subset of ops.&quot;&quot;&quot;
+    registerBinopSemantics(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
 
-    regROIBinopSemantics(Operator.ADD, lambda x, y: x + y)
-    regROIBinopSemantics(Operator.SUB, lambda x, y: x - y)
-    regROIBinopSemantics(Operator.MUL, lambda x, y: x * y)
-    regROIBinopSemantics(Operator.DIV, lambda x, y: x / y)
-    regROIBinopSemantics(Operator.POW, lambda x, y: x ** y)
+regROIBinopSemantics(Operator.ADD, lambda x, y: x + y)
+regROIBinopSemantics(Operator.SUB, lambda x, y: x - y)
+regROIBinopSemantics(Operator.MUL, lambda x, y: x * y)
+regROIBinopSemantics(Operator.DIV, lambda x, y: x / y)
+regROIBinopSemantics(Operator.POW, lambda x, y: x ** y)
 </code></pre>
 <h2 id="binary-and-unary-operations-in-an-expr-node">Binary and unary operations in an <em>expr</em> node</h2>
 <ul>
@@ -335,8 +335,8 @@ in <code>pcot.datum</code>, which will
 turn imagecubes and numbers into Value objects in a similar way to how the semantic binop
 wrappers work for operations. It will also wrap the resulting Value in a Datum.</p>
 <p>An example is <code>Datum.sin</code>, a method that finds the sine of a numeric or image Datum. Here is the method in full:</p>
-<pre><code class="language-python">    def sin(self):
-        return func_wrapper(lambda x: x.sin(), self)
+<pre><code class="language-python">def sin(self):
+    return func_wrapper(lambda x: x.sin(), self)
 </code></pre>
 <p>The wrapper takes a function and the Datum on which perform the function. It
 returns a Datum. The function passed must take and return a Value. In this case, we use
@@ -379,7 +379,7 @@ scalar - are converted into a vector Value with one value for each band.</li>
 <p>and it will work on scalar Values, vector Values and images - in the latter case, producing a vector
 Value.</p>
 <p>The <code>pooled_sd</code> function will take the nominal and uncertainty arrays and pool their variation into
-a single value, as described in <a href="/devguide/guppy/">GUPPY</a>.</p>
+a single value, as described in <a href="../guppy/">GUPPY</a>.</p>
 <p>The datumfunc is simple:</p>
 <pre><code class="language-python">@datumfunc
 def mean(val):
@@ -393,7 +393,47 @@ def mean(val):
     @param val:img,number:the value to process
     &quot;&quot;&quot;
     return val.mean()
-</code></pre></div>
+</code></pre>
+<p>For vector Values (i.e. a plain array of elements, not an image), elements with <code>BAD</code> DQ bits are
+masked out of the arithmetic in the same way as bad pixels in an image - a vector containing a
+<code>NODATA</code> element doesn't get to silently pollute a <code>sum</code> or <code>mean</code> just because it isn't an image.</p>
+<h3 id="dq-propagation-in-aggregate-functions-using-stats_wrapper">DQ propagation in aggregate functions (using stats_wrapper)</h3>
+<p>The functions that go through <code>stats_wrapper</code> (<code>mean</code>, <code>sd</code>, <code>min</code>, <code>max</code>, <code>sum</code>) reduce many
+elements down to a single value, so they need a consistent rule for how the DQ bits of those many
+inputs combine into the DQ bits of the one result.</p>
+<p><strong>The result's DQ is the bitwise OR of the DQ bits of every element that contributed to the
+calculation</strong> - whether that element was included in the arithmetic, or excluded from it for being
+<code>BAD</code> - with <code>NODATA</code> forced on if nothing at all was left to compute. This is the same convention
+<code>combineDQs</code> uses for ordinary binary operations elsewhere in the codebase, applied here too.</p>
+<p>Breaking that down by bit category:</p>
+<ul>
+<li><strong>Bits in <code>dq.BAD</code></strong> (<code>NODATA</code>, <code>SAT</code>, <code>DIVZERO</code>, <code>UNDEF</code>, <code>COMPLEX</code>, <code>ERROR</code>) mark an element's
+  <em>value</em> as untrustworthy, so elements carrying any of them are excluded from the arithmetic.
+  Whichever specific <code>BAD</code> bits caused an exclusion are OR'd into the result, so e.g. a mean
+  computed while dropping one saturated element will itself carry <code>SAT</code>, not just a generic
+  "something was wrong" flag.</li>
+<li>If <em>every</em> contributing element is excluded, there's nothing left to compute: the result is
+    <code>(0.0, 0.0, ...)</code> with <code>NODATA</code> added on top of whatever <code>BAD</code> bits were actually present, since
+    the aggregate has no data regardless of which specific failure caused that.</li>
+<li><strong><code>NOUNCERTAINTY</code></strong> is not a <code>BAD</code> bit - the element's value is fine and is included in the
+  arithmetic, but its uncertainty is an unreliable placeholder (0). If any <em>included</em> element
+  carries it, the result carries it too, because the aggregate's own computed uncertainty may be
+  an underestimate. This falls out of the same OR rule as any other non-<code>BAD</code> bit - no special
+  casing is needed except where a function's own uncertainty isn't derived from the inputs at all
+  (see <code>sd()</code> below).</li>
+<li><strong>Everything else</strong> (<code>ZERO</code>, <code>TEST</code>, and any future non-<code>BAD</code> bits) propagates via the same OR
+  rule with no special handling.</li>
+</ul>
+<p>Per-function notes:</p>
+<ul>
+<li><code>mean</code> and <code>sum</code> are straightforward applications of the rule above.</li>
+<li><code>sd</code>'s own uncertainty-of-the-uncertainty is never computed (its <code>u</code> is hardcoded to <code>0</code>), so
+  <code>NOUNCERTAINTY</code> is always forced onto the result <em>in addition to</em> whatever the OR rule produces
+  from the inputs.</li>
+<li><code>min</code>/<code>max</code> propagate the winning element's own DQ bits (via <code>minmax</code>'s <code>d[idx]</code>). Under the OR
+  rule they additionally pick up the <code>BAD</code> bits of any <em>other</em> element that was excluded from
+  consideration, even though it wasn't the element chosen as the min/max.</li>
+</ul></div>
             </div>
         </div>
 

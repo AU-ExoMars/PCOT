@@ -197,6 +197,14 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#full-description-of-parameter-file-format" class="nav-link">Full description of parameter file format</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#jinja-2-templates" class="nav-link">Jinja 2 templates</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -225,7 +233,7 @@ That PDF will look something like this:</p>
 <p>This is great, but we might want to run this on multiple images. We can
 do that using batch files. For example, this file will use the same
 settings for all the nodes and inputs, but replace the input filenames
-with those specified (we're using a <a href="/userguide/multifile">multifile</a> input
+with those specified (we're using a <a href="../multifile/">multifile</a> input
 here):</p>
 <pre><code class="language-txt">inputs.0.multifile.directory = H:\PancamData\SamplesGeologyFilter
 inputs.0.multifile.filenames.+ = R01.bin
@@ -284,14 +292,20 @@ run
 <li>changing the gradient's appearance with a preset</li>
 <li>changing the output to write to a different filename</li>
 </ul>
-<div class="alert alert-danger fw-bold" role="alert">
-<p>Write more on how the inputs work - intro here, more in params.md or
-elsewhere. Write more in general. Note <a href="/autodocs/">autodocs</a>.</p>
-<p>Finish.</p>
-</div>
+<h2 id="full-description-of-parameter-file-format">Full description of parameter file format</h2>
 <ul>
 <li><a href="params/">Parameter file format</a></li>
-</ul></div>
+</ul>
+<h2 id="jinja-2-templates">Jinja 2 templates</h2>
+<p>All batch files are processed through the Jinja templating engine,
+which gives a lot of power and flexibility - see 
+<a href="params/#using-jinja2-templates">Using Jinja2 templates</a> in the parameter
+file format, and <a href="complex/">this more complex example</a>.</p>
+<div class="alert alert-danger fw-bold" role="alert">
+<p>Write more on how the inputs work - intro here, more in params.md or
+elsewhere. Write more in general. Note <a href="../../autodocs/">autodocs</a>.</p>
+<p>Finish.</p>
+</div></div>
             </div>
         </div>
 

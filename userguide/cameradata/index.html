@@ -241,7 +241,7 @@ storing them under names given in the files themselves.</p>
 data for AUPE and PanCam from the <a href="https://pcot.aber.ac.uk">PCOT Cookbook</a> site.</p>
 <p>Store the camera files in a separate directory from the reflectances.
 In my own system, I've created <code>cameras</code> and <code>reflectances</code> directories
-in my PCOT install directory. <a href="/wobble">wibble</a></p>
+in my PCOT install directory.</p>
 <p>The rest of this page describes how to make your own data files if you
 are working with a new camera or target.</p>
 <h2 id="creating-camera-files">Creating camera files</h2>
@@ -250,6 +250,9 @@ and stored in a PARC file.</p>
 <p>To create a camera data file, run the <code>pcot gencam</code> command:</p>
 <pre><code>pcot gencam cameraname.yaml cameraname.parc
 </code></pre>
+<p>The output filename is optional; if omitted, it defaults to the input YAML filename's
+basename with the extension changed to <code>.parc</code> (so <code>cameraname.yaml</code> becomes <code>cameraname.parc</code>
+in the current directory).</p>
 <h2 id="format-of-the-yaml-file">Format of the YAML file</h2>
 <p>The camera parameter file should have the following form at minimum:</p>
 <pre><code class="language-yaml">name: AUPE                  # short name of the camera
@@ -267,6 +270,11 @@ description: |
 # Filters organised thus:
 
 filters:
+  defaults:                 # optional default values for entries in each filter
+    order: 1                # for simulated filters, the order of the super-Gaussian.
+                            # used to simulate. 1 is just a Gaussian, higher makes the
+                            # filter more &quot;top-hat-like&quot;
+
   C01L:                     # filter name
     cwl: 640                # centre wavelength
     fwhm: 100               # full-width at half-maximum
@@ -280,6 +288,18 @@ filters:
     transmission: 1.0
     description: &quot;Green broadband&quot;
 (and so on)
+</code></pre>
+<p>If no <code>response</code> field is given (see below), the filter's response is simulated as a Gaussian from
+<code>cwl</code> and <code>fwhm</code>. You can make this simulated profile more of a top-hat shape, with a roll-off at the
+edges, by adding an optional <code>order</code> field (default 1, giving a standard Gaussian); higher values
+square off the profile while still passing through half-maximum at <code>cwl</code> ± <code>fwhm/2</code>. For example:</p>
+<pre><code class="language-yaml">  C03L:
+    cwl: 500
+    fwhm: 40
+    position: L01
+    transmission: 1.0
+    order: 4
+    description: &quot;Simulated top-hat filter&quot;
 </code></pre>
 <h2 id="filter-response-data">Filter response data</h2>
 <p>As well as the above parameters, filters typically have a CSV file containing filter response data
@@ -359,6 +379,9 @@ be done when darkfields are implemented, but this can be done downstream for the
     extension: png      # extension of image files (png or bin)
     bitdepth: 10        # how many bits are used in the data - this is 16bit data but only 
                         # the lower 10 bits are used - data will be multiplied up
+    leftjustified: y    # If this is true, the data has the bits given in &quot;bitdepth&quot; but has already
+                        # been left-shifted to fill the container. For example, a fully saturated
+                        # 10 bit value in a 16 bit container would be 1111111111000000.
     key: name           # &quot;name&quot; or &quot;position&quot; - the filter directories can be named for either        
 </code></pre>
 <p>If you are creating the data from raw files - and this is typically the case - you will need to
@@ -388,7 +411,7 @@ To specify the raw loader fully use the following format:</p>
       preset: pancam-rawloader  # use this multifile preset for loading PANCAM files
 </code></pre>
 <p>where the preset has been created in the multifile input. However, It's best to specify the data fully rather than risk another user not having the preset when
-trying to reconstruct the data. See the <a href="/userguide/multifile.md">multifile docs</a> for more details on presets for loading binary
+trying to reconstruct the data. See the <a href="../multifile/">multifile docs</a> for more details on presets for loading binary
 files. </p>
 <h3 id="remapping-filter-names-in-flatfield-data">Remapping filter names in flatfield data</h3>
 <p>Sometimes the directory names are not the same as the filter names or positions. In
@@ -407,7 +430,8 @@ this case you can use a <code>directory_map</code> dictionary inside the <code>f
 <p>Note that every filter position must be listed in the <code>directory_map</code> dictionary, even if the value is the same as the key.</p>
 <h2 id="reflectance-data">Reflectance data</h2>
 <p>Reflectance data is also stored in <code>.parc</code> files, and these are created by the <code>pcot genrefl</code> command in a similar
-manner, from a YAML file and some extra data.</p>
+manner, from a YAML file and some extra data. As with <code>gencam</code>, the output filename is optional and defaults to
+the input YAML filename's basename with the extension changed to <code>.parc</code>.</p>
 <h3 id="simple-reflectances">Simple reflectances</h3>
 <p>Simple reflectance data records the spectrum of each patch at a single angle only. We typically use it
 for lab targets such as Spectralon patches or the Macbeth/Babel ColorChecker. The YAML file looks like this:</p>
@@ -469,7 +493,7 @@ $$
 Each <code>.sed</code> file is directly taken from the RS-3500 instrument; we use the Reflect. (reflectance) percentage field.</p>
 <h2 id="listing-camera-data-using-pcot">Listing camera data using PCOT</h2>
 <div class="alert alert-info" role="alert">
-<p>Some of this information is duplicated in <a href="/userguide/multifile/">the multifile input docs </a></p>
+<p>Some of this information is duplicated in <a href="../multifile/">the multifile input docs </a></p>
 </div>
 <p>You can find out which cameras are available and what data they have using the <code>lscams</code> subcommand:</p>
 <pre><code class="language-commandline">pcot lscams

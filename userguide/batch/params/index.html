@@ -199,6 +199,14 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#using-jinja2-templates" class="nav-link">Using Jinja2 templates</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#a-more-complex-example" class="nav-link">A more complex example</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#inputs-outputs-and-nodes" class="nav-link">Inputs, outputs and nodes</a>
               <ul class="nav flex-column">
               </ul>
@@ -226,7 +234,7 @@ input, and this change will "activate" input 0's RGB loader.</p>
 <pre><code class="language-txt">k.val = 2
 </code></pre>
 <p>which assumes that there is a node called <code>k</code>, whose parameter <code>val</code>
-we now set to 2 (this is probably a <a href="/autodocs/constant">constant</a> node).</p>
+we now set to 2 (this is probably a <a href="../../../autodocs/constant/">constant</a> node).</p>
 <h2 id="lists">Lists</h2>
 <p>Some of the elements in the parameter structure file are lists. We
 can add to lists by putting a <code>+</code> in the path. For example, there
@@ -313,7 +321,7 @@ outputs.+.file = out2.csv
 lets us go back up the path one level, to <code>output.</code>, so we can now add a new output.</p>
 <h3 id="list-notation-for-ordered-parameters">List notation for ordered parameters</h3>
 <p>Some parameters have an implicit ordering. These are marked in the documentation as
-"(ordered)". For example, the <em>circle</em> node type <a href="/autodocs/circle/">autodocs</a> contain
+"(ordered)". For example, the <em>circle</em> node type <a href="../../../autodocs/circle/">autodocs</a> contain
 this:</p>
 <table border='1' style='border-collapse: collapse;'>
 <tr><td rowspan="3" style="border-right: none;">croi</td><td rowspan="3" style="border-left: none;">circle definition (ordered)</td><td rowspan="1" style="border-right: none;">x: integer (default 0)</td><td rowspan="1" style="border-left: none;">Centre x coordinate</td></tr>
@@ -362,7 +370,7 @@ expr.expr = a*3
 run
 </code></pre>
 <p>This is particularly useful when using templates, as we will see below.</p>
-<h3 id="using-jinja2-templates">Using Jinja2 templates</h3>
+<h2 id="using-jinja2-templates">Using Jinja2 templates</h2>
 <p>Before they are run, each parameter file is processed using the
 <a href="https://jinja.palletsprojects.com/en/stable/templates/">Jinja2 templating engine</a>, more typically
 used to create websites (as is obvious from its documentation).</p>
@@ -391,6 +399,7 @@ run
 # but this won't happen if the previous command was also a &quot;run&quot;, which
 # it will be here.
 </code></pre>
+<h3 id="jinja2-extensions">Jinja2 extensions</h3>
 <p>PCOT automatically sets up the following Jinja2 variables for you to use:</p>
 <table>
 <thead>
@@ -465,6 +474,21 @@ run
 as a prefix to any text output, but strip off any directory elements:</p>
 <pre><code class="language-txt">output.0.prefix = {{paramfile | basename}}
 </code></pre>
+<p>There are also some functions:</p>
+<table>
+<thead>
+<tr>
+<th>function</th>
+<th>return value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>loadlist(filename)</td>
+<td>the contents of the file as a list, with trailing comments, white space and blank lines removed</td>
+</tr>
+</tbody>
+</table>
 <h3 id="using-outputs-and-other-lists-in-a-loop">Using outputs (and other lists) in a loop</h3>
 <p>A common use case is writing multiple output files. You may be tempted
 to do something like this:</p>
@@ -496,6 +520,9 @@ inputs.0.envi.filename = input{{i}}.hdr     # change input 0
 outputs.0.filename = output{{i}}.png        # and change the output filename
 {{ endfor }}
 </code></pre>
+<h2 id="a-more-complex-example">A more complex example</h2>
+<p><a href="../complex/">This page</a> describes a much more complex example which uses Jinja2 to read a list
+of files from another file, and run a document on each file.</p>
 <div class="alert alert-danger" role="alert">
 <p>Not yet written below here</p>
 </div>
