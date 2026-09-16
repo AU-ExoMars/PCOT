@@ -12,7 +12,13 @@ li > p {
     margin-bottom: 0 !important;
 }
 
+/* Bootstrap's Reboot resets td/th/tr border-width to 0 site-wide (it expects the .table
+   class and its own border-collapse styling to be opted into per-table), which strips
+   the borders off our plain <table> markup - both the pipe-syntax markdown tables and the
+   autodoc parameter tables' hand-written HTML (see output_as_table() in autodoc.py). Put
+   them back explicitly. */
 table td,
 table th {
     padding: 0.5em 1em;
+    border: 1px solid var(--bs-border-color, #ccc);
 }
