@@ -11,11 +11,8 @@ bit of info. You can look them up on the Megalithic Portal for more.
 
 
 ## Production releases
-None
 
-## Beta releases
-
-## 1.0.0-beta 2026-09-16 LITTLE DENNIS
+## 1.0.0 2026-09-16 LITTLE DENNIS
 
 The big one: PCOT has been migrated from PySide2 (Qt5) to PySide6 (Qt6), which is why this is
 the first major version bump. Most of the migration is invisible to users - it's the same UI -
@@ -145,6 +142,10 @@ Site
 * A promontory fort (cliff castle), probably Iron Age, on a headland at St Anthony-in-Meneage
 on the Lizard - the earthworks cutting off the headland show up well on LIDAR, though on the
 ground it's mostly reduced to crop marks and a bank on the sloping southern side.
+
+
+
+## Beta releases
 
 
 ## 0.13.0-beta 2026-07-03 KENWYN FOUR BURROWS
