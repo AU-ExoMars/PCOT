@@ -97,7 +97,8 @@ so changing one changes all three.
 of using the actual patch shape (Shape mode) (which can be scaled) or a flood fill from the centre (the previous
 mode of operation) with a variable fill tolerance. The rectangular patches of the ColorChecker are now fully supported.
 * Calibration target locator nodes have new "White Fill" and "Red Fill" ROI draw modes; single-band reflectance
-plots now always show the fit title. Macros that shadow a built-in node type's name are now ignored with a
+plots now always show the fit title. 
+* Macros that shadow a built-in node type's name are now ignored with a
 warning, rather than silently causing confusing behaviour.
 * *reflectance* node's filter-to-plot combo now shows each filter's wavelength, e.g. "C01L (640nm)".
 * *spectrum* node: new wavelength annotation modes (none/line/line+FWHM) draw a marker line and rotated
@@ -119,6 +120,18 @@ store/load view location feature previously only available from the right-click 
 change to expression syntax, but should be easier to extend.
 * Command-line subcommands (`gencam`, `genrefl`, `lscams`, `lsrefls`, `config`, etc.) now use
 Click instead of a homebrew argparse dispatcher; `-h` works as a short form of `--help` again.
+* `getflats`: bands with no flatfield data in the camera file are now substituted with a unity
+flatfield instead of raising an error, so images can still be processed with partial calibration data.
+* Canvas's missing-filter-data warning now lists the actual source files responsible, rather than
+just showing a bare warning label.
+* Batch parameter files: new Jinja2 `loadlist()` function to load a list of strings (comments,
+blank lines and surrounding whitespace stripped) from a file for use in templates; documentation
+of the Jinja2 templating system has been expanded, including a
+[more complex example](userguide/batch/complex.md).
+* New (early/placeholder) *colourcorrect* node and `colourcorrect()` datum function, performing
+non-linearity correction, white balance and chromatic adaptation to convert a camera's native RGB
+to sRGB. Currently supports AUPE (daylight) and HRC (tungsten) cameras/illuminants, selected via
+separate camera+scene and illuminant parameters; more cameras and illuminants will follow.
 
 Site
 
