@@ -25,6 +25,11 @@ To make a new release, follow this checklist.
 1. Create a list of the changes by looking at the Git log and add this
    to **PCOT/mkdocs/docs/releases.md** under a new section for the new
    release.
+1. Check **mkdocs/docs/userguide/update.md** for any release-specific update notes
+   (e.g. the LITTLE DENNIS Conda-rebuild section added for the 1.0.0-beta release).
+   These should probably be removed once that release is no longer current, or
+   generalised into something like "when updating from versions older than LITTLE
+   DENNIS to newer ones, do X" so the instructions don't go stale.
 1. ~~Make **pyInstaller** builds for Windows and Linux.~~ **We no longer do PyInstaller
    builds - they proved too unreliable.** The steps are left below for reference in case
    we revisit this.
