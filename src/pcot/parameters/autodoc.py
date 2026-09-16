@@ -202,6 +202,8 @@ def generate_node_documentation(nodeName: str):
     t = allTypes.get(nodeName)
     if t.params is None:
         return f"No automatic parameter documentation available for {nodeName}"
+    if len(t.params) == 0:
+        return "This node has no parameters."
     root = build_tree(nodeName, t.params)
     return output_as_table(root)
 
