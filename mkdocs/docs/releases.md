@@ -37,7 +37,7 @@ Follow these instructions while inside the PCOT directory:
 * `poetry install` to install PCOT
 
 Aside from pulling the update and deleting the old environment, this is very similar to the install process given
-in the [README](README.md).
+in the [README on the main site](https://github.com/AU-ExoMars/PCOT).
 
 You may find you get a lot of errors when you run `poetry install`. What they look like very much depends
 on your system. This can be caused by Python picking up bits of your system's Python installation instead of your
