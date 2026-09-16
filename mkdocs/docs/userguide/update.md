@@ -8,9 +8,9 @@ It should contain directories called `src` and `tests`.
 * Type `git pull` - this should get the latest release
 * Type `poetry install` - this should check for any updated packages and download them
 
-## Important: updating to 1.0.0-beta LITTLE DENNIS
+## Important: updating to 1.0.0 LITTLE DENNIS
 
-**Updating to the 1.0.0-beta LITTLE DENNIS release is not this simple.** This release migrates
+**Updating to the 1.0.0 LITTLE DENNIS release is not this simple.** This release migrates
 PCOT from PySide2 (Qt5) to PySide6 (Qt6), which also requires a more recent Python version (3.11),
 so you will need to rebuild your Conda environment completely rather than just running
 `poetry install` in the existing one.
@@ -24,7 +24,7 @@ Follow these instructions while inside the PCOT directory instead of the steps a
 * `conda activate pcot` to switch to the new environment
 * `poetry install` to install PCOT
 
-See the [1.0.0-beta LITTLE DENNIS release notes](../releases.md#100-beta-2026-09-16-little-dennis)
+See the [1.0.0 LITTLE DENNIS release notes](../releases.md#100-2026-09-16-little-dennis)
 for the full details, including a fix for `poetry install` errors caused by Python picking up your
 system install instead of the Conda sandbox.
 
