@@ -1,20 +1,6 @@
 import numpy as np
 
-# https://en.wikipedia.org/wiki/Standard_illuminant#D65_values
-# This is the default destination illuminant
-cie_illuminant_RGB_D65_chromacity = [0.31272, 0.32903]
-
-# https://en.wikipedia.org/wiki/Standard_illuminant#Illuminant_A - a
-# tungsten filament light.
-# Not used by default - kept in case we need to switch back.
-cie_illuminant_a_chromacity = np.array([0.44758, 0.40745])
-
-# xy chromaticity of a 2700K blackbody (colour.temperature.CCT_to_xy(2700) in the
-# Colour Science library), matching the MSSL Tungsten Halogen lamp's rated CCT.
-# This is the source illuminant used in the HRC colour correction recipe, chosen
-# deliberately over the canonical Illuminant A chromacity above.
-# This is the default source illuminant
-cie_illuminant_th_2700k_chromacity = np.array([0.45381618, 0.40960506])
+from pcot.colour_correction.constants import ILLUMINANTS, DEFAULT_DEST_ILLUMINANT
 
 # XYZ to LMS (cones) model. colour_science uses the CIECAM02 matrix, so
 # we'll also use it for consistency.
@@ -101,13 +87,11 @@ def von_kries(XYZ, src_tristimulus, dst_tristimulus):
     return vecmul(transform, XYZ)
 
 
-def chromatic_adaptation(XYZimage, src_illuminant=None, dst_illuminant=None):
+def chromatic_adaptation(XYZimage, src_illuminant:str, dst_illuminant:str):
     """Perform chromatic adaptation of XYZimage from the specified chromacity to RGB. """
 
-    if src_illuminant is None:
-        src_illuminant = cie_illuminant_th_2700k_chromacity
-    if dst_illuminant is None:
-        dst_illuminant = cie_illuminant_RGB_D65_chromacity
+    src_illuminant = ILLUMINANTS[src_illuminant]
+    dst_illuminant = ILLUMINANTS[DEFAULT_DEST_ILLUMINANT if dst_illuminant is None else dst_illuminant]
 
     # Convert our two illuminant chromacities to tristimulus values.
     src_tristimulus = chromacityXY_to_tristimulusXYZ(*src_illuminant)

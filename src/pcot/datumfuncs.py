@@ -1343,7 +1343,7 @@ def colourcorrect(img):
     img = img.get(Datum.IMG)
     if img is None:
         return Datum.null
-    cc = ColourCorrection()
+    cc = ColourCorrection("HRC/Tungsten")
     outimg = cc.process(img.img)
 
     out = ImageCube(outimg, uncertainty=None, dq=img.dq, sources=img.sources)

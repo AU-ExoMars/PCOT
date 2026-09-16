@@ -2,23 +2,45 @@ import numpy as np
 from  pcot.colour_correction import colour_transforms
 from scipy.interpolate import BSpline
 from pcot.assets import getAssetPath
+from pcot.colour_correction.constants import DEFAULT_SRC_CAMERA_SCENE, DEFAULT_SRC_ILLUMINANT, \
+    COLOUR_CORRECTION_MATRICES, NON_LINEARITY_SPLINES
 
 
 class ColourCorrection:
-    def __init__(self):
+    def __init__(self, camera_illuminant=DEFAULT_SRC_CAMERA_SCENE, illuminant=DEFAULT_SRC_ILLUMINANT):
         cali_dir = getAssetPath('data/colour_correction/')
+
+        if camera_illuminant not in COLOUR_CORRECTION_MATRICES:
+            raise ValueError("Unknown camera/illuminant '{}'".format(camera_illuminant))
+
+        if illuminant is None:
+            # default is the first in the list (daylight)
+            illuminant = DEFAULT_SRC_ILLUMINANT
+
+        self.src_illuminant = illuminant
+        self.dest_illuminant = "D65 (daylight)" # hardwired for now
+
+        spline_name = NON_LINEARITY_SPLINES[camera_illuminant] # could be None, that's OK
+        ccm_name = COLOUR_CORRECTION_MATRICES[camera_illuminant] # must be non-None
+
         # Load the calibrated non-linearity correction B-spline, fit to the
-        # sensor's opto-electronic response curve.
-        spl_o_coeffs = np.load(cali_dir / 'pc_th_spl_o.npz')
-        self.spline = BSpline(spl_o_coeffs['t'], spl_o_coeffs['c'], int(spl_o_coeffs['k'][0]))
+        # sensor's opto-electronic response curve. Just leave as None if the
+        # camera is linear.
+        if spline_name is not None:
+            spl_o_coeffs = np.load(cali_dir / spline_name)
+            self.spline = BSpline(spl_o_coeffs['t'], spl_o_coeffs['c'], int(spl_o_coeffs['k'][0]))
+        else:
+            self.spline = None
+
         # Load the calibrated colour correction matrix (camera RGB -> CIE XYZ).
-        th_ccm_path = cali_dir / 'pc_th_ccm.csv'
+        th_ccm_path = cali_dir / ccm_name
         self.th_ccm = np.loadtxt(th_ccm_path, delimiter=',')
 
     def _non_linearity_correction(self, image:np.ndarray) -> np.ndarray:
-        # apply the non-linearity correction (subtract the spline-modelled
+        # apply the non-linearity correction if present (subtract the spline-modelled
         # deviation from linear response) and clip back to a valid [0, 1] range.
-        image = image - self.spline(image)
+        if self.spline is not None:
+            image = image - self.spline(image)
         return np.clip(image, 0, 1)
 
     def _to_XYZ(self, RGB:np.ndarray) -> np.ndarray:
@@ -34,7 +56,9 @@ class ColourCorrection:
         # reference illuminant (default D65), convert to linear RGB, then gamma-encode to
         # sRGB. Commented out code to cross-check each result against colour-science's equivalent
         # conversion to catch regressions in colour_transforms.py.
-        XYZcorrected = colour_transforms.chromatic_adaptation(XYZ)
+        XYZcorrected = colour_transforms.chromatic_adaptation(XYZ,
+                                                              self.src_illuminant,
+                                                              self.dest_illuminant)
         RGBimage = colour_transforms.XYZ_to_RGB(XYZcorrected)
         sRGBimage = colour_transforms.RGB_to_sRGB(RGBimage)
         return sRGBimage

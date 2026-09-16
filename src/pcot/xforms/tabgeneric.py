@@ -3,6 +3,7 @@ from PySide6 import QtWidgets
 import pcot.ui.tabs
 from pcot.datum import Datum
 from pcot.ui.datawidget import DataWidget
+from pcot.ui.help import md2html
 from pcot.ui.taggedaggregates import AggregateEditorWidget
 
 # combo box values
@@ -30,7 +31,7 @@ class TabGeneric(pcot.ui.tabs.Tab):
     source: int  # one of the above options
     data: Datum  # the data to display if the source is SRC_DATA
 
-    def __init__(self, node, w, src=SRC_OUTPUT0, source_section=False, suppress_editor=False):
+    def __init__(self, node, w, src=SRC_OUTPUT0, source_section=False, suppress_editor=False, help_markdown=None):
         super().__init__(w, node)
         # build the UI by hand!
         layout = QtWidgets.QHBoxLayout(self.w)
@@ -42,13 +43,28 @@ class TabGeneric(pcot.ui.tabs.Tab):
         self.w.data = DataWidget(self.w, source_section)
         splitter.addWidget(self.w.data)
 
+        right_widget = QtWidgets.QWidget(self.w)
+        right_layout = QtWidgets.QVBoxLayout()
+        right_widget.setLayout(right_layout)
+
+        self.editor = None
         if hasattr(node.type,"params") and node.type.params is not None and len(node.type.params)>0 and not suppress_editor:
             # we set internal_editor to True to avoid the editor having
             # an unreasonable minimum width
             self.editor = AggregateEditorWidget(node.params,
                                                 handler=self,
                                                 internal_editor=True)
-            splitter.addWidget(self.editor)
+            right_layout.addWidget(self.editor)
+
+        if help_markdown is not None:
+            txt = md2html(help_markdown)
+            wid = QtWidgets.QTextEdit()
+            wid.setReadOnly(True)
+            wid.setText(txt)
+            right_layout.addWidget(wid)
+
+        if self.editor is not None or help_markdown is not None:
+            splitter.addWidget(right_widget)
 
         self.source = src
         self.disptype = DATA
