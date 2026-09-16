@@ -15,7 +15,7 @@ None
 
 ## Beta releases
 
-## 1.0.0-beta DATE TBD LITTLE DENNIS
+## 1.0.0-beta 2026-09-16 LITTLE DENNIS
 
 The big one: PCOT has been migrated from PySide2 (Qt5) to PySide6 (Qt6), which is why this is
 the first major version bump. Most of the migration is invisible to users - it's the same UI -
@@ -68,12 +68,16 @@ single implementation (fixes a bug where presets could be double-applied).
 before scaling; the Multifile file list is now a resizable/reorderable table.
 * New `pix()` datumfunc to get a pixel value directly.
 * Fixed `Value.out` to correctly use `config.data.sigfigs` (was a mutable default argument bug).
+* Fixed a crash on undo/redo in documents containing macros.
+* *crop* node no longer leaves a redundant full-image rectangular ROI behind after cropping.
 * PDS4 directory scan now skips invalid files instead of aborting the whole scan.
 * Pan/zoom with keyboard in canvas
 * `clamp()` datumfunc now takes optional min/max arguments (was fixed to 0-1).
 * Canvas right-click menu can store and load a view's centre/zoom, to sync the view between canvases.
 * `expr` node: subtracting an ROI from an image (`A - B`) now "cuts a hole", producing an image whose
 ROI is everything *outside* the given ROI (e.g. to exclude a calibration target from an operation).
+* `expr` node: `a$N` now selects band index `N` directly when `N` is under 20, rather than always
+being interpreted as a wavelength; the old `a$_N` index syntax is kept for compatibility.
 * New `.all` property on images, giving an ROI covering the entire image.
 * Input methods (Multifile, RGB, ENVI, PDS4, PARC) no longer read files or pop up warning dialogs
 for inactive/unvisited tabs; missing source files/directories are now shown as a quiet in-tab
@@ -90,7 +94,8 @@ annotations now show the sample count used for each point.
 (e.g. a band ratio or index) from a spectral parameter group to an image, selected via group/parameter
 dropdowns. Ships with builtin AUPE LWAC, AUPE RWAC and PanCam parameter groups.
 * `mean()`/`sum()`/`sd()`/`min()`/`max()` on a band with no unmasked pixels (e.g. entirely excluded
-by ROI or bad-pixel DQ) now correctly return NODATA rather than leaking a numpy masked constant.
+by ROI or bad-pixel DQ) now correctly return NODATA rather than leaking a numpy masked constant;
+these functions also now correctly propagate DQ bits from their input into their result.
 * Canvas RGB channel selectors now have a link button to lock the three channel combos together,
 so changing one changes all three.
 * Calibration target locator nodes *pct* and *colorchecker* have been improved, giving the user the option
