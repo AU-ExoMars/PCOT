@@ -51,6 +51,21 @@ class InputMethod(ABC):
         original images, and deliberately not treated as an error (no dialog)."""
         return None
 
+    def _missingDirFilesReason(self, directory, files: List[str]) -> Optional[str]:
+        """Helper for missingPathReason() in methods which read a list of files from a single
+        directory (e.g. Multifile): reports a missing directory, or any of the given files
+        missing from it. Still cheap - one stat call per file."""
+        if directory is None:
+            return None
+        if not os.path.isdir(str(directory)):
+            return f"Directory not found: {directory}{self._cachedDataSuffix()}"
+        missing = [f for f in files if not os.path.isfile(os.path.join(str(directory), f))]
+        if missing:
+            if len(missing) == 1:
+                return f"File not found: {os.path.join(str(directory), missing[0])}{self._cachedDataSuffix()}"
+            return f"{len(missing)} input files not found in directory: {directory}{self._cachedDataSuffix()}"
+        return None
+
     def _cachedDataSuffix(self) -> str:
         """A short suffix for missingPathReason() messages, noting whether this method still
         has valid cached data to fall back on (in which case the missing source isn't

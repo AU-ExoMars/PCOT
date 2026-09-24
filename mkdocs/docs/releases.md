@@ -12,6 +12,21 @@ bit of info. You can look them up on the Megalithic Portal for more.
 
 ## Production releases
 
+## 1.1.0 DATE TBD MEXICO CROSS
+
+Changes
+
+* New *AUPE XML* input method: reads exposure times from a set of AUPE XML metadata files in a
+directory, producing a vector with one element per file. The order of the elements can be set by
+the user, and missing files are handled in the same way as the Multifile input.
+
+Site
+
+* [Google maps](https://www.google.com/maps/place/50%C2%B011'47.1%22N+5%C2%B024'46.5%22W/@50.1961715,-5.412831,179m)
+* [NLS Map (prior location)](https://maps.nls.uk/geo/explore/#zoom=17.0&lat=50.19530&lon=-5.41662&layers=6&b=ESRIWorld&o=100&marker=50.19537,-5.41682)
+* A medieval cross, recently moved into the graveyard of St. Phillack's church. It marked the path to Lelant ferry and church, and may have been a glebe boundary marker.
+
+
 ## 1.0.0 2026-09-16 LITTLE DENNIS
 
 The big one: PCOT has been migrated from PySide2 (Qt5) to PySide6 (Qt6), which is why this is

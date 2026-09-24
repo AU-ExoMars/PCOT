@@ -263,7 +263,9 @@ class Source(SourcesObtainable):
             ui.log("Legacy format for sources not supported - please Run All to regenerate")
             return Source().setExternal(StringExternal("ERROR", "Legacy format for sources not supported"))
 
-        b = Filter.deserialise(d['band']) if not isinstance(d['band'], str) else d['band']
+        b = d['band']
+        if b is not None and not isinstance(b, str):
+            b = Filter.deserialise(b)
         e = External.deserialise(d['external']) if d['external'] else None
         p = d.get('secondary_name', None)
         i = d['inputIdx']

@@ -309,3 +309,11 @@ def test_secondaries_ignored():
 
 
 
+
+def test_bandless_source_serialise_roundtrip():
+    """A source with an external but no band (e.g. a non-image input) should survive
+    serialisation - band is saved as None, which must not be treated as a Filter."""
+    ss = SourceSet([s1, s2])
+    ss2 = SourceSet.deserialise(ss.serialise())
+    assert ss2.long() == ss.long()
+    assert all(s.band is None for s in ss2)

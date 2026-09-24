@@ -371,3 +371,29 @@ def test_unop_number_from_image(envi_image_1):
 
     assert len(datum.sources) == 4
     assert set([x.getFilter().cwl for x in datum.sources]) == {800, 640, 550, 440}
+
+
+def test_bandless_vector_sources_with_image(envi_image_1):
+    """Band-less sources (e.g. from a non-image input producing a vector, like AUPE XML
+    exposure times) combined with an image should appear in each band's sources without
+    interfering with filter lookup, and should survive serialisation."""
+    pcot.setup()
+    doc = Document()
+    assert doc.setInputENVI(0, envi_image_1) is None
+    vs = SourceSet([Source().setInputIdx(1).setExternal(StringExternal("XML", f"/x/{n}.xml")) for n in "abcd"])
+    doc.setInputDirect(1, Datum(Datum.NUMBER, Value(np.array([1, 2, 3, 4], dtype=np.float32)), vs))
+
+    exprNode = doc.graph.create("expr")
+    exprNode.connect(0, doc.graph.create("input 0"), 0)
+    exprNode.connect(1, doc.graph.create("input 1"), 0)
+    exprNode.params.expr = "(a/b)$640"
+    doc.run()
+
+    img = exprNode.getOutput(0, Datum.IMG)
+    assert img is not None
+    assert img.filter(0).cwl == 640
+    assert img.sources[0].brief() == "0:ENVI:640&1:XML"
+
+    img2 = Datum.deserialise(Datum(Datum.IMG, img).serialise()).get(Datum.IMG)
+    assert img2.filter(0).cwl == 640
+    assert img2.sources[0].brief() == "0:ENVI:640&1:XML"

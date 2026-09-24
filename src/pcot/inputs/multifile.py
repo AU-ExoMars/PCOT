@@ -111,19 +111,7 @@ class MultifileInputMethod(InputMethod, PresetOwner):
         super().invalidate(force=force)
 
     def missingPathReason(self) -> Optional[str]:
-        if self.dir is None:
-            return None
-        if not os.path.isdir(str(self.dir)):
-            return f"Directory not found: {self.dir}{self._cachedDataSuffix()}"
-        # the directory itself is fine, but one or more of the individually-selected files
-        # within it might have been deleted since - check those too (still a cheap check:
-        # a handful of stat calls, one per selected file).
-        missing = [f for f in self.files if not os.path.isfile(os.path.join(str(self.dir), f))]
-        if missing:
-            if len(missing) == 1:
-                return f"File not found: {os.path.join(str(self.dir), missing[0])}{self._cachedDataSuffix()}"
-            return f"{len(missing)} input files not found in directory: {self.dir}{self._cachedDataSuffix()}"
-        return None
+        return self._missingDirFilesReason(self.dir, self.files)
 
     def readData(self):
         self.dnRanges = {}
