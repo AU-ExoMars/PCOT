@@ -220,13 +220,13 @@ class Datum(SourcesObtainable):
         self.sources = sources
 
     @classmethod
-    def k(cls, n, u=0.0, dq=0):
+    def k(cls, n, u=0.0, dq=0, sources=None):
         """Shortcut method to create a Value object and wrap it in a Datum. Will have null sources, so
         don't use it to create data from observations! That's why it's called "K" for constant."""
         from pcot.value import Value
         if u == 0.0:
             dq |= NOUNCERTAINTY
-        return cls(cls.NUMBER, Value(n, u, dq), nullSourceSet)
+        return cls(cls.NUMBER, Value(n, u, dq), nullSourceSet if sources is None else sources)
 
     def isImage(self):
         """Is this an image of some type?"""
