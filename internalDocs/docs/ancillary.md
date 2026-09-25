@@ -10,16 +10,19 @@ vector whose elements have to be matched to bands by hand.
 
 ### Fixes to the current code
 
-- [ ] Register the AUPE loader: nothing imports `aupe.py` yet, so `LOADERS` stays empty. Import it
-  from `ancillary/__init__.py` or from `pcot.setup()`.
-- [ ] Make `_load()` return `None` on any error, as `attempt_load()` promises. At the moment these
+- [x] Register the AUPE loader: nothing imports `aupe.py` yet, so `LOADERS` stays empty. Import it
+  from `ancillary/__init__.py` or from `pcot.setup()`. (Done: both - `pcot.setup()` imports the
+  package before loading plugins, so built-in loaders are tried before plugin ones.)
+- [x] Make `_load()` return `None` on any error, as `attempt_load()` promises. At the moment these
   can crash the whole multifile load:
-    - [ ] `ET.parse()` on malformed or unreadable XML
-    - [ ] `x.get("value")` returning `None`, which then fails on `.split()`
-    - [ ] `md["exposure_time"]` and `float(...)`, which aren't inside the `try` (the `try` only
+    - [x] `ET.parse()` on malformed or unreadable XML
+    - [x] `x.get("value")` returning `None`, which then fails on `.split()`
+    - [x] `md["exposure_time"]` and `float(...)`, which aren't inside the `try` (the `try` only
       covers the split and zip, which can't really fail)
-- [ ] Log a warning when a sidecar file exists but can't be parsed, as opposed to there being no
+- [x] Log a warning when a sidecar file exists but can't be parsed, as opposed to there being no
   sidecar at all. Otherwise a broken file silently gives no exposure.
+  (Done: loaders report problems to `multifile_loader()`, which logs a warning only if no loader
+  could read the file, so a file in another loader's convention doesn't cause spurious warnings.)
 - [ ] Decide whether a sidecar with some fields but no `exposure_time` should still return the
   fields it does have, rather than being rejected entirely.
 

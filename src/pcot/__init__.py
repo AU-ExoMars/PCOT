@@ -66,6 +66,8 @@ def setup():
     import pcot.expressions.register
     # force import of builtin functions!
     import pcot.datumfuncs
+    # register the built-in ancillary data (sidecar) loaders - before plugins, so they're tried first
+    import pcot.ancillary
 
     load_plugins()
 
