@@ -6,6 +6,43 @@ next to the image files (e.g. AUPE's `.png.xml`), or from the image data itself 
 It will eventually replace the AUPE XML input method, which reads exposure times into a separate
 vector whose elements have to be matched to bands by hand.
 
+It's expected to be used sparingly - typically just normalising for exposure in an `expr` node with
+something like `a/exposure(a)`. The overriding rule is the Law of Least Astonishment.
+
+## Behaviour
+
+- **Storage:** `ImageCube.ancillary` is a `BandAncillary` (`ancillary/bandancillary.py`): one dict
+  per band, keyed by the names in `ancillary/keys.py`. A band with no data has an empty dict.
+  There's no whole-cube storage yet: a value for the whole capture is stored in every band.
+  Whole-cube storage can be added inside `BandAncillary` later without changing its users.
+- **Not on `Source`:** it's deliberately separate from sources. Sources may not stay attached to
+  images, and they're merged when images are combined (e.g. `a/b` unions each band's sources),
+  which would produce meaningless ancillary data.
+- **What it means:** ancillary data describes how the pixel data was acquired. So it's **kept** by
+  operations which don't change pixel values (copies, crops, ROIs, band selection and reordering,
+  geometric operations like rotate/flip/resize, and changes to DQ bits or uncertainty only), and
+  **dropped** by operations which do (arithmetic, functions, most nodes). For example, the result of
+  `a/exposure(a)` has no exposure data, so correcting it a second time can't happen by accident.
+- **Dropped by default:** `ImageCube(...)` without an `ancillary` argument gives every band empty
+  data, so any code which hasn't been deliberately updated drops it rather than passing on something
+  wrong. `BandAncillary` mirrors `MultiBandSource`'s API (`select()`, `concat()`, `copy()`), so code
+  which rearranges bands can do the same to both.
+- **Missing data should be an error:** e.g. `exposure(a)` on an image without exposure data should
+  raise a clear error, not return a made-up value.
+- **Currently implemented:** the constructor (and its band-count check), `copy()` and
+  `shallowCopy()` (so `rotate()`/`flip()` too) keep it; `modifyWithSub()` drops it when writing new
+  pixels but keeps it for DQ/uncertainty-only changes; `zeros_like()` drops it.
+- **Values must be JSON-serialisable:** values are typed as `Any`, but they're saved as-is in
+  documents and PARC archives, so they must be `str`, `int`, `float`, `bool`, `None`, or lists/dicts
+  of those (not numpy scalars). Anything else makes saving fail, with an error from the archive code
+  naming the offending item.
+- **Saving:** `ImageCube.serialise()` saves it under an `ancillary` key. Images saved before
+  ancillary data existed have no such key, and load with empty data for every band; older PCOT
+  versions ignore the key.
+- **Where it comes from:** the Multifile loader (`load.multifile()`) calls `multifile_loader()` for
+  each band's file, so each band gets the data from its own sidecar, in the same order as the bands.
+  A band with no sidecar gets no data.
+
 ## To do
 
 ### Fixes to the current code
@@ -37,17 +74,25 @@ vector whose elements have to be matched to bands by hand.
   so loaders only ever refer to them through those constants. Exposure time is in seconds.)
 - [x] Confirm the unit of AUPE3's `exposure_time`: the loader assumes seconds
   (`EXPOSURE_TIME_TO_SECONDS = 1.0` in `ancillary/aupe.py`). (Done: it's seconds.)
-- [ ] Where the data lives on the ImageCube: per band, for the whole cube, or both. Keep it off
-  `Source`, which may not stay attached to images in future.
+- [x] Where the data lives on the ImageCube: per band, for the whole cube, or both. Keep it off
+  `Source`, which may not stay attached to images in future. (Done: per band, in `BandAncillary` -
+  see Behaviour above.)
 - [ ] How it survives processing:
-    - [ ] Carried through band-preserving operations: copies, ROI subimages and `modifyWithSub()`,
-      crop, `a$640` band selection, merging bands
-    - [ ] A rule for arithmetic between images (`a/b` etc.): drop it, or keep it only when both
-      sides agree. Write the rule down before the code spreads through `imagecube.py`.
-- [ ] Saving and loading: include it when ImageCubes are saved to `.pcot` documents and PARC
-  archives.
-- [ ] How users get at it: e.g. an `exposure(a)` datum function returning a vector with one value
-  per band, as the direct replacement for the AUPE XML input.
+    - [ ] Carried through operations which don't change pixel values. Done: copies, `rotate()`,
+      `flip()`, DQ/uncertainty-only `modifyWithSub()`. Still to do (these currently drop it, because
+      they build a new ImageCube without it): `resize()`, `cropROI()`, `getChannelImageByFilter()`
+      (so `a$640`), band selection and merging nodes, and anything else which builds a new
+      `MultiBandSource` from an existing image's bands.
+    - [x] A rule for arithmetic between images (`a/b` etc.): drop it, or keep it only when both
+      sides agree. Write the rule down before the code spreads through `imagecube.py`. (Done: drop
+      it - see Behaviour above. Happens automatically, because arithmetic goes through
+      `modifyWithSub()`.)
+- [x] Saving and loading: include it when ImageCubes are saved to `.pcot` documents and PARC
+  archives. (Done - see Behaviour above.)
+- [x] How users get at it: e.g. an `exposure(a)` datum function returning a vector with one value
+  per band, as the direct replacement for the AUPE XML input. It should raise a clear error if any
+  band has no exposure data. (Done: `exposure()` in `datumfuncs.py` returns seconds, and raises an
+  error naming the bands with no data, or saying the image has none.)
 - [ ] Inputs other than Multifile: ENVI and PDS4 carry this data in the files themselves, so decide
   how their readers feed into the same mechanism.
 
@@ -55,7 +100,7 @@ vector whose elements have to be matched to bands by hand.
 
 - [ ] Docstring fixes in `ancillary/__init__.py`: "fiile" should be "file", and "support either
   data for the cube a whole" is missing "per-band data or ..." and an "as".
-- [ ] Give `attempt_load()` a return type: `Optional[Dict[str, Any]]`.
+- [x] Give `attempt_load()` a return type: `Optional[Dict[str, Any]]`.
 - [ ] Tests: reuse the real AUPE file in `tests/data/aupexml/` (its `....png.xml` name matches the
   sidecar pattern), but give these tests their own copy, or move the file somewhere neutral, so
   removing AUPE XML doesn't take it with it.

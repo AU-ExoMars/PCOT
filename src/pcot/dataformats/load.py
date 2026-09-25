@@ -9,6 +9,8 @@ from proctools.products import DataProduct
 
 import pcot.config
 from pcot import ui
+from pcot.ancillary import multifile_loader
+from pcot.ancillary.bandancillary import BandAncillary
 from pcot.cameras import getFilter
 from pcot.dataformats.pds4 import ProductList
 from pcot.dataformats.raw import RawLoader
@@ -243,6 +245,7 @@ def multifile(directory: Path|str,
 
     sources = []  # array of source sets for each image
     imgs = []  # array of actual images (greyscale, numpy)
+    ancillary = []  # array of ancillary data dicts (from sidecar files) for each image
 
     # make sure we're dealing with a Path
     directory = Path(directory)
@@ -314,13 +317,15 @@ def multifile(directory: Path|str,
             # img /= filt.transmission
             imgs.append(img)
             sources.append(source)
+            # ancillary data from any sidecar file (empty if there isn't one)
+            ancillary.append(multifile_loader(Path(path)))
 
     # construct the imagecube
     if len(imgs) > 0:
         if len(set([x.shape for x in imgs])) != 1:
             raise Exception("all images must be the same size in a multifile")
         img = image.imgmerge(imgs).astype(np.float32)
-        img = ImageCube(img, mapping, MultiBandSource(sources))
+        img = ImageCube(img, mapping, MultiBandSource(sources), ancillary=BandAncillary(ancillary))
     else:
         img = None
 

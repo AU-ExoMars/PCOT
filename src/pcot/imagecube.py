@@ -20,6 +20,7 @@ from pcot import dq, ui
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIBoundsException, ROIRect
 from pcot.sources import MultiBandSource, SourcesObtainable, Source
+from pcot.ancillary.bandancillary import BandAncillary
 from pcot.utils import annotations, debayering
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
@@ -423,6 +424,11 @@ class ImageCube(SourcesObtainable):
     # a list of sets of sources - one set for each channel - describing where this data came from
     sources: MultiBandSource
 
+    # per-band ancillary data (e.g. exposure time) describing how the pixel data was acquired. Kept by
+    # operations which don't change pixel values, dropped by those which do - see
+    # internalDocs/docs/ancillary.md.
+    ancillary: BandAncillary
+
     # The RGB mapping to convert this image into RGB. May be None
     mapping: Optional[ChannelMapping]
 
@@ -436,7 +442,8 @@ class ImageCube(SourcesObtainable):
                  sources: MultiBandSource = None,
                  rois=None,
                  defaultMapping: ChannelMapping = None,
-                 uncertainty=None, dq=None
+                 uncertainty=None, dq=None,
+                 ancillary: Optional[BandAncillary] = None
                  ):
         """create imagecube from numpy array. Other fields are optional.
             image:          input numpy array: float32, Height x Width x Depth
@@ -453,6 +460,8 @@ class ImageCube(SourcesObtainable):
             dq:             data quality bits, a 16-bit unsigned int array of the same shape as the image.
                             If None, a zero array is created - but if a zero array is used (or created) for
                             uncertainty, the "no uncertainty data" bit is set on all pixels.
+            ancillary:      per-band ancillary data (BandAncillary), with one entry per band. If None,
+                            every band has none - so ancillary data is dropped by default.
 
         """
 
@@ -500,6 +509,12 @@ class ImageCube(SourcesObtainable):
             self.sources = sources
         else:
             self.sources = MultiBandSource.createEmptySourceSets(self.channels)
+
+        if ancillary is None:
+            ancillary = BandAncillary.empty(self.channels)
+        elif len(ancillary) != self.channels:
+            raise Exception(f"ancillary data has {len(ancillary)} bands, image has {self.channels}")
+        self.ancillary = ancillary
 
         self.defaultMapping = defaultMapping
 
@@ -714,7 +729,8 @@ class ImageCube(SourcesObtainable):
                       self.sources.copy(),
                       defaultMapping=self.defaultMapping,
                       uncertainty=self.uncertainty,
-                      dq=self.dq)
+                      dq=self.dq,
+                      ancillary=self.ancillary.copy())
         i.rois = self.rois.copy()
         if copyAnnotations:
             i.annotations = self.annotations.copy()
@@ -723,9 +739,10 @@ class ImageCube(SourcesObtainable):
     def _copybase(self, img: np.ndarray,
                   uncs: np.ndarray,
                   dq: np.ndarray,
-                  keepMapping=False, copyAnnotations=True):
+                  keepMapping=False, copyAnnotations=True, keepAncillary=False):
         """
-        Used to build "copies" of an image - real copies or ones with different data.
+        Used to build "copies" of an image - real copies or ones with different data. Ancillary data
+        is only kept if keepAncillary is set, because it no longer applies if the pixel data is different.
         """
         if self.mapping is None or keepMapping:
             m = self.mapping
@@ -737,7 +754,8 @@ class ImageCube(SourcesObtainable):
         # we should be able to copy the default mapping reference OK, it won't change.
         i = ImageCube(img, m, srcs, defaultMapping=self.defaultMapping,
                       uncertainty=uncs,
-                      dq=dq)
+                      dq=dq,
+                      ancillary=self.ancillary.copy() if keepAncillary else None)
         i.rois = self.rois.copy()
         if copyAnnotations:
             i.annotations = self.annotations.copy()
@@ -758,7 +776,8 @@ class ImageCube(SourcesObtainable):
         """
 
         return self._copybase(self.img.copy(), self.uncertainty.copy(), self.dq.copy(),
-                              keepMapping = keepMapping, copyAnnotations = copyAnnotations)
+                              keepMapping = keepMapping, copyAnnotations = copyAnnotations,
+                              keepAncillary=True)
 
     def zeros_like(self, keepMapping=False, copyAnnotations=True):
         """
@@ -787,9 +806,14 @@ class ImageCube(SourcesObtainable):
         in the DQ bits.
 
         DQ can either be set by passing in dqv (value or array), or a value or array can be provided to OR in.
+
+        Ancillary data is dropped if newimg is given, because the pixel data has changed. If only DQ and
+        uncertainty are being changed (newimg is None), it's kept.
         """
 
         i = self.copy(keepMapping)
+        if newimg is not None:
+            i.ancillary = BandAncillary.empty(i.channels)
         x, y, w, h = subimage.bb
         # we only want to paste into the bits in the image that are covered
         # by the mask - and we want the full mask
@@ -946,7 +970,8 @@ class ImageCube(SourcesObtainable):
             'defmapping': self.defaultMapping.serialise() if self.defaultMapping else None,
             'sources': self.sources.serialise(),
             'dq': encodeArrayValue(self.dq),
-            'uncertainty': encodeArrayValue(self.uncertainty)
+            'uncertainty': encodeArrayValue(self.uncertainty),
+            'ancillary': self.ancillary.serialise()
         }
 
     @classmethod
@@ -967,9 +992,11 @@ class ImageCube(SourcesObtainable):
 
         dq = decodeArrayValue(d['dq']) if 'dq' in d else None
         uncertainty = decodeArrayValue(d['uncertainty']) if 'uncertainty' in d else None
+        # legacy files have no ancillary data; None gives empty data for every band
+        ancillary = BandAncillary.deserialise(d['ancillary']) if 'ancillary' in d else None
 
         return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping,
-                   uncertainty=uncertainty, dq=dq)
+                   uncertainty=uncertainty, dq=dq, ancillary=ancillary)
 
     def filter(self, channelNumber):
         """Get the filter for a channel if all sources have the same filter, else None. Compare with

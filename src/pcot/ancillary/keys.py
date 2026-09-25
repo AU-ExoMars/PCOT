@@ -3,6 +3,8 @@ The standard keys used in ancillary data dicts, and their units. Loaders must co
 they read into these units, and should always refer to keys through the constants here (e.g.
 keys.EXPOSURE.name), never as string literals - the set of keys is expected to change, and this
 way a key can be renamed, given a different unit, or added in one place.
+
+Values stored under these keys must be JSON-serialisable (see BandAncillary).
 """
 from dataclasses import dataclass
 from typing import Dict

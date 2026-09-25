@@ -4,6 +4,7 @@ import logging
 
 import pcot.dq
 from pcot import rois, operations, dq
+from pcot.ancillary import keys
 from pcot.assets import getAssetPath
 from pcot.colour_correction.correct import ColourCorrection
 from pcot.datum import Datum
@@ -1348,3 +1349,30 @@ def colourcorrect(img):
 
     out = ImageCube(outimg, uncertainty=None, dq=img.dq, sources=img.sources)
     return Datum(Datum.IMG, out)
+
+
+@datumfunc
+def exposure(img):
+    """
+    Get the exposure time of each band of an image, in seconds, from its ancillary data (e.g. read
+    from sidecar files by the multifile input). Returns a vector with one element per band, so
+    a/exposure(a) normalises each band for exposure. Gives an error if any band has no exposure
+    data - e.g. because the image is the result of an operation which changes pixel values, which
+    drops ancillary data.
+    @param img:img:the image
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return Datum.null
+
+    data = img.ancillary.get(keys.EXPOSURE.name)
+    missing = [i for i, x in enumerate(data) if x is None]
+    if len(missing) == len(data):
+        raise XFormException('DATA', "exposure(): the image has no exposure data")
+    if missing:
+        def bandName(i):
+            f = img.filter(i)
+            return f"{i} ({f.name})" if f is not None else str(i)
+        raise XFormException('DATA', f"exposure(): no exposure data for band(s) {', '.join(bandName(i) for i in missing)}")
+
+    return Datum(Datum.NUMBER, Value(data), sources=img.sources)
