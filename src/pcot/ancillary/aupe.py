@@ -4,9 +4,14 @@ This is a sidecar loader for AUPE3 files (as of 25 Sep 2026)
 from pathlib import Path
 from typing import Any, Optional, Dict, List
 from logging import getLogger
+from pcot.ancillary import keys
 from pcot.ancillary.multifile import MultifileSidecarLoader, add_multifile_sidecar_loader
 
 logger = getLogger(__name__)
+
+# multiply AUPE3's exposure_time by this to get seconds. ASSUMED to already be seconds
+# (a typical value is 0.009911) - check this against the AUPE software.
+EXPOSURE_TIME_TO_SECONDS = 1.0
 
 
 def _load(fname) -> Dict[str, Any]:
@@ -37,7 +42,7 @@ def _load(fname) -> Dict[str, Any]:
     if "exposure_time" not in md:
         raise ValueError("no exposure_time in ImageMetadata")
 
-    return {"exposure": float(md["exposure_time"])}
+    return {keys.EXPOSURE.name: float(md["exposure_time"]) * EXPOSURE_TIME_TO_SECONDS}
 
 
 class AUPE3MultifileLoader(MultifileSidecarLoader):
