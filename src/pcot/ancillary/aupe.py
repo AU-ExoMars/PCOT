@@ -1,9 +1,11 @@
 """
 This is a sidecar loader for AUPE3 files (as of 25 Sep 2026)
 """
+import logging
 from pathlib import Path
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional, Dict, List, Tuple, Callable
 from logging import getLogger
+from pcot import ui
 from pcot.ancillary import keys
 from pcot.ancillary.multifile import MultifileSidecarLoader, add_multifile_sidecar_loader
 
@@ -13,10 +15,18 @@ logger = getLogger(__name__)
 # (a typical value is 0.009911) - check this against the AUPE software.
 EXPOSURE_TIME_TO_SECONDS = 1.0
 
+# The ImageMetadata fields we read: AUPE3 field name -> (ancillary key, function converting the
+# field's string value into the key's unit). Fields missing from a file are just left out.
+FIELDS: Dict[str, Tuple[keys.AncillaryKey, Callable[[str], Any]]] = {
+    "exposure_time": (keys.EXPOSURE, lambda v: float(v) * EXPOSURE_TIME_TO_SECONDS),
+}
+
 
 def _load(fname) -> Dict[str, Any]:
     """Read ancillary data from an AUPE XML metadata file. Raises an exception describing the
-    problem if the file isn't in the format we expect."""
+    problem if the file isn't in the format we expect, including if none of the fields in FIELDS
+    are present. Once the file is recognised, a field with a bad value is left out with a warning
+    (not an exception - no other loader will be asked to read the file)."""
     import xml.etree.ElementTree as ET
     tree = ET.parse(fname)
     root = tree.getroot()
@@ -39,10 +49,20 @@ def _load(fname) -> Dict[str, Any]:
 
     md = mds["ImageMetadata"].split("|")
     md = dict(zip(md[::2], md[1::2]))
-    if "exposure_time" not in md:
-        raise ValueError("no exposure_time in ImageMetadata")
+    if not any(field in md for field in FIELDS):
+        raise ValueError(f"none of the expected fields ({', '.join(FIELDS)}) in ImageMetadata")
 
-    return {keys.EXPOSURE.name: float(md["exposure_time"]) * EXPOSURE_TIME_TO_SECONDS}
+    output = {}
+    for field, (key, convert) in FIELDS.items():
+        if field not in md:
+            logger.debug(f"{fname}: no {field} in ImageMetadata")
+            continue
+        try:
+            output[key.name] = convert(md[field])
+        except Exception as e:
+            ui.log(f"Bad value for {field} in {fname} ({md[field]!r}): {e} - ignoring it",
+                   loglevel=logging.WARNING)
+    return output
 
 
 class AUPE3MultifileLoader(MultifileSidecarLoader):

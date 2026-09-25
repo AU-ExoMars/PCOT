@@ -23,8 +23,11 @@ vector whose elements have to be matched to bands by hand.
   sidecar at all. Otherwise a broken file silently gives no exposure.
   (Done: loaders report problems to `multifile_loader()`, which logs a warning only if no loader
   could read the file, so a file in another loader's convention doesn't cause spurious warnings.)
-- [ ] Decide whether a sidecar with some fields but no `exposure_time` should still return the
-  fields it does have, rather than being rejected entirely.
+- [x] Decide whether a sidecar with some fields but no `exposure_time` should still return the
+  fields it does have, rather than being rejected entirely. (Done: yes. Fields are read from the
+  `FIELDS` table in `ancillary/aupe.py`; missing fields are left out quietly, a field with a bad
+  value is left out with a warning, and a file with none of the fields counts as unreadable so
+  that other loaders get a chance.)
 
 ### Design questions
 
