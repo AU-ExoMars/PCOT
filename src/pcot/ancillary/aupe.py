@@ -11,8 +11,8 @@ from pcot.ancillary.multifile import MultifileSidecarLoader, add_multifile_sidec
 
 logger = getLogger(__name__)
 
-# multiply AUPE3's exposure_time by this to get seconds. ASSUMED to already be seconds
-# (a typical value is 0.009911) - check this against the AUPE software.
+# multiply AUPE3's exposure_time by this to get seconds. It's already in seconds (a typical
+# value is 0.009911), but it's kept as a constant in case a later convention differs.
 EXPOSURE_TIME_TO_SECONDS = 1.0
 
 # The ImageMetadata fields we read: AUPE3 field name -> (ancillary key, function converting the

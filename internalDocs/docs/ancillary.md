@@ -35,8 +35,8 @@ vector whose elements have to be matched to bands by hand.
   and have each loader convert to them (AUPE's `0.009911` is presumably seconds; other cameras may
   use milliseconds). (Done: keys and units are defined once in `ancillary/keys.py` - still fluid,
   so loaders only ever refer to them through those constants. Exposure time is in seconds.)
-- [ ] Confirm the unit of AUPE3's `exposure_time`: the loader assumes seconds
-  (`EXPOSURE_TIME_TO_SECONDS = 1.0` in `ancillary/aupe.py`).
+- [x] Confirm the unit of AUPE3's `exposure_time`: the loader assumes seconds
+  (`EXPOSURE_TIME_TO_SECONDS = 1.0` in `ancillary/aupe.py`). (Done: it's seconds.)
 - [ ] Where the data lives on the ImageCube: per band, for the whole cube, or both. Keep it off
   `Source`, which may not stay attached to images in future.
 - [ ] How it survives processing:
