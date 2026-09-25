@@ -166,7 +166,8 @@ class Input:
         else:
             activeData = None
 
-        out = {'active': self.activeMethod,
+        # the active method is saved by class name; older files saved it as an index
+        out = {'active': type(self.getActive()).__name__,
                'methods': [[type(x).__name__, x.serialise(internal)] for x in self.methods],
                'activeData': activeData
                }
@@ -184,21 +185,45 @@ class Input:
         # putting new data into them.
         # self.methods = [self.createMethod(name, data) for name, data in d['methods']]
 
-        self.activeMethod = d['active']
         methodsByName = {type(m).__name__: m for m in self.methods}
 
-        # if you add new methods, old files will still work - they just won't deserialise data from
-        # for the new method because it won't be in the loaded dict.
+        # Methods are matched by class name, not position, so methods can be added, removed or
+        # reordered without breaking saved documents: methods not in the file keep their
+        # defaults, and saved data for methods which no longer exist is ignored.
+        savedNames = [name for name, _ in d['methods']]
         for name, data in d['methods']:
-            m = methodsByName[name]
-            m.deserialise(data, internal)
+            m = methodsByName.get(name)
+            if m is None:
+                logger.warning(f"Input {self.idx}: ignoring saved data for unknown input method {name}")
+            else:
+                m.deserialise(data, internal)
 
-        if 'activeData' in d and d['activeData'] is not None:
-            # if this was an external save, there will be an actual Datum here we can use - until
-            # a method changes!
-            data = Datum.deserialise(d['activeData'])
-            # and set this datum in the active method
-            self.methods[self.activeMethod].data = data
+        # if this was an external save, there will be an actual Datum here we can use - until
+        # a method changes!
+        activeData = Datum.deserialise(d['activeData']) if d.get('activeData') is not None else None
+
+        # The active method is saved by class name. Legacy files saved it as an index into the
+        # saved method list, so convert that into a name - the same index in the current list
+        # may now be a different method.
+        active = d['active']
+        if isinstance(active, str):
+            activeName = active
+        else:
+            activeName = savedNames[active] if 0 <= active < len(savedNames) else None
+        if activeName in methodsByName:
+            self.activeMethod = self.methods.index(methodsByName[activeName])
+            if activeData is not None:
+                self.methods[self.activeMethod].data = activeData
+        elif activeData is not None:
+            # the active method no longer exists, but its data was saved - keep that data
+            # (so the document still runs) by moving it into the direct method.
+            ui.warn(f"Input {self.idx} used an input method ({activeName}) which no longer exists. "
+                    f"Its saved data will be used as a fixed input.")
+            self.activeMethod = self.DIRECT
+            self.methods[self.DIRECT].setDatum(activeData)
+        else:
+            logger.warning(f"Input {self.idx}: active input method {activeName} no longer exists, using null")
+            self.activeMethod = self.NULL
 
     def createMethod(self, name, data=None):
         """create a method given its type name, and initialise it with some data. Currently unused."""

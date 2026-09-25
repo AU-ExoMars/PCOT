@@ -19,6 +19,9 @@ Changes
 * New *AUPE XML* input method: reads exposure times from a set of AUPE XML metadata files in a
 directory, producing a vector with one element per file. The order of the elements can be set by
 the user, and missing files are handled in the same way as the Multifile input.
+* Documents now record each input's method by name rather than by position, so they still load
+if input methods are added, removed or reordered in future versions. **Documents saved with this
+version cannot be opened by earlier versions.**
 
 Site
 
