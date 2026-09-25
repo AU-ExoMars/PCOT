@@ -1,2 +1,2 @@
-1.0.0 2026-09-16 LITTLE DENNIS
+1.1.0 TBD MEXICO CROSS
 0.10.0   # version number of oldest legible document
