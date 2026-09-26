@@ -201,6 +201,31 @@ For images from AUPE, the settings are:
 * Big-endian data
 @@@
 
+## Ancillary data from sidecar files
+
+Some cameras save extra information about each image, such as its exposure time, in a separate
+"sidecar" file next to the image file. When the multifile input loads each band's file, it looks
+for a sidecar alongside it, and attaches any data it finds to that band as *ancillary data*. This
+is saved in the document along with the image.
+
+Currently the only sidecar format PCOT understands is AUPE's: an XML file with the same name as
+the image file plus `.xml` (e.g. `Set18_LWAC01.png.xml` next to `Set18_LWAC01.png`), from which
+PCOT reads the exposure time.
+
+You can get the exposure time of each band with the `exposure()` function in an *expr* node. This
+gives a vector of times in seconds, one per band, so you can normalise an image for exposure with
+`a/exposure(a)`.
+
+Ancillary data describes how the image was captured, so it stays with the image through operations
+which don't change its pixel values - cropping, selecting bands (e.g. `a$640`), merging bands and so
+on - but is dropped by operations which do, such as arithmetic. This means that the result of
+`a/exposure(a)` has no exposure data, so you can't accidentally normalise it twice: `exposure()`
+will give an error instead.
+
+Band files without a sidecar are fine - those bands just have no ancillary data. If a sidecar
+exists but can't be read (perhaps because it's in a newer format), a warning appears in the log
+and the image still loads.
+
 ## Missing files and directories
 
 PCOT documents are often shared without the original source images, so it's

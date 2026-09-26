@@ -22,6 +22,10 @@ and PDS4 inputs read it from the files themselves. The new `exposure()` function
 exposure time in seconds, so `a/exposure(a)` normalises an image for exposure - but ENVI and PDS4
 images are usually already normalised, so take care. Ancillary data is kept by operations which
 don't change pixel values (such as cropping and band selection) and dropped by those which do.
+ENVI files written by earlier versions of PCOT contain placeholder exposure times of 0.01s, which
+will be read as real - don't rely on `exposure()` for those files. Plugins can add loaders for
+other sidecar formats with `add_multifile_sidecar_loader()` (in `pcot.ancillary.multifile`), and
+can put them ahead of the built-in loaders with `first=True`.
 * Documents now record each input's method by name rather than by position, so they still load
 if input methods are added, removed or reordered in future versions. **Documents saved with this
 version cannot be opened by earlier versions.**
