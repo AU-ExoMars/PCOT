@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rawentity UUID="70c05173-36dc-4e8e-b502-9eca359faded" createdtime="UTC=2026-09-22T10:21:05">
+    <name>IMAGE WAC_LEFT_1790072465245.png</name>
+    <description>WAC_LEFT image. Last: Tue Sep 22 12:21:05 CEST 2026</description>
+    <rawEntityType>IMAGE</rawEntityType>
+    <context>
+        <attribute name="contextname" value="WAC_LEFT_1790072465245.png"/>
+        <attribute name="metadata" value="cameraname=WAC_LEFT;Camera=WAC_LEFT;Seq=1;time=0;Encoding=mono8;Height=1024;Width=1024;Bigendian=true;Step=1024;X=69.99;Y=20.8;Z=4.53;qX=0.011647161;qY=-0.022658875;qZ=2.6399727E-4;qW=0.9996754;ImageMetadata=sol|39|task_id|0|task_run_num|0|file_name|././output/sol00039/00000/00000/220926_1110/sol00039_00000_00000_00013_LWAC4_T71.0_P-124.0.png|au_timestamp|2025-07-31T14:54:20.546983|cam_num|0|filter_num|4|exposure_time|0.009911|gain|0|bit_depth|8|height|1024|width|1024|hrc_image|false|focus|0|zoom|0|iris|0|white_balance_red|0|white_balance_blue|0|pan|-124|tilt|71|dataproduct_id|NULL|session_id|NULL|metadata_version|1.0;Frame=default;"/>
+        <attribute name="cameraname" value="WAC_LEFT"/>
+    </context>
+    <metadata>
+        <attribute name="Frame" value="default"/>
+        <attribute name="Bigendian" value="true"/>
+        <attribute name="qW" value="0.9996754"/>
+        <attribute name="qX" value="0.011647161"/>
+        <attribute name="qY" value="-0.022658875"/>
+        <attribute name="qZ" value="2.6399727E-4"/>
+        <attribute name="Encoding" value="mono8"/>
+        <attribute name="Step" value="1024"/>
+        <attribute name="cameraname" value="WAC_LEFT"/>
+        <attribute name="ImageMetadata" value="sol|39|task_id|0|task_run_num|0|file_name|././output/sol00039/00000/00000/220926_1110/sol00039_00000_00000_00013_LWAC4_T71.0_P-124.0.png|au_timestamp|2025-07-31T14:54:20.546983|cam_num|0|filter_num|4|exposure_time|0.009911|gain|0|bit_depth|8|height|1024|width|1024|hrc_image|false|focus|0|zoom|0|iris|0|white_balance_red|0|white_balance_blue|0|pan|-124|tilt|71|dataproduct_id|NULL|session_id|NULL|metadata_version|1.0"/>
+        <attribute name="X" value="69.99"/>
+        <attribute name="Y" value="20.8"/>
+        <attribute name="Height" value="1024"/>
+        <attribute name="Z" value="4.53"/>
+        <attribute name="Camera" value="WAC_LEFT"/>
+        <attribute name="time" value="0"/>
+        <attribute name="Width" value="1024"/>
+        <attribute name="Seq" value="1"/>
+    </metadata>
+    <filename>WAC_LEFT_1790072465245.png</filename>
+</rawentity>

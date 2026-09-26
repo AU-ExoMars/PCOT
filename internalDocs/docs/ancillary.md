@@ -122,9 +122,11 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
 - [x] Docstring fixes in `ancillary/__init__.py`: "fiile" should be "file", and "support either
   data for the cube a whole" is missing "per-band data or ..." and an "as".
 - [x] Give `attempt_load()` a return type: `Optional[Dict[str, Any]]`.
-- [ ] Tests: reuse the real AUPE file in `tests/data/aupexml/` (its `....png.xml` name matches the
+- [x] Tests: reuse the real AUPE file in `tests/data/aupexml/` (its `....png.xml` name matches the
   sidecar pattern), but give these tests their own copy, or move the file somewhere neutral, so
-  removing AUPE XML doesn't take it with it.
+  removing AUPE XML doesn't take it with it. (Done: `tests/input/test_multifile_sidecars.py` tests
+  the whole multifile sidecar path, using its own copy of the real sidecar in `tests/data/ancillary/`
+  as a template next to small generated band images.)
 
 ### Retiring the AUPE XML input once this works
 
