@@ -260,11 +260,6 @@ class Document:
 
         return self.setInputData(inputidx, inputs.Input.MULTIFILE, fn)
 
-    def setInputAUPEXML(self, inputidx, directory, fnames):
-        """set graph's input to read exposure times from AUPE XML files in a directory, giving a
-        vector with one element per file in the order given"""
-        return self.setInputData(inputidx, inputs.Input.AUPEXML, lambda method: method.setFileNames(directory, fnames))
-
     def setInputPDS4(self, inputidx, products):
         """Set a PDS4 input to a set of proctools DataProducts. Must be able to combine them into a single datum
         (e.g. could be mono images of the same resolution)"""

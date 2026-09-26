@@ -374,7 +374,7 @@ def test_unop_number_from_image(envi_image_1):
 
 
 def test_bandless_vector_sources_with_image(envi_image_1):
-    """Band-less sources (e.g. from a non-image input producing a vector, like AUPE XML
+    """Band-less sources (e.g. from a non-image input producing a vector, like a list of
     exposure times) combined with an image should appear in each band's sources without
     interfering with filter lookup, and should survive serialisation."""
     pcot.setup()

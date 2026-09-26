@@ -130,12 +130,12 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
 
 ### Retiring the AUPE XML input once this works
 
-- [ ] Delete `aupeXMLmethod.py`, `inputaupexml.ui`, `tests/input/test_aupexml.py` and its data
+- [x] Delete `aupeXMLmethod.py`, `inputaupexml.ui`, `tests/input/test_aupexml.py` and its data
   (unless the ancillary tests now use that data).
-- [ ] Remove the import, the method-list entry and `AUPEXML = 7` from `inp.py`, and
+- [x] Remove the import, the method-list entry and `AUPEXML = 7` from `inp.py`, and
   `setInputAUPEXML()` from `document.py`.
-- [ ] Update the MEXICO CROSS release notes: the AUPE XML entry becomes the ancillary data feature,
-  if AUPE XML never ships in a release.
-- [ ] Nothing extra is needed for saved documents. Input methods are now saved by name (commit
+- [x] Update the MEXICO CROSS release notes: the AUPE XML entry becomes the ancillary data feature,
+  if AUPE XML never ships in a release. (Done: it never shipped, so the entry was replaced.)
+- [x] Nothing extra is needed for saved documents. Input methods are now saved by name (commit
   `d3ba5e09`), so documents saved with AUPE XML active will load with their exposure data kept as a
-  fixed (Direct) input, plus a warning.
+  fixed (Direct) input, plus a warning. (Checked with a document saved before the removal.)

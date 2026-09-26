@@ -16,9 +16,12 @@ bit of info. You can look them up on the Megalithic Portal for more.
 
 Changes
 
-* New *AUPE XML* input method: reads exposure times from a set of AUPE XML metadata files in a
-directory, producing a vector with one element per file. The order of the elements can be set by
-the user, and missing files are handled in the same way as the Multifile input.
+* Images can now carry per-band *ancillary data*, such as exposure time. Multifile inputs read it
+from "sidecar" files next to each band's image file (currently AUPE's `.png.xml` files), and ENVI
+and PDS4 inputs read it from the files themselves. The new `exposure()` function gives each band's
+exposure time in seconds, so `a/exposure(a)` normalises an image for exposure - but ENVI and PDS4
+images are usually already normalised, so take care. Ancillary data is kept by operations which
+don't change pixel values (such as cropping and band selection) and dropped by those which do.
 * Documents now record each input's method by name rather than by position, so they still load
 if input methods are added, removed or reordered in future versions. **Documents saved with this
 version cannot be opened by earlier versions.**

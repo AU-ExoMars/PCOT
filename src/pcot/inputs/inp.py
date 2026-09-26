@@ -30,7 +30,6 @@ class Input:
     PDS4 = 4
     PARC = 5
     DIRECT = 6
-    AUPEXML = 7
 
     def __init__(self, mgr, idx):
         """this will initialise an Input from scratch, typically when
@@ -43,7 +42,6 @@ class Input:
         from pcot.inputs.nullinput import NullInputMethod
         from pcot.inputs.rgb import RGBInputMethod
         from pcot.inputs.pds4input import PDS4InputMethod
-        from pcot.inputs.aupeXMLmethod import AUPEXMLMethod
 
         self.mgr = mgr
         self.idx = idx
@@ -58,7 +56,6 @@ class Input:
             PDS4InputMethod(self),
             PARCInputMethod(self),
             DirectInputMethod(self),
-            AUPEXMLMethod(self),
         ]
 
     def get(self) -> Datum:
