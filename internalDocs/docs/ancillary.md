@@ -31,7 +31,14 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
   raise a clear error, not return a made-up value.
 - **Currently implemented:** the constructor (and its band-count check), `copy()` and
   `shallowCopy()` (so `rotate()`/`flip()` too) keep it; `modifyWithSub()` drops it when writing new
-  pixels but keeps it for DQ/uncertainty-only changes; `zeros_like()` drops it.
+  pixels but keeps it for DQ/uncertainty-only changes; `zeros_like()` drops it. Band selection keeps
+  the selected bands' data: `getChannelImageByFilter()` (so `a$640`, `a$name`, `a$N` and `a[...]`)
+  and `rgbImage()` (so `rgb()`). Crops and resizes keep it: `cropROI()` (so the *crop* node),
+  `cropother()`, `resize()` and the `crop()` function. `merge()` concatenates the images' data, with
+  no data for bands made from numbers. `nominal()` (which only strips uncertainty), the *offset* node
+  (which only shifts the image) and the registration nodes (*tvl1 autoreg* and *manual register*,
+  which warp the moving image and, for *manual register*, shift the fixed one) keep each image's own
+  data.
 - **Values must be JSON-serialisable:** values are typed as `Any`, but they're saved as-is in
   documents and PARC archives, so they must be `str`, `int`, `float`, `bool`, `None`, or lists/dicts
   of those (not numpy scalars). Anything else makes saving fail, with an error from the archive code
@@ -77,12 +84,14 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
 - [x] Where the data lives on the ImageCube: per band, for the whole cube, or both. Keep it off
   `Source`, which may not stay attached to images in future. (Done: per band, in `BandAncillary` -
   see Behaviour above.)
-- [ ] How it survives processing:
-    - [ ] Carried through operations which don't change pixel values. Done: copies, `rotate()`,
-      `flip()`, DQ/uncertainty-only `modifyWithSub()`. Still to do (these currently drop it, because
-      they build a new ImageCube without it): `resize()`, `cropROI()`, `getChannelImageByFilter()`
-      (so `a$640`), band selection and merging nodes, and anything else which builds a new
-      `MultiBandSource` from an existing image's bands.
+- [x] How it survives processing:
+    - [x] Carried through operations which don't change pixel values: copies, rotate/flip,
+      DQ/uncertainty-only `modifyWithSub()`, band selection, crops, resize and merge (see
+      "Currently implemented" above).
+    - [x] Decide about the remaining operations which don't change pixel values but still drop
+      it: `nominal()` (only strips uncertainty - probably keep), the *offset* node (only shifts the
+      image - probably keep), and the registration nodes (warp one image onto another - arguably
+      geometric like `resize()`). (Done: all keep it.)
     - [x] A rule for arithmetic between images (`a/b` etc.): drop it, or keep it only when both
       sides agree. Write the rule down before the code spreads through `imagecube.py`. (Done: drop
       it - see Behaviour above. Happens automatically, because arithmetic goes through
@@ -98,7 +107,7 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
 
 ### Smaller things
 
-- [ ] Docstring fixes in `ancillary/__init__.py`: "fiile" should be "file", and "support either
+- [x] Docstring fixes in `ancillary/__init__.py`: "fiile" should be "file", and "support either
   data for the cube a whole" is missing "per-band data or ..." and an "as".
 - [x] Give `attempt_load()` a return type: `Optional[Dict[str, Any]]`.
 - [ ] Tests: reuse the real AUPE file in `tests/data/aupexml/` (its `....png.xml` name matches the

@@ -162,3 +162,102 @@ def test_exposure_missing_gives_clear_error():
     # and it's gone after an operation which changes pixel values
     node = runExpr(makeImage(), "exposure(a*2)")
     assert "the image has no exposure data" in node.error.message
+
+
+def makeFilteredImage():
+    """As makeImage(), but with filters on the bands: 440, 540, 640nm"""
+    from pcot.cameras.filters import Filter
+    from pcot.sources import MultiBandSource, Source
+    img = makeImage()
+    img.sources = MultiBandSource([
+        Source().setBand(Filter(cwl=c, fwhm=20, transmission=1, position=f"P{i}", name=f"F{c}")).setInputIdx(0)
+        for i, c in enumerate([440, 540, 640])])
+    return img
+
+
+def exposureOf(cube, expr):
+    """Run exposure(expr) in an expr node on an image in input 0"""
+    node = runExpr(cube, f"exposure({expr})")
+    assert node.error is None, node.error.message
+    return list(node.getOutput(0, Datum.NUMBER).n)
+
+
+def test_band_selection_keeps_it():
+    cube = makeFilteredImage()
+    assert np.allclose(exposureOf(cube, "a$640"), [0.03])     # by wavelength
+    assert np.allclose(exposureOf(cube, "a$F540"), [0.02])    # by name
+    assert np.allclose(exposureOf(cube, "a$0"), [0.01])       # by index
+
+
+def test_rgb_keeps_it_for_mapped_bands():
+    img = makeFilteredImage()
+    img.mapping.set(2, 0, 1)
+    assert img.rgbImage().ancillary.get("exposure") == [0.03, 0.01, 0.02]
+
+
+def test_crops_and_resize_keep_it():
+    from pcot.rois import ROIRect
+    img = makeImage()
+    img.rois = [ROIRect(rect=(2, 2, 5, 5))]
+    assert img.cropROI().ancillary.get("exposure") == EXPOSURES
+    assert img.subimage().cropother(img).ancillary.get("exposure") == EXPOSURES
+    assert img.resize(40, 20, 1).ancillary.get("exposure") == EXPOSURES
+    assert np.allclose(exposureOf(makeImage(), "crop(a,0,0,5,5)"), EXPOSURES)
+
+
+def test_merge_concatenates_it():
+    cube = makeFilteredImage()
+    assert np.allclose(exposureOf(cube, "merge(a$640, a$440)"), [0.03, 0.01])
+    # a number becomes a band with no ancillary data
+    merged = pcot.datumfuncs.merge(Datum(Datum.IMG, cube), Datum.k(2)).get(Datum.IMG)
+    assert merged.ancillary.get("exposure") == EXPOSURES + [None]
+
+
+def runNode(typename, images, setup=None):
+    """Run a node of the given type, with each image in a direct input connected to its inputs in
+    order. 'setup' is an optional function called on the node before running."""
+    from pcot.document import Document
+    doc = Document()
+    node = doc.graph.create(typename)
+    for i, cube in enumerate(images):
+        doc.setInputDirectImage(i, cube)
+        node.connect(i, doc.graph.create(f"input {i}"), 0)
+    if setup is not None:
+        setup(node)
+    doc.run()
+    assert node.error is None, node.error.message
+    return node
+
+
+def test_nominal_keeps_it():
+    """nominal() only strips the uncertainty"""
+    assert np.allclose(exposureOf(makeImage(), "nominal(a)"), EXPOSURES)
+
+
+def test_offset_node_keeps_it():
+    def setup(node):
+        node.params.x, node.params.y = 2, 1
+    node = runNode("offset", [makeImage()], setup)
+    assert node.getOutput(0, Datum.IMG).ancillary.get("exposure") == EXPOSURES
+
+
+def test_autoregister_keeps_moving_images_data():
+    other = makeImage()
+    for d, e in zip(other.ancillary.bands, [1, 2, 3]):
+        d["exposure"] = e
+    node = runNode("tvl1 autoreg", [makeImage(), other])
+    assert node.getOutput(0, Datum.IMG).ancillary.get("exposure") == EXPOSURES
+
+
+def test_manualregister_keeps_both_images_data():
+    other = makeImage()
+    for d, e in zip(other.ancillary.bands, [1, 2, 3]):
+        d["exposure"] = e
+
+    def setup(node):
+        node.params.translate = True
+        node.moving = [(5, 5)]
+        node.fixed = [(6, 4)]
+    node = runNode("manual register", [makeImage(), other], setup)
+    assert node.getOutput(0, Datum.IMG).ancillary.get("exposure") == EXPOSURES   # moving
+    assert node.getOutput(1, Datum.IMG).ancillary.get("exposure") == [1, 2, 3]   # fixed

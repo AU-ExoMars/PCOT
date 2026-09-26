@@ -185,7 +185,8 @@ class SubImageCube:
         x, y, w, h = self.bb
         return ImageCube(img2.img[y:y + h, x:x + w], img2.mapping, img2.sources,
                          dq=img2.dq[y:y + h, x:x + w],
-                         uncertainty=img2.uncertainty[y:y + h, x:x + w]
+                         uncertainty=img2.uncertainty[y:y + h, x:x + w],
+                         ancillary=img2.ancillary.copy()
                          )
 
     def sameROI(self, other):
@@ -627,6 +628,7 @@ class ImageCube(SourcesObtainable):
             unc = np.dstack([self.uncertainty, self.uncertainty, self.uncertainty])
             dq = np.dstack([self.dq, self.dq, self.dq])
             img = np.dstack([self.img, self.img, self.img])
+            bands = [0, 0, 0]
         else:
             if mapping is None:
                 mapping = self.mapping
@@ -647,10 +649,12 @@ class ImageCube(SourcesObtainable):
                 self.uncertainty[:, :, mapping.green],
                 self.uncertainty[:, :, mapping.blue]]
             )
+            bands = [mapping.red, mapping.green, mapping.blue]
         # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
         return ImageCube(img, ChannelMapping(0, 1, 2), self.rgbSources(mapping),
                          dq=dq, uncertainty=unc,
-                         rois=self.rois)
+                         rois=self.rois,
+                         ancillary=self.ancillary.select(bands))
 
     def rgbSources(self, mapping=None):
         """Return the sources for the RGB mapped channels - used in rgbImage(), but handy in association
@@ -894,7 +898,8 @@ class ImageCube(SourcesObtainable):
             dqs = np.stack(dqs, axis=-1)
             uncertainties = np.stack(uncertainties, axis=-1)
         # and a new imagecube
-        return ImageCube(img, sources=MultiBandSource(sources), uncertainty=uncertainties, dq=dqs)
+        return ImageCube(img, sources=MultiBandSource(sources), uncertainty=uncertainties, dq=dqs,
+                         ancillary=self.ancillary.select(lstOfChannels))
 
     ## crop an image down to its regions of interest.
     def cropROI(self):
@@ -902,7 +907,8 @@ class ImageCube(SourcesObtainable):
         img = ImageCube(subimg.img,
                         uncertainty=subimg.uncertainty,
                         dq=subimg.dq,
-                        rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
+                        rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources,
+                        ancillary=self.ancillary.copy())
         img.rois = [roi.rebase(subimg.bb.x, subimg.bb.y) for roi in self.rois]
         # if there is now any rect ROI which covering the entire image, remove it.
         def covers(roi):
@@ -1196,7 +1202,8 @@ class ImageCube(SourcesObtainable):
                 dqs.append(dqbits)
             outdq = np.stack(dqs, axis=-1)
 
-        return ImageCube(outimg, self.mapping, self.sources, uncertainty=outunc, dq=outdq)
+        return ImageCube(outimg, self.mapping, self.sources, uncertainty=outunc, dq=outdq,
+                         ancillary=self.ancillary.copy())
 
     def get_uncertainty_image(self):
         """Return an image with this image's uncertainty as its nominal values and zero uncertainty.

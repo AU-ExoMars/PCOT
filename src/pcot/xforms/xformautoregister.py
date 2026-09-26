@@ -68,7 +68,8 @@ class XFormAutoRegister(XFormType):
                 chans = image.imgsplit(movingImg.dq)
                 dqs = image.imgmerge([warp(x, warpdata, mode='edge', order=0, preserve_range=True).astype(np.uint16) for x in chans])
 
-            out = ImageCube(out, node.mapping, movingImg.sources, uncertainty=unc, dq=dqs)
+            out = ImageCube(out, node.mapping, movingImg.sources, uncertainty=unc, dq=dqs,
+                            ancillary=movingImg.ancillary.copy())
             out = Datum(Datum.IMG, out)
 
         node.setOutput(0, out)

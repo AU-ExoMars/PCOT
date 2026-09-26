@@ -339,7 +339,8 @@ class XFormManualRegister(XFormType):
                       output_shape=(output_height,output_width),
                       cval=NODATA|NOUNCERTAINTY, mode='constant').astype(np.uint16)
 
-            n.movingOut = ImageCube(img, movingImg.mapping, movingImg.sources, uncertainty=unc, dq=dq)
+            n.movingOut = ImageCube(img, movingImg.mapping, movingImg.sources, uncertainty=unc, dq=dq,
+                                    ancillary=movingImg.ancillary.copy())
 
             # apply only the translation to the fixed image
             img = warp(fixedImg.img, translation, preserve_range=True,
@@ -351,7 +352,8 @@ class XFormManualRegister(XFormType):
                         output_shape=(output_height,output_width),
                         cval=NODATA|NOUNCERTAINTY, mode='constant').astype(np.uint16)
 
-            n.fixedOut = ImageCube(img, fixedImg.mapping, fixedImg.sources, uncertainty=unc, dq=dq)
+            n.fixedOut = ImageCube(img, fixedImg.mapping, fixedImg.sources, uncertainty=unc, dq=dq,
+                                   ancillary=fixedImg.ancillary.copy())
 
         except XFormException as e:
             # handle any errors by setting the node error and returning no images

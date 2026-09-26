@@ -5,6 +5,7 @@ import logging
 import pcot.dq
 from pcot import rois, operations, dq
 from pcot.ancillary import keys
+from pcot.ancillary.bandancillary import BandAncillary
 from pcot.assets import getAssetPath
 from pcot.colour_correction.correct import ColourCorrection
 from pcot.datum import Datum
@@ -181,7 +182,9 @@ def merge(img1, *remainingargs):
     img = image.imgmerge(bands)
     unc = image.imgmerge(banduncs)
     dqs = image.imgmerge(banddqs)
-    img = ImageCube(img, None, MultiBandSource(sources), uncertainty=unc, dq=dqs)
+    # numbers were turned into images with no ancillary data above, so those bands have none
+    ancillary = BandAncillary.concat([x.ancillary for x in imglist])
+    img = ImageCube(img, None, MultiBandSource(sources), uncertainty=unc, dq=dqs, ancillary=ancillary)
 
     return Datum(Datum.IMG, img)
 
@@ -268,7 +271,7 @@ def crop(img, x, y, w, h):
     out = img.img[y:y + h, x:x + w]
     dq = img.dq[y:y + h, x:x + w]
     unc = img.uncertainty[y:y + h, x:x + w]
-    img = ImageCube(out, img.mapping, sources, dq=dq, uncertainty=unc)
+    img = ImageCube(out, img.mapping, sources, dq=dq, uncertainty=unc, ancillary=img.ancillary.copy())
     return Datum(Datum.IMG, img)
 
 
@@ -387,7 +390,7 @@ def nominal(d):
     if d.tp == Datum.IMG:
         img = d.get(Datum.IMG)
         if img is not None:
-            img = ImageCube(img.img, None, img.sources, rois=img.rois)
+            img = ImageCube(img.img, None, img.sources, rois=img.rois, ancillary=img.ancillary.copy())
         return Datum(Datum.IMG, img)
     else:  # type is constrained to either image or number, so it's fine to do this
         n = d.get(Datum.NUMBER)

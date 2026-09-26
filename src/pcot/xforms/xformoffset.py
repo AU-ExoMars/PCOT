@@ -51,7 +51,8 @@ class XFormOffset(XFormType):
             newunc[yd:yd + h, xd:xd + w] = img.uncertainty[ys:ys + h, xs:xs + w]
             newdq[yd:yd + h, xd:xd + w] = img.dq[ys:ys + h, xs:xs + w]
             # remember to copy ROI
-            out = ImageCube(newimg, node.mapping, img.sources, dq=newdq, uncertainty=newunc)
+            out = ImageCube(newimg, node.mapping, img.sources, dq=newdq, uncertainty=newunc,
+                            ancillary=img.ancillary.copy())
 
         node.setOutput(0, Datum(Datum.IMG, out))
 
