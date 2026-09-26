@@ -8,6 +8,8 @@ from proctools.products import DataProduct
 
 import pcot
 import pcot.dq
+from pcot.ancillary import keys
+from pcot.ancillary.bandancillary import BandAncillary
 
 from pcot.datum import Datum
 from pcot.cameras.filters import Filter
@@ -141,6 +143,7 @@ class PDS4ImageProduct(PDS4Product):
     camera: Optional[str]  # note - this is whether the camera is L or R, not PANCAM/AUPE.
     rmc_ptu: Optional[float]
     filt: Optional[Filter]
+    exposure: Optional[float]
 
     def __init__(self, p: Optional[DataProduct] = None):
         """Given a data product"""
@@ -150,6 +153,10 @@ class PDS4ImageProduct(PDS4Product):
             self.seq_num = int(m.seq_num)
             self.camera = m.camera
             self.rmc_ptu = float(m.rmc_ptu)
+            # exposure is optional ancillary data, so a label without it mustn't stop the product
+            # loading. Labels give it in seconds (unit="s"); the unit isn't checked.
+            exp = getattr(m, 'exposure_duration', None)
+            self.exposure = float(exp) if exp is not None else None
             cwl = int(m.filter_cwl)
             fwhm = int(m.filter_bw)
             filtid = m.filter_id
@@ -158,6 +165,7 @@ class PDS4ImageProduct(PDS4Product):
             self.seq_num = None
             self.camera = None
             self.rmc_ptu = None
+            self.exposure = None
             self.filt = None
 
     def serialise(self) -> Dict:
@@ -166,6 +174,7 @@ class PDS4ImageProduct(PDS4Product):
         d.update({'seq_num': self.seq_num,
                   'camera': self.camera,
                   'rmc_ptu': self.rmc_ptu,
+                  'exposure': self.exposure,
                   'filt': self.filt.serialise(),
                   'prodtype': 'image'})
         return d
@@ -178,6 +187,7 @@ class PDS4ImageProduct(PDS4Product):
         x.seq_num = d['seq_num']
         x.camera = d['camera']
         x.rmc_ptu = d['rmc_ptu']
+        x.exposure = d.get('exposure',None)
         x.filt = Filter.deserialise(d['filt'])
         return x
 
@@ -319,7 +329,13 @@ class ProductList:
                                   .setInputIdx(inpidx)
                                    for p in selected])
 
+        # prepare ancillary data for each band - an empty dict for a band with no exposure (e.g. a
+        # product saved before exposure was read)
+        ancillary_data = [{keys.EXPOSURE.name: p.exposure} if p.exposure is not None else {}
+                          for p in selected]
+        ancillary = BandAncillary(ancillary_data)
+
         img = ImageCube(imgdata, rgbMapping=mapping, sources=sources,
-                        uncertainty=uncertainty, dq=dq)
+                        uncertainty=uncertainty, dq=dq, ancillary=ancillary)
 
         return Datum(Datum.IMG, img)

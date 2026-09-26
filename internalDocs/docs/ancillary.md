@@ -102,7 +102,7 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
   per band, as the direct replacement for the AUPE XML input. It should raise a clear error if any
   band has no exposure data. (Done: `exposure()` in `datumfuncs.py` returns seconds, and raises an
   error naming the bands with no data, or saying the image has none.)
-- [ ] Inputs other than Multifile: ENVI and PDS4 carry this data in the files themselves, so decide
+- [x] Inputs other than Multifile: ENVI and PDS4 carry this data in the files themselves, so decide
   how their readers feed into the same mechanism.
     - [x] ENVI: the reader reads the (non-standard) `exposure times` header field, in seconds, into
       each band's ancillary data. The writer writes it exactly, and omits the field if any band's
@@ -110,9 +110,12 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
       for exposure (e.g. DN/s), so `exposure()`'s docstring warns that dividing by it again could
       be an error - the data is still read for information. ENVI files written by PCOT before
       this change contain placeholder exposures of 0.01, which will now be read as real.
-    - [ ] PDS4: probably from the product labels (`PDS4ImageProduct`, alongside the filter data);
-      it must also be added to `PDS4ImageProduct.serialise()`/`deserialise()`, or it will be lost
-      when a document is reopened.
+    - [x] PDS4: `PDS4ImageProduct` reads each product's `exposure_duration` from its label (in
+      seconds - the labels say `unit="s"`, but the unit isn't checked) and saves it in
+      `serialise()`/`deserialise()`. A label without it, or a product saved before this, gives no
+      exposure for that band rather than an error. PDS4 products (spec-rad) are already normalised
+      for exposure, like ENVI, so `exposure()`'s docstring warns against dividing by it again.
+      PCOT only reads PDS4, never writes it, so there's no writer side.
 
 ### Smaller things
 

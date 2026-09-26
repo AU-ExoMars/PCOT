@@ -42,3 +42,8 @@ def test_pds4_load():
     # they have the correct source data (including LIDs).
 
     check_data(img, inpidx=0)
+
+    # each band should have its product's exposure (in seconds) as ancillary data. The products are
+    # sorted before being turned into bands, so compare sorted lists.
+    expected = sorted(float(x.meta.exposure_duration) for x in specrads)
+    assert sorted(img.ancillary.get("exposure")) == expected
