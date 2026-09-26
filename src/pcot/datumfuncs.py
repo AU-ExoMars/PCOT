@@ -1361,7 +1361,9 @@ def exposure(img):
     from sidecar files by the multifile input). Returns a vector with one element per band, so
     a/exposure(a) normalises each band for exposure. Gives an error if any band has no exposure
     data - e.g. because the image is the result of an operation which changes pixel values, which
-    drops ancillary data.
+    drops ancillary data. Take care with images from ENVI files: these are often already normalised
+    for exposure (e.g. in DN/s), so dividing by exposure again would be an error - the exposure
+    times are still read, but only for information.
     @param img:img:the image
     """
     img = img.get(Datum.IMG)

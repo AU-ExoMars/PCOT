@@ -23,11 +23,12 @@
 import os
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 
 import pcot.ui as ui
+from pcot.ancillary import keys
 from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 
@@ -129,12 +130,19 @@ class ENVIHeader:
                 gain = [float(x) for x in d['data gain values']]
             else:
                 gain = [0 for _ in wavelengths]
-
             self.gains = gain
+
+            if 'exposure times' in d:
+                # these are assumed to be in seconds.
+                self.exposureTimes = [float(x) for x in d['exposure times']]
+            else:
+                self.exposureTimes = None
+
 
             self.filters = []
             for w, f, g, n in zip(wavelengths, fwhm, gain, bandNames):
                 self.filters.append(Filter(w, f, g, n, n))
+
 
         if 'data ignore value' in d:
             self.ignoreValue = float(d['data ignore value'])
@@ -189,7 +197,7 @@ def load(fn:Path|str) -> Tuple[ENVIHeader, np.ndarray]:
     return h, img
 
 
-def _genheader(f, w: int, h: int, freqs: List[float], camname="LWAC"):
+def _genheader(f, w: int, h: int, freqs: List[float], exp_times: Optional[List[float]] = None, camname="LWAC"):
     """Crude envi header writer"""
 
     f.write("ENVI\n")
@@ -220,15 +228,18 @@ def _genheader(f, w: int, h: int, freqs: List[float], camname="LWAC"):
     f.write("calibration target label = MacBeth_ColorChecker\n")
     f.write(f"camera name = {camname}\n")
     f.write("camera system = SIM\n")
-    t = 0.01
-    s = ", ".join([f"{t:0.2f}" for f in freqs])
-    f.write(f"exposure times = {{\n {s}}}\n")
+    # exposure times (in seconds) are omitted if we don't have them, rather than made up - so
+    # they will read back as missing. repr() of a float is the shortest string which reads back
+    # as exactly the same value.
+    if exp_times is not None:
+        s = ", ".join([repr(float(x)) for x in exp_times])
+        f.write(f"exposure times = {{\n {s}}}\n")
     f.write("sensor bit-depth = 10\n")
     f.write("session id = testing\n")
     f.write("units = DN/s\n")
 
 
-def _write(name: str, freqs: List[float], img: np.ndarray, camname):
+def _write(name: str, freqs: List[float], img: np.ndarray, camname, exp_times=None):
     """The input here a filename base, a (h,w,depth) numpy array,
     and a set of frequencies of the same number as the depth."""
     assert (len(img.shape) == 3)
@@ -237,7 +248,7 @@ def _write(name: str, freqs: List[float], img: np.ndarray, camname):
 
     # first, write out the header
     with open(f"{name}.hdr", "w") as f:
-        _genheader(f, w, h, freqs, camname)
+        _genheader(f, w, h, freqs, camname=camname, exp_times=exp_times)
 
     # now output the actual ENVI data
     bands = [np.reshape(x, img.shape[:2]) for x in np.dsplit(img, img.shape[-1])]
@@ -252,5 +263,8 @@ def write(fn: str, img: ImageCube, camname="LWAC"):
     # convert the sources to frequencies, assuming there is only
     # one source per channel and they all have centre wavelength values
     freqs = [next(iter(s)).getFilter().cwl for s in img.sources]
+    exps = img.ancillary.get(keys.EXPOSURE.name)
+    if any(x is None for x in exps):
+        exps = None
 
-    _write(fn, freqs, img.img, camname)
+    _write(fn, freqs, img.img, camname, exps)

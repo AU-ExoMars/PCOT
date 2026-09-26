@@ -31,9 +31,7 @@ def _genheader(f, w: int, h: int, freqs: List[float]):
     f.write("calibration target label = MacBeth_ColorChecker\n")
     f.write("camera name = LWAC\n")
     f.write("camera system = SIM\n")
-    t = 0.01
-    s = ", ".join([f"{t:0.2f}" for f in freqs])
-    f.write(f"exposure times = {{\n {s}}}\n")
+    # no exposure times - they would be read as real ancillary data
     f.write("sensor bit-depth = 10\n")
     f.write("session id = testing\n")
     f.write("units = DN/s\n")

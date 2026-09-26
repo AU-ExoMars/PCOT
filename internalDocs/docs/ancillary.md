@@ -104,6 +104,15 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
   error naming the bands with no data, or saying the image has none.)
 - [ ] Inputs other than Multifile: ENVI and PDS4 carry this data in the files themselves, so decide
   how their readers feed into the same mechanism.
+    - [x] ENVI: the reader reads the (non-standard) `exposure times` header field, in seconds, into
+      each band's ancillary data. The writer writes it exactly, and omits the field if any band's
+      exposure is unknown, rather than making values up. ENVI files are often already normalised
+      for exposure (e.g. DN/s), so `exposure()`'s docstring warns that dividing by it again could
+      be an error - the data is still read for information. ENVI files written by PCOT before
+      this change contain placeholder exposures of 0.01, which will now be read as real.
+    - [ ] PDS4: probably from the product labels (`PDS4ImageProduct`, alongside the filter data);
+      it must also be added to `PDS4ImageProduct.serialise()`/`deserialise()`, or it will be lost
+      when a document is reopened.
 
 ### Smaller things
 

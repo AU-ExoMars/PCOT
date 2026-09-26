@@ -9,7 +9,7 @@ from proctools.products import DataProduct
 
 import pcot.config
 from pcot import ui
-from pcot.ancillary import multifile_loader
+from pcot.ancillary import multifile_loader, keys
 from pcot.ancillary.bandancillary import BandAncillary
 from pcot.cameras import getFilter
 from pcot.dataformats.pds4 import ProductList
@@ -86,11 +86,21 @@ def envi(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None) ->
     sources = MultiBandSource(sources)
     if mapping is None:
         mapping = ChannelMapping()
+
+    # prepare ancillary data for each band
+    ancillary_data = [{} for _ in range(h.bands)]     # empty ancillary dict for each band
+    if h.exposureTimes is not None:
+        if len(h.exposureTimes) != h.bands:
+            raise ValueError("Number of exposure times does not match number of bands")
+        for i in range(h.bands):
+            ancillary_data[i][keys.EXPOSURE.name] = h.exposureTimes[i]
+    ancillary = BandAncillary(ancillary_data)
+
     if h.defaultBands is not None:
         mapping.set(*h.defaultBands)
-        img = ImageCube(img, mapping, sources, defaultMapping=mapping.copy())
+        img = ImageCube(img, mapping, sources, defaultMapping=mapping.copy(),ancillary=ancillary)
     else:
-        img = ImageCube(img, mapping, sources)
+        img = ImageCube(img, mapping, sources,ancillary=ancillary)
 
     return Datum(Datum.IMG, img)
 
