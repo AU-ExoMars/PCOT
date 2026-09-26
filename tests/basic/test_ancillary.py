@@ -99,6 +99,21 @@ def test_document_save_and_load(tmp_path):
     assert img.ancillary.get("exposure") == EXPOSURES
 
 
+def test_parc_save_and_load(tmp_path):
+    """Ancillary data survives being written to a PARC archive and read back, both directly and
+    through a PARC input"""
+    from pcot.document import Document
+    from pcot.utils.archive import FileArchive
+    from pcot.utils.datumstore import DatumStore, readParc
+    fn = str(tmp_path / "test.parc")
+    with FileArchive(fn, "w") as a:
+        DatumStore(a).writeDatum("main", Datum(Datum.IMG, makeImage()))
+
+    assert readParc(fn).get(Datum.IMG).ancillary.get("exposure") == EXPOSURES
+    doc = Document()
+    assert doc.setInputPARC(0, fn) is None
+    assert doc.inputMgr.inputs[0].get().get(Datum.IMG).ancillary.get("exposure") == EXPOSURES
+
 def test_non_json_values_fail_to_save(tmp_path):
     """Ancillary values must be JSON-serialisable: anything else fails loudly when saving"""
     from pcot.document import Document
