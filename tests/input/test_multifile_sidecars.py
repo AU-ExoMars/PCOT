@@ -35,7 +35,7 @@ def restoreLoaders():
 
 def bandName(n):
     """A filename in the real AUPE style, so the default pattern finds filter position L<n>"""
-    return f"sol00039_00000_00000_0001{n}_LWAC{n}_T71.0_P-124.0.png"
+    return f"sol00039_00000_00000_0001{n}_L{n:02d}_T71.0_P-124.0.png"
 
 
 def makeBand(directory, n, sidecar=None):
@@ -52,10 +52,10 @@ def withExposure(template, value):
     return template.replace(TEMPLATE_EXPOSURE_FIELD, "" if value is None else f"exposure_time|{value}|")
 
 
-def load(directory, files):
+def load(directory, files, filterpat=None, camera=None):
     pcot.setup()
     doc = Document()
-    assert doc.setInputMulti(0, str(directory), files) is None
+    assert doc.setInputMulti(0, str(directory), files, filterpat=filterpat, camera=camera) is None
     return doc, doc.inputMgr.inputs[0].get().get(Datum.IMG)
 
 
@@ -74,10 +74,14 @@ def test_each_band_gets_its_own_sidecar_data(template, tmp_path):
 
 
 def test_exposure_from_sidecars(template, tmp_path):
-    """The whole path: sidecars -> multifile input -> exposure() in an expr node, via band selection"""
+    """The whole path: sidecars -> multifile input -> exposure() in an expr node, via band selection.
+    PANCAM has separate L/R lenses, so filter positions are e.g. "L02" - we need lens+n groups
+    in the filter pattern (rather than relying on the ambient default_camera/multifile_pattern
+    settings from the user's own config, which won't necessarily compose positions this way) to
+    reliably resolve wavelengths regardless of the machine running the test."""
     d = tmp_path / "bands"
     files = [makeBand(d, n, withExposure(template, e)) for n, e in [(1, "0.5"), (2, "0.25"), (3, "2")]]
-    doc, _ = load(d, files)
+    doc, _ = load(d, files, filterpat=r".*(?P<lens>[LR])(?P<n>[0-9][0-9]).*", camera="PANCAM")
     node = doc.graph.create("expr")
     node.connect(0, doc.graph.create("input 0"), 0)
     node.params.expr = "exposure(a)"
