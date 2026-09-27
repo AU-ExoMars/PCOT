@@ -15,6 +15,7 @@ EXPOSURES = [0.01, 0.02, 0.03]
 
 
 def makeImage():
+    """Generate a 3-band image with exposures from EXPOSURES"""
     img = np.dstack([np.full((10, 20), v, dtype=np.float32) for v in (1, 2, 3)])
     anc = BandAncillary([{"exposure": e} for e in EXPOSURES])
     return ImageCube(img, ancillary=anc)
