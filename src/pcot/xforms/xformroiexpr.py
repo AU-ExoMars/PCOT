@@ -13,6 +13,7 @@ from pcot import ui
 from pcot.ui import theme
 from pcot.datum import Datum
 from pcot.expressions import ExpressionEvaluator
+from pcot.expressions.ops import combineSources
 from pcot.imagecube import ImageCube
 from pcot.sources import nullSourceSet
 from pcot.ui.tabs import Tab
@@ -196,14 +197,18 @@ class XFormROIExpr(XFormType):
                 # now execute the expression and get it back as an ROI
                 res = parser.run(node.params.expr)
                 node.roi = res.get(Datum.ROI)
-                node.roi.drawBox = False
-                # set its colour
-                if node.roi is not None:
+                if node.roi is None:
+                    raise XFormException('EXPR', 'expression does not produce an ROI')
+                else:
+                    # set its colour
                     node.roi.drawBox = False
                     node.roi.colour = node.outColour
                     # impose that ROI on the image - REMOVING existing ROIs
                     img.rois = [node.roi]
-                    outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)
+                    # the ROI's sources (from any ROI inputs) are carried on the result datum; add them
+                    # to every band of the image so they can be traced downstream.
+                    img.sources = combineSources(img.sources, res.sources)
+                    outROIDatum = Datum(Datum.ROI, node.roi, res.sources)
             else:
                 img.rois = []  # remove all existing ROIs from the image for output
             # impose the individual ROIs as annotations

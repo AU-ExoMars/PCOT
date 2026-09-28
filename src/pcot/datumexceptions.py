@@ -35,6 +35,13 @@ class DatumWithNoSourcesException(DatumException):
         super().__init__("Datum objects which are not images must have an explicit source set")
 
 
+class ImageDatumSourcesException(DatumException):
+    """Thrown when we try to give an image Datum sources which differ from those of its ImageCube. The
+    ImageCube is the sole owner of an image's sources: set img.sources before wrapping it instead."""
+    def __init__(self):
+        super().__init__("image Datum sources come from the ImageCube; set the image's sources instead")
+
+
 class NoDatumCopy(DatumException):
     def __init__(self, typename):
         super().__init__(f"Datum type {typename} has no copy operation")

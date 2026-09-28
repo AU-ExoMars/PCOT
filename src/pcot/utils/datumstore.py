@@ -276,8 +276,15 @@ def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Datum:
             # for each root source, we create a new source with our new external (giving the name of the archive)
             # and the input index. Keep the band data (which will be a filter or a band name).
             return Source().setExternal(e).setBand(s.band).setInputIdx(inpidx)
+        else:
+            return s
 
-    datum.val.sources = patchSource(datum.val.sources)
+    # images own their sources, other datum types keep them in the datum
+    patched = patchSource(datum.sources)
+    if datum.isImage():
+        datum.val.sources = patched
+    else:
+        datum.sources = patched
 
     #
     # if isinstance(datum.val.sources, MultiBandSource):

@@ -100,6 +100,76 @@ def test_datum_str_all_types():
     assert set(values_by_type_name.keys()) == set(builtin_types.keys())
 
     for name, val in values_by_type_name.items():
-        d = Datum(builtin_types[name], val, sources=nullSourceSet)
+        tp = builtin_types[name]
+        # images own their sources, so we can't pass them in
+        d = Datum(tp, val, sources=None if tp.image else nullSourceSet)
         assert str(d) == f"{val} ({name})"
 
+
+
+def test_image_datum_sources_are_the_images():
+    """An image Datum doesn't hold its own sources - it always reports the ImageCube's, even if
+    those are replaced after the Datum was created."""
+    from pcot.sources import MultiBandSource, Source, StringExternal
+
+    img = genrgb(4, 4, 1, 2, 3)
+    d = Datum(Datum.IMG, img)
+    assert d.sources is img.sources
+
+    newsources = MultiBandSource([SourceSet(Source().setExternal(StringExternal("x", "x")))] * 3)
+    img.sources = newsources
+    assert d.sources is newsources
+
+
+def test_image_datum_rejects_divergent_sources():
+    """Giving an image Datum sources which aren't the image's own is an error, because they
+    would silently disagree with the sources seen by nodes which unwrap the image."""
+    from pcot.datumexceptions import ImageDatumSourcesException
+
+    img = genrgb(4, 4, 1, 2, 3)
+    with pytest.raises(ImageDatumSourcesException):
+        Datum(Datum.IMG, img, nullSourceSet)
+    # passing the image's own sources is fine
+    Datum(Datum.IMG, img, img.sources)
+
+    d = Datum(Datum.IMG, img)
+    with pytest.raises(ImageDatumSourcesException):
+        d.sources = nullSourceSet
+
+
+def test_null_image_datum_keeps_its_sources():
+    """A null image has no ImageCube to own sources, so the Datum holds them."""
+    d = Datum(Datum.IMG, None, nullSourceSet)
+    assert d.sources is nullSourceSet
+
+
+def test_readparc_patches_image_sources(tmp_path):
+    """Sources patched by readParc are the ones the image Datum reports"""
+    from pcot.utils.datumstore import readParc
+
+    fn = str(tmp_path / "img.parc")
+    genrgb(4, 4, 1, 2, 3).save(fn, format='parc', name='main')
+    d = readParc(fn, 'main', 1)
+
+    assert d.sources is d.val.sources
+    for ss in d.sources:
+        s = ss.getOnlyItem()
+        assert s.external.brief() == "PARC"
+        assert s.inputIdx == 1
+
+
+def test_readparc_non_image(tmp_path):
+    """readParc works on non-image items, patching the Datum's own sources"""
+    from pcot.utils.archive import FileArchive
+    from pcot.utils.datumstore import DatumStore, readParc
+    from pcot.sources import Source, StringExternal
+
+    fn = str(tmp_path / "num.parc")
+    with FileArchive(fn, "w") as a:
+        src = SourceSet(Source().setExternal(StringExternal("orig", "orig")))
+        DatumStore(a).writeDatum("n", Datum(Datum.NUMBER, Value(2.0, 0.1), src))
+
+    d = readParc(fn, 'n')
+    assert d.tp == Datum.NUMBER
+    assert d.val.n == pytest.approx(2.0)
+    assert d.sources.getOnlyItem().external.brief() == "PARC"

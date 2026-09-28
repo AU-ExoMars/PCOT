@@ -783,6 +783,10 @@ class ROIPainted(ROI):
                 self.bbrect = Rect(0, 0, w, h)
                 self.map = np.zeros((h, w), dtype=np.uint8)
                 self.map[mask] = 255
+        elif sourceROI.bb() is None:
+            # the source ROI is empty (e.g. unset, or a painted ROI with nothing painted)
+            self.bbrect = None
+            self.map = None
         else:
             self.map = sourceROI.mask()  # not a copy?
             self.bbrect = Rect.copy(sourceROI.bb())
@@ -816,7 +820,9 @@ class ROIPainted(ROI):
         self.map = td.map
 
     def mask(self):
-        """return a boolean array, same size as BB"""
+        """return a boolean array, same size as BB, or None if the ROI is empty"""
+        if self.map is None:
+            return None
         return self.map > 0
 
     def getSize(self):

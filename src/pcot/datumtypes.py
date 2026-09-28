@@ -230,7 +230,7 @@ class RoiType(Type):
 
     def copy(self, d):
         r = copy(d.val)  # deep copy with __copy__
-        return pcot.datum.Datum(pcot.datum.Datum.ROI, r)
+        return pcot.datum.Datum(pcot.datum.Datum.ROI, r, d.sources)
 
     def getSize(self, v):
         return v.getSize()

@@ -155,9 +155,10 @@ class Datum(SourcesObtainable):
     ## @var val
     # the data value
     val: Any
-    ## @var sources
-    # the source - could be any kind of SourcesObtainable object
-    sources: SourcesObtainable
+    ## @var _sources
+    # the source - could be any kind of SourcesObtainable object. Not used for non-null images, where
+    # the ImageCube owns the sources; always access through the sources property.
+    _sources: SourcesObtainable
 
     # register built-in types; extras can be registered with registerType
     types = [
@@ -193,7 +194,8 @@ class Datum(SourcesObtainable):
     def __init__(self, t: pcot.datumtypes.Type, v: Any, sources: Optional[SourcesObtainable] = None):
         """create a datum given the type and value. No type checking is done!
         The source should be a SourcesObtainable object, but can be omitted from images (it will be
-        the one stored in the image)."""
+        the one stored in the image). If it is given for a non-null image it must be the image's own
+        sources object - images own their sources."""
         if not isinstance(t, pcot.datumtypes.Type):
             raise BadDatumCtorCallException()
 
@@ -205,19 +207,35 @@ class Datum(SourcesObtainable):
             if not any([isinstance(v, x) for x in t.validTypes]):
                 raise InvalidTypeForDatum(f"{str(type(v))} is not a valid type for Datum {t.name}")
 
-        if sources is None:
-            if self.isNone():
-                sources = nullSource
-            elif not self.isImage():
-                raise DatumWithNoSourcesException()
-            elif self.val is not None:
-                if hasattr(self.val, 'sources'):
-                    sources = self.val.sources
-                else:
+        if self._ownsSources():
+            # the image owns the sources, so we don't store any here
+            if sources is not None and sources is not self.val.sources:
+                raise ImageDatumSourcesException()
+            self._sources = None
+        else:
+            if sources is None:
+                if self.isNone():
+                    sources = nullSource
+                elif not self.isImage():
                     raise DatumWithNoSourcesException()
-            else:
-                sources = nullSource
-        self.sources = sources
+                else:
+                    sources = nullSource
+            self._sources = sources
+
+    def _ownsSources(self):
+        """True if the value object owns the sources rather than this Datum - currently only non-null images"""
+        return self.isImage() and self.val is not None
+
+    @property
+    def sources(self) -> SourcesObtainable:
+        """The sources of this datum. For a non-null image, these are the ImageCube's sources."""
+        return self.val.sources if self._ownsSources() else self._sources
+
+    @sources.setter
+    def sources(self, s: SourcesObtainable):
+        if self._ownsSources():
+            raise ImageDatumSourcesException()
+        self._sources = s
 
     @classmethod
     def k(cls, n, u=0.0, dq=0, sources=None):

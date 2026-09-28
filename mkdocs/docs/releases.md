@@ -29,6 +29,11 @@ can put them ahead of the built-in loaders with `first=True`.
 * Documents now record each input's method by name rather than by position, so they still load
 if input methods are added, removed or reordered in future versions. **Documents saved with this
 version cannot be opened by earlier versions.**
+* The sources of an ROI now appear in the sources of the image it is applied to by the ROI nodes and
+`roiexpr`, so data derived from an ROI can be traced back to where the ROI came from. Previously
+these sources could be lost further down the graph. For plugin authors: an image `Datum` now always
+takes its sources from its `ImageCube`, and creating one with different sources is an error - set
+`img.sources` before wrapping the image instead.
 
 Site
 

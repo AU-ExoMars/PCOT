@@ -1637,12 +1637,13 @@ class XFormROIType(XFormType):
             self.setProps(node, img)
             # copy image and append ROI to it
             img = img.copy()
+            img.sources = sources
             node.roi.setContainingImageDimensions(img.w, img.h)
             img.rois.append(node.roi)
             # set mapping from node
             img.setMapping(node.mapping)
 
-            outImgDatum = Datum(Datum.IMG, img, sources)
+            outImgDatum = Datum(Datum.IMG, img)
             outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)  # not a copy!
 
         node.setOutput(self.OUT_IMG, outImgDatum)
