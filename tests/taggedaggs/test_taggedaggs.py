@@ -531,6 +531,18 @@ def test_optional_ser():
     assert s == {'a': [10, 20, 30], 'b': None, 'c': 3.14}
 
 
+def test_optional_aggregate_deser():
+    """A non-null Maybe(TaggedAggregate) deserialises to a TaggedAggregate whether it was serialised
+    ordered (as a tuple) or unordered (as a dict), rather than being left as the raw data."""
+    rt = TaggedDictType(x=("x", int, 0), y=("y", int, 0), w=("w", int, 0), h=("h", int, 0)).setOrdered()
+    tdt = TaggedDictType(r=("r", Maybe(rt), None))
+
+    for data in ((1, 2, 3, 4), {'h': 4, 'w': 3, 'x': 1, 'y': 2}):
+        td = tdt.deserialise({'r': data})
+        assert isinstance(td.r, TaggedDict)
+        assert td.r.get() == [1, 2, 3, 4]
+
+
 def test_tagged_variant_dict():
     tdt1 = TaggedDictType(
         type=("type", str, "type1"),

@@ -401,3 +401,25 @@ def test_roi_serialisation_base():
     with pytest.raises(Exception):
         x = roi.serialise()
 
+
+
+def test_roiexpr_painted_roi_survives_repeated_save(tmp_path):
+    """A painted ROI in a roiexpr node has its bounding box saved in unordered (dict) form. That must load
+    back correctly, so that the document can be saved and loaded again. It used to load as a Rect of the
+    dict's keys, making the next save fail."""
+    import pcot
+    from pcot.document import Document
+
+    pcot.setup()
+    fn = str(tmp_path / "roiexpr.pcot")
+    doc = Document()
+    node = doc.graph.create("roiexpr")
+    node.rois = [ROIPainted(mask=np.ones((3, 4), dtype=bool))]
+    node.rois[0].bbrect = Rect(5, 6, 4, 3)
+    doc.save(fn)
+
+    for _ in range(2):
+        doc = Document(fn)
+        node, = [n for n in doc.graph.nodes if n.type.name == "roiexpr"]
+        assert node.rois[0].bb().astuple() == (5, 6, 4, 3)
+        doc.save(fn)

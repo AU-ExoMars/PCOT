@@ -422,7 +422,7 @@ class TaggedDict(TaggedAggregate):
                             self._values[k] = v.type.type_if_exists.deserialise(d)
                         else:
                             v.check_value(d)    # redundant, we do the check in the ctor of the type object
-                    self._values[k] = d
+                            self._values[k] = d
                 else:
                     # otherwise just use the data as is
                     # handle int->float promotion etc.

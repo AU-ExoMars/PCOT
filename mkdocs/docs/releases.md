@@ -34,6 +34,9 @@ version cannot be opened by earlier versions.**
 these sources could be lost further down the graph. For plugin authors: an image `Datum` now always
 takes its sources from its `ImageCube`, and creating one with different sources is an error - set
 `img.sources` before wrapping the image instead.
+* Fixed a bug where a painted ROI in a `roiexpr` node was loaded with a corrupted bounding box, so
+that saving the document again failed and **destroyed the file**. Documents affected by this but not
+yet re-saved will now load correctly.
 
 Site
 
