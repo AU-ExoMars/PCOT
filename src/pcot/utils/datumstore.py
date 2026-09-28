@@ -239,7 +239,7 @@ class DatumStore:
         self.cache = {}
 
 
-def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Optional[Datum]:
+def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Datum:
     """Load a Datum from a Datum archive file. We also patch the sources, overwriting the source data
     in the archive because we want the data to look like it came from the archive and not whatever
     the archive was created from. This may seem a bit rude - and that we're losing a record of something
@@ -256,10 +256,10 @@ def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Optional
         ds = DatumStore(fa)
         datum = ds.get(itemname)
     else:
-        return None
+        return Datum.null
 
     if datum is None:
-        return None
+        return Datum.null
 
     # Patch sources as described above
 

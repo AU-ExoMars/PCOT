@@ -386,7 +386,7 @@ def pds4(inputlist: Union[ProductList, List[Union[DataProduct, str]]],
     return inputlist.toDatum(multValue=multValue, mapping=mapping, selection=selection, inpidx=inpidx)
 
 
-def parc(fname: str, itemname: str, inpidx: int = None) -> Optional[Datum]:
+def parc(fname: str, itemname: str, inpidx: int = None) -> Datum:
     """Load a Datum from a PCOT datum archive (PARC) file. We also patch the sources, overwriting the source data
     in the archive because we want the data to look like it came from the archive and not whatever
     the archive was created from. This may seem a bit rude - and that we're losing a record of something
