@@ -16,7 +16,7 @@ import typing
 
 import numpy as np
 
-from scipy.ndimage.filters import convolve, convolve1d
+from scipy.ndimage import convolve, convolve1d
 
 __author__ = "Colour Developers"
 __copyright__ = "Copyright 2015 Colour Developers"

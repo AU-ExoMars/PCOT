@@ -16,7 +16,7 @@ References
 from typing import Literal
 
 import numpy as np
-from scipy.ndimage.filters import convolve
+from scipy.ndimage import convolve
 
 __author__ = "Colour Developers"
 __copyright__ = "Copyright 2015 Colour Developers"
