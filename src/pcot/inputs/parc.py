@@ -115,7 +115,7 @@ class Model(QtCore.QAbstractTableModel):
             keys = sorted(list(self.manifest.keys()))
             # and return the appropriate item
             item: Metadata = self.manifest[keys[index.row()]]
-            print(item)
+
             if index.column() == 0:
                 return keys[index.row()]            # column zero is the key
             else:
