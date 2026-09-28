@@ -128,8 +128,10 @@ def test_file_append(globaldatadir):
 
 
 def test_file_append_error(globaldatadir):
-    """Make sure that an error doesn't result in the file being appended to getting
-    corrupted"""
+    """Make sure that an error caught before anything is written (here, a duplicate name) doesn't
+    result in the file being appended to getting corrupted. Note that appending is NOT protected
+    in general: an error after data has started to be written can leave partial data in the archive
+    (see FileArchive)."""
 
     with TemporaryDirectory() as tmpdir:
         # copy the test archive into a new archive onto which we will append
@@ -197,3 +199,56 @@ def test_cant_read_in_append_mode(globaldatadir):
             with pytest.raises(Exception, match=".* not open for reading"):
                 d1a = a.readJson("data1")
 
+
+def test_file_write_replaces_existing(tmp_path):
+    """Writing to an existing file replaces it, leaving no temporary files behind"""
+    fn = tmp_path / "arch.dat"
+    with FileArchive(fn, "w") as a:
+        a.writeJson("data1", test_data_d1)
+    with FileArchive(fn, "w") as a:
+        a.writeJson("data2", test_data_d2)
+
+    with FileArchive(fn, "r") as a:
+        d2_correct(a.readJson("data2"))
+        assert "data1" not in a.getNames()
+    assert os.listdir(tmp_path) == ["arch.dat"]
+
+
+def test_file_write_error_leaves_existing_file(tmp_path):
+    """An exception part way through writing an archive must not damage the existing file - it's written
+    to a temporary file which only replaces the original if there's no exception."""
+    fn = tmp_path / "arch.dat"
+    with FileArchive(fn, "w") as a:
+        a.writeJson("data1", test_data_d1)
+    original = fn.read_bytes()
+
+    with pytest.raises(Exception):
+        with FileArchive(fn, "w") as a:
+            # the array gets written into the archive before the unserialisable object is found
+            a.writeJson("data2", {"arr": np.array([1, 2, 3]), "bad": object()})
+
+    assert fn.read_bytes() == original
+    assert os.listdir(tmp_path) == ["arch.dat"]
+
+
+def test_document_save_error_leaves_existing_file(tmp_path, monkeypatch):
+    """A document which fails to serialise when it's saved doesn't destroy the existing file"""
+    import pcot
+    from pcot.document import Document
+
+    pcot.setup()
+    fn = str(tmp_path / "doc.pcot")
+    doc = Document()
+    doc.graph.create("rect")
+    doc.save(fn)
+    original = Path(fn).read_bytes()
+
+    def fail(*args, **kwargs):
+        raise ValueError("serialisation failed")
+    monkeypatch.setattr(doc, "serialise", fail)
+    with pytest.raises(ValueError):
+        doc.save(fn)
+
+    assert Path(fn).read_bytes() == original
+    assert os.listdir(tmp_path) == ["doc.pcot"]
+    Document(fn)    # and it still loads

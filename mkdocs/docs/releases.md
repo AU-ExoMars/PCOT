@@ -37,6 +37,10 @@ takes its sources from its `ImageCube`, and creating one with different sources 
 * Fixed a bug where a painted ROI in a `roiexpr` node was loaded with a corrupted bounding box, so
 that saving the document again failed and **destroyed the file**. Documents affected by this but not
 yet re-saved will now load correctly.
+* Saving a document or writing a new PARC file no longer destroys the existing file if an error
+occurs during the save: the new file is written separately and only replaces the old one once it
+is complete. Appending to a PARC file is still done in place, so an error part way through an
+append can leave partial data in the file.
 
 Site
 

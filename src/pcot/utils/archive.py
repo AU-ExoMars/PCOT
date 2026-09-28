@@ -2,6 +2,8 @@ import json
 import datetime
 import dataclasses
 import getpass
+import os
+import tempfile
 from pathlib import Path
 from typing import Callable, Union
 from dataclasses import dataclass
@@ -255,8 +257,9 @@ class Archive:
         """Must open the zip, setting self.zip to the zipfile.ZipFile object"""
         pass
 
-    def close(self):
-        """Must close the zip file and set self.zip to None"""
+    def close(self, commit=True):
+        """Must close the zip file and set self.zip to None. If commit is false, an exception
+        occurred while the archive was open and any written data may be discarded."""
         pass
 
     def __enter__(self):
@@ -264,7 +267,7 @@ class Archive:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        self.close(commit=exc_type is None)
 
     def is_writable(self):
         return self.mode in ['w', 'a']
@@ -405,6 +408,13 @@ class Archive:
 class FileArchive(Archive):
     """
     Used for ZIP files on disk.
+
+    Writing ('w' mode) is protected against failure: data goes to a temporary file which only replaces
+    the target if the archive is closed without an exception (see close()).
+
+    **Appending ('a' mode) is NOT protected** - it works on the file in place, so an exception part way
+    through an append can leave partial data in the archive. This is deliberate: protecting it would mean
+    copying the whole archive on every append, which is far too slow for batch writing of images.
     """
 
     def __init__(self, path: Union[Path,str], mode='r', progressCallback: Callable[[str], None] = None,
@@ -414,6 +424,9 @@ class FileArchive(Archive):
 
         """Open a Zip archive on disk.
         The mode is 'r' for read, 'w' for write, and 'a' for append.
+        In 'w' mode the data is written to a temporary file in the same directory, which only replaces
+        the target when the archive is closed without an exception - so a failed write can't destroy
+        an existing file. Append mode works in place, so a failed append may leave partial data.
         If "type" is set, add the type of the archive to the metadata for writing.
         This is just a string; some are defined in ArchiveTypes. The default is "unspecified".
         Metadata is only written when the archive is opened in write mode.
@@ -422,6 +435,7 @@ class FileArchive(Archive):
         super().__init__(mode, progressCallback=progressCallback)
         path = path if isinstance(path, Path) else Path(path)  # sometimes they are strings
         self.path = path
+        self.temppath = None    # temporary file we write to in 'w' mode
 
         # either create a new metadata item, or use the one passed in.
         if metadata is None:
@@ -456,9 +470,17 @@ class FileArchive(Archive):
 
 
     def open(self):
-        self.zip = zipfile.ZipFile(self.path, self.mode.lower(), compression=zipfile.ZIP_DEFLATED)
-        
         mode = self.mode.lower()
+
+        if mode == 'w':
+            # write to a temporary file in the same directory, so that it can be atomically
+            # moved over the target in close() if all goes well.
+            fd, tmp = tempfile.mkstemp(prefix=f".{self.path.name}.", suffix=".tmp", dir=self.path.parent)
+            os.close(fd)
+            self.temppath = Path(tmp)
+            self.zip = zipfile.ZipFile(self.temppath, 'w', compression=zipfile.ZIP_DEFLATED)
+        else:
+            self.zip = zipfile.ZipFile(self.path, mode, compression=zipfile.ZIP_DEFLATED)
 
         if mode == 'a':
             # if we're doing append, now the file is open we should try to work out
@@ -482,14 +504,31 @@ class FileArchive(Archive):
 
             # update the metadata
             self.metadata.update()
-            self.writeJson("pcot_metadata",self.metadata.serialise())
+            try:
+                self.writeJson("pcot_metadata",self.metadata.serialise())
+            except Exception:
+                # we're not inside a context manager yet, so close here to clean up the temporary file
+                self.close(commit=False)
+                raise
 
         logger.debug(f"Opened {self}")
 
-    def close(self):
+    def close(self, commit=True):
         if self.zip is not None:
-            self.zip.close()
-            self.zip = None
+            tmp, self.temppath = self.temppath, None
+            try:
+                self.zip.close()
+            except Exception:
+                commit = False  # the zip may not be complete (e.g. disk full), so don't use it
+                raise
+            finally:
+                self.zip = None
+                if tmp is not None:
+                    if commit:
+                        os.replace(tmp, self.path)
+                    else:
+                        logger.error(f"Write to {self.path} failed, existing file (if any) left unchanged")
+                        tmp.unlink(missing_ok=True)
 
     def __str__(self):
         return f"FileArchive({self.path, self.mode})"
@@ -519,7 +558,7 @@ class MemoryArchive(Archive):
         self.zip = zipfile.ZipFile(self.data, self.mode, compression=zipfile.ZIP_DEFLATED)
         logger.debug(f"Opened {self}")
 
-    def close(self):
+    def close(self, commit=True):
         if self.zip is not None:
             self.zip.close()
             self.zip = None

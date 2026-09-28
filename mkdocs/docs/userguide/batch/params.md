@@ -229,6 +229,10 @@ run
 # it will be here.
 ```
 
+**Warning:** appending to a PARC file modifies it in place. If an error occurs part way through
+an append, the PARC may be left with partial data in it. Writing a new PARC (without `append`) is
+safe: an existing file is only replaced once the new one has been written successfully.
+
 ### Jinja2 extensions
 
 PCOT automatically sets up the following Jinja2 variables for you to use:

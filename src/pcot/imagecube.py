@@ -1236,7 +1236,8 @@ class ImageCube(SourcesObtainable):
         * format - if not None, use this to determine the format, not the file extension
         * name - the name of the image (used in the PARC format)
         * description - a text description of the image (used in the PARC format)
-        * append - if True, append to an existing PARC file, otherwise create a new PARC.
+        * append - if True, append to an existing PARC file, otherwise create a new PARC. Appending works
+          in place, so unlike creating a new PARC, a failure part way through can leave the file damaged.
         * pixelWidth - if there are annotations, resize to this (default 1000) before saving.
         """
 

@@ -186,7 +186,7 @@ class Document:
 
     def save(self, fname, saveInputs=True):
         # note that the archive mechanism deals with numpy array saving and also
-        # saves to a temp file before moving when it's all OK at the end.
+        # saves to a temp file which only replaces the target if there's no exception.
         with archive.FileArchive(fname, 'w', type=archive.ArchiveType.DOCUMENT) as arc:
             arc.writeJson("JSON", self.serialise(saveInputs=saveInputs))
             pcot.config.addRecent(fname)
