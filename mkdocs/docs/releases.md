@@ -30,7 +30,7 @@ can put them ahead of the built-in loaders with `first=True`.
 if input methods are added, removed or reordered in future versions. **Documents saved with this
 version cannot be opened by earlier versions.**
 * The sources of an ROI now appear in every band of the image it is applied to by the ROI nodes,
-`roiexpr` and `roidq`, so data derived from an ROI can be traced back to where the ROI came from.
+`roiexpr`, `roidq` and `inset`, so data derived from an ROI can be traced back to where the ROI came from.
 Previously these sources could be lost further down the graph - for example, an ROI made by `roidq`
 from band R and used in a calculation on band G gave a result whose sources were only G (Issue #68). For plugin authors: an image `Datum` now always
 takes its sources from its `ImageCube`, and creating one with different sources is an error - set

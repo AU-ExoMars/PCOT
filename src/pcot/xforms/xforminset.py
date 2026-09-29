@@ -2,6 +2,7 @@ import cv2 as cv
 from PySide6.QtWidgets import QMessageBox
 
 from pcot.datum import Datum
+from pcot.expressions.ops import combineSources
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
@@ -59,7 +60,8 @@ class XformInset(XFormType):
     def perform(self, node):
         image = node.getInput(0, Datum.IMG)  # this is the main image
         inset = node.getInput(1, Datum.IMG)  # this is the thing we're going to insert
-        roi = node.getInput(2, Datum.ROI)  # this is the ROI
+        roiDatum = node.getInput(2, Datum.ROI, return_datum=True)  # this is the ROI; we need the datum for sources
+        roi = None if roiDatum is None else roiDatum.get(Datum.ROI)
 
         inrect = None if roi is None else roi.bb()  # get rect from ROI
 
@@ -121,6 +123,9 @@ class XformInset(XFormType):
         if out is None:
             img = None
         else:
+            if roi:
+                # the ROI positions the inset and is attached to the output, so add its sources to every band
+                src = combineSources(src, roiDatum.sources)
             img = ImageCube(out, node.mapping, sources=src, rois=[roi] if roi else None)
         node.setOutput(0, Datum(Datum.IMG, img))
 

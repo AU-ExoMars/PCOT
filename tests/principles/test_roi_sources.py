@@ -103,3 +103,29 @@ def test_roidq_roi_sources_on_image():
     # and the result depends on R as well as G
     assert len(out.sources) == 1
     assert {s.band for s in out.sources[0].getSources()} == {'R', 'G'}
+
+
+def test_inset_roi_sources_on_image():
+    """The ROI which positions an inset adds its sources to every band of the output, along with
+    those of the background and inset images."""
+    pcot.setup()
+    doc = Document()
+    assert doc.setInputDirectImage(0, genrgb(16, 16, 0.1, 0.2, 0.3, inpidx=0)) is None     # background
+    assert doc.setInputDirectImage(1, genrgb(4, 4, 0.4, 0.5, 0.6, inpidx=1)) is None       # inset
+    # SAT everywhere, so roidq gives an ROI covering all of input 2 (the same size as the background)
+    assert doc.setInputDirectImage(2, genrgb(16, 16, 1, 2, 3, d=(dq.SAT, dq.NONE, dq.NONE), inpidx=2)) is None
+
+    roidq = doc.graph.create("roidq")
+    roidq.connect(0, doc.graph.create("input 2"), 0)
+
+    inset = doc.graph.create("inset")
+    inset.connect(0, doc.graph.create("input 0"), 0)
+    inset.connect(1, doc.graph.create("input 1"), 0)
+    inset.connect(2, roidq, 1)
+    doc.run()
+
+    assert inset.error is None
+    img = inset.getOutput(0, Datum.IMG)
+    assert len(img.sources) == 3
+    for ss in img.sources:
+        assert inputIndices(ss) == {0, 1, 2}
