@@ -14,14 +14,19 @@ from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
 
-# the exposure time field in the template sidecar, exactly as it appears in the ImageMetadata string
+# the exposure time and filter number fields in the template sidecar, exactly as they appear in the
+# ImageMetadata string, and its camera (which gives the lens)
 TEMPLATE_EXPOSURE_FIELD = "exposure_time|0.009911|"
+TEMPLATE_FILTER_FIELD = "filter_num|4|"
+TEMPLATE_CAMERA = "Camera=WAC_LEFT;"
 
 
 @pytest.fixture
 def template(globaldatadir):
     text = (globaldatadir / "ancillary" / "aupe3_sidecar.png.xml").read_text()
     assert TEMPLATE_EXPOSURE_FIELD in text
+    assert TEMPLATE_FILTER_FIELD in text
+    assert TEMPLATE_CAMERA in text
     return text
 
 
@@ -50,6 +55,12 @@ def makeBand(directory, n, sidecar=None):
 def withExposure(template, value):
     """The template sidecar with a different exposure time, or with it removed if value is None"""
     return template.replace(TEMPLATE_EXPOSURE_FIELD, "" if value is None else f"exposure_time|{value}|")
+
+
+def withFilter(template, n, camera="WAC_LEFT"):
+    """The template sidecar with a different filter number (or none if n is None) and camera"""
+    text = template.replace(TEMPLATE_FILTER_FIELD, "" if n is None else f"filter_num|{n}|")
+    return text.replace(TEMPLATE_CAMERA, f"Camera={camera};")
 
 
 def load(directory, files, filterpat=None, camera=None):
@@ -103,7 +114,7 @@ def test_unreadable_sidecar_warns(template, tmp_path, caplog):
     """A sidecar no loader can read gives no data for that band and a warning, but the image loads"""
     d = tmp_path / "bands"
     files = [makeBand(d, 1, "this is not XML"),
-             makeBand(d, 2, withExposure(template, None)),     # none of the expected fields
+             makeBand(d, 2, withFilter(withExposure(template, None), None)),     # none of the expected fields
              makeBand(d, 3, withExposure(template, "0.03"))]
     _, img = load(d, files)
     assert img.ancillary.get(keys.EXPOSURE.name) == [None, None, 0.03]
@@ -172,3 +183,89 @@ def test_loader_order(template, tmp_path, restoreLoaders):
     add_multifile_sidecar_loader(Overrider(), first=True)
     _, img = load(d, files)
     assert img.ancillary.get(keys.EXPOSURE.name) == [99.0]     # overridden
+
+
+# a filter pattern for positions like "L04" in filenames - which the "capture" files below don't match
+LENS_PATTERN = r".*(?P<lens>[LR])(?P<n>[0-9][0-9]).*"
+
+
+def makePlainBand(directory, k, sidecar=None):
+    """Write a small band image whose filename says nothing about its filter, with the given sidecar"""
+    directory.mkdir(exist_ok=True)
+    name = f"capture{k}.png"
+    cv.imwrite(str(directory / name), np.full((10, 20), k * 10, dtype=np.uint8))
+    if sidecar is not None:
+        (directory / (name + ".xml")).write_text(sidecar)
+    return name
+
+
+def bandFilters(img):
+    return [ss.getOnlyItem().getFilter() for ss in img.sources]
+
+
+def errors(caplog):
+    return [r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+def test_sidecar_filter_data(template, tmp_path):
+    """The AUPE3 loader reads the filter number, and the lens from the camera name"""
+    d = tmp_path / "bands"
+    files = [makeBand(d, 1, withFilter(template, 4)),
+             makeBand(d, 2, withFilter(template, 7, "WAC_RIGHT")),
+             makeBand(d, 3, withFilter(template, 2, "HRC")),       # no lens for this camera
+             makeBand(d, 5, withFilter(template, None))]           # no filter number
+    _, img = load(d, files, filterpat=LENS_PATTERN, camera="PANCAM")
+    assert img.ancillary.get(keys.FILTER_NUMBER.name) == [4, 7, 2, None]
+    assert img.ancillary.get(keys.LENS.name) == ['L', 'R', None, 'L']
+
+
+def test_filter_from_sidecar_lens_positions(template, tmp_path, caplog):
+    """When the filename doesn't give the filter, the sidecar's lens and filter number are used - here
+    for a camera whose positions include the lens (e.g. "L04"). No errors are reported."""
+    from pcot.cameras import getFilter
+    d = tmp_path / "bands"
+    files = [makePlainBand(d, 1, withFilter(template, 4)),
+             makePlainBand(d, 2, withFilter(template, 2, "WAC_RIGHT"))]
+    _, img = load(d, files, filterpat=LENS_PATTERN, camera="PANCAM")
+    assert bandFilters(img) == [getFilter("PANCAM", "L04", 'pos'), getFilter("PANCAM", "R02", 'pos')]
+    assert errors(caplog) == []
+
+
+def test_filter_from_sidecar_numbered_positions(template, tmp_path, caplog):
+    """As above, for a camera whose positions are just numbers (e.g. "04"): the lens is dropped"""
+    from pcot.cameras import getFilter
+    d = tmp_path / "bands"
+    _, img = load(d, [makePlainBand(d, 1, withFilter(template, 4))],
+                  filterpat=LENS_PATTERN, camera="AUPE_LEFT_NOCALIB")
+    assert bandFilters(img) == [getFilter("AUPE_LEFT_NOCALIB", "04", 'pos')]
+    assert errors(caplog) == []
+
+
+def test_filename_filter_wins_with_warning(template, tmp_path, caplog):
+    """If the filename and sidecar disagree about the filter, the filename wins, with a warning"""
+    from pcot.cameras import getFilter
+    d = tmp_path / "bands"
+    _, img = load(d, [makeBand(d, 1, withFilter(template, 3))], filterpat=LENS_PATTERN, camera="PANCAM")
+    assert bandFilters(img) == [getFilter("PANCAM", "L01", 'pos')]
+    assert any("using the filename" in x and bandName(1) in x for x in warnings(caplog))
+
+
+def test_filename_and_sidecar_agree_quietly(template, tmp_path, caplog):
+    """No warning if the filename and sidecar give the same filter"""
+    d = tmp_path / "bands"
+    load(d, [makeBand(d, 4, withFilter(template, 4))], filterpat=LENS_PATTERN, camera="PANCAM")
+    assert not any("using the filename" in x for x in warnings(caplog))
+
+
+def test_no_filter_is_an_error(template, tmp_path, caplog):
+    """If neither the filename nor the sidecar gives a filter, an error explains why and the band
+    gets the dummy filter"""
+    from pcot.cameras.filters import DUMMY_FILTER
+    d = tmp_path / "bands"
+    files = [makePlainBand(d, 1, withFilter(template, None)),      # no filter number
+             makePlainBand(d, 2, withFilter(template, 99))]        # filter number not in the camera
+    _, img = load(d, files, filterpat=LENS_PATTERN, camera="PANCAM")
+    assert bandFilters(img) == [DUMMY_FILTER, DUMMY_FILTER]
+    e = errors(caplog)
+    assert any("cannot find the filter" in x and "capture1.png" in x and "no filter number" in x for x in e)
+    assert any("cannot find the filter" in x and "capture2.png" in x and "L99 isn't in the camera" in x for x in e)

@@ -210,7 +210,19 @@ is saved in the document along with the image.
 
 Currently the only sidecar format PCOT understands is AUPE's: an XML file with the same name as
 the image file plus `.xml` (e.g. `Set18_LWAC01.png.xml` next to `Set18_LWAC01.png`), from which
-PCOT reads the exposure time.
+PCOT reads the exposure time and the filter the image was captured through.
+
+### Filters from sidecar files
+
+If a band's filename doesn't match the filter pattern, or gives a filter that isn't in the camera,
+PCOT uses the filter number and lens in the sidecar instead. It tries the lens and number
+together (e.g. `L04`, for cameras whose filter positions include the lens) and then the number
+on its own (e.g. `04`). So files whose names say nothing about the filter can still be loaded,
+as long as they have sidecars.
+
+The filename always takes priority. If the filename and the sidecar give different filters, the
+filename's is used and a warning appears in the log. If neither gives a filter, an error in the
+log says why, and that band has no filter (like any other band whose filter can't be found).
 
 You can get the exposure time of each band with the `exposure()` function in an *expr* node. This
 gives a vector of times in seconds, one per band, so you can normalise an image for exposure with

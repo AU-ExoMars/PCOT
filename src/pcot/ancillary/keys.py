@@ -18,8 +18,15 @@ class AncillaryKey:
 
 
 EXPOSURE = AncillaryKey("exposure", "s", "Exposure time")
+# The filter a band was captured through, as the camera's own filter wheel number and lens. These are
+# raw facts from the capture: matching them to a filter in PCOT's camera data is done by the image
+# loader, which knows the camera (see load.multifile()).
+FILTER_NUMBER = AncillaryKey("filter_number", "", "Filter wheel position number (an int)")
+LENS = AncillaryKey("lens", "", "Lens the band was captured through: 'L' or 'R'")
 
 # all the keys, by name
 ALL_KEYS: Dict[str, AncillaryKey] = {k.name: k for k in [
     EXPOSURE,
+    FILTER_NUMBER,
+    LENS,
 ]}

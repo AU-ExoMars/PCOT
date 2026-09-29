@@ -49,6 +49,13 @@ something like `a/exposure(a)`. The overriding rule is the Law of Least Astonish
 - **Where it comes from:** the Multifile loader (`load.multifile()`) calls `multifile_loader()` for
   each band's file, so each band gets the data from its own sidecar, in the same order as the bands.
   A band with no sidecar gets no data.
+- **Filters from sidecars:** the AUPE loader also reads the filter wheel number (`keys.FILTER_NUMBER`)
+  and the lens (`keys.LENS`, from the `Camera` entry: `WAC_LEFT` -> `L`, `WAC_RIGHT` -> `R`). These are
+  stored as raw facts, not as a camera filter position, because only the image loader knows the
+  camera and so how its positions are named (`L04` for PANCAM/AUPE-SKP, `04` for the AUPE_LEFT/RIGHT
+  cameras). `load.multifile()` uses them when the filename doesn't give a filter that's in the
+  camera, trying `<lens><n>` then `<n>`. The filename wins if both give a filter (with a warning if
+  they disagree); if neither does, an error explains why and the band gets `DUMMY_FILTER`.
 
 ## To do
 

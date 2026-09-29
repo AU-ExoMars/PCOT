@@ -19,6 +19,14 @@ EXPOSURE_TIME_TO_SECONDS = 1.0
 # field's string value into the key's unit). Fields missing from a file are just left out.
 FIELDS: Dict[str, Tuple[keys.AncillaryKey, Callable[[str], Any]]] = {
     "exposure_time": (keys.EXPOSURE, lambda v: float(v) * EXPOSURE_TIME_TO_SECONDS),
+    "filter_num": (keys.FILTER_NUMBER, int),
+}
+
+# The "Camera" entry in the metadata attribute (outside ImageMetadata) -> the lens it captures through.
+# Other cameras (e.g. the HRC) have no lens.
+CAMERA_TO_LENS = {
+    "WAC_LEFT": "L",
+    "WAC_RIGHT": "R",
 }
 
 
@@ -53,6 +61,14 @@ def _load(fname) -> Dict[str, Any]:
         raise ValueError(f"none of the expected fields ({', '.join(FIELDS)}) in ImageMetadata")
 
     output = {}
+
+    # the lens comes from the Camera entry in the metadata attribute, not from ImageMetadata
+    camera = mds.get("Camera")
+    if camera in CAMERA_TO_LENS:
+        output[keys.LENS.name] = CAMERA_TO_LENS[camera]
+    else:
+        logger.debug(f"{fname}: no lens for camera {camera!r}")
+
     for field, (key, convert) in FIELDS.items():
         if field not in md:
             logger.debug(f"{fname}: no {field} in ImageMetadata")

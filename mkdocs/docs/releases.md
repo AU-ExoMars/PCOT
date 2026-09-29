@@ -25,7 +25,10 @@ don't change pixel values (such as cropping and band selection) and dropped by t
 ENVI files written by earlier versions of PCOT contain placeholder exposure times of 0.01s, which
 will be read as real - don't rely on `exposure()` for those files. Plugins can add loaders for
 other sidecar formats with `add_multifile_sidecar_loader()` (in `pcot.ancillary.multifile`), and
-can put them ahead of the built-in loaders with `first=True`.
+can put them ahead of the built-in loaders with `first=True`. AUPE sidecars also give each band's
+filter, which is used when the filename doesn't match the filter pattern - so files whose names say
+nothing about the filter can still be loaded. The filename takes priority, with a warning if the two
+disagree.
 * Documents now record each input's method by name rather than by position, so they still load
 if input methods are added, removed or reordered in future versions. **Documents saved with this
 version cannot be opened by earlier versions.**

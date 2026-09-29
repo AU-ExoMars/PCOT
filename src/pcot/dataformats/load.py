@@ -12,6 +12,7 @@ from pcot import ui
 from pcot.ancillary import multifile_loader, keys
 from pcot.ancillary.bandancillary import BandAncillary
 from pcot.cameras import getFilter
+from pcot.cameras.filters import Filter, DUMMY_FILTER
 from pcot.dataformats.pds4 import ProductList
 from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
@@ -217,14 +218,15 @@ def multifile(directory: Path|str,
             camera = camera or pcot.config.data.default_camera
 
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
-        """Returns the thing to search for to match a filter to a path and the type of the search"""
+        """Returns the thing to search for to match a filter to a path and the type of the search,
+        or (None, None) if the path doesn't match the pattern. That isn't reported here, because
+        the filter may still be found from the band's sidecar data (see resolveBandFilter())."""
 
         if filterre is None or camera is None:
             return None, None
         else:
             m = filterre.match(p)
             if m is None:
-                ui.error(f"Multifile loader cannot get filter from pattern: {p}, regex {filterre.pattern}")
                 return None, None
         
             m = m.groupdict()
@@ -244,6 +246,56 @@ def multifile(directory: Path|str,
             else:
                 ui.error(f"Multifile loader pattern: bad pattern {camera} {filterre}, need at least one of <name>, <pos>, <cwl>")
                 return None, None
+
+    def sidecarFilter(anc: Dict) -> Optional[Filter]:
+        """Find the camera's filter from the filter number and lens in a band's ancillary (sidecar) data,
+        or None if there's no filter number or no filter matches it."""
+        n = anc.get(keys.FILTER_NUMBER.name)
+        if n is None:
+            return None
+        lens = anc.get(keys.LENS.name)
+        # Try with the lens first (e.g. "L4" for cameras with positions like "L04"), then the number alone
+        # (e.g. "4" for cameras with positions like "04") - just as the filename pattern does with <lens><n>
+        # or <n>. Position matching treats "4" and "04", and "L4" and "L04", as the same.
+        candidates = ([f"{lens}{n}"] if lens else []) + [str(n)]
+        for c in candidates:
+            f = getFilter(camera, c, 'pos')
+            if f is not DUMMY_FILTER:
+                return f
+        return None
+
+    def resolveBandFilter(path, filtpos, searchtype, anc: Dict) -> Filter:
+        """Find the filter for a band: from the filename if possible, otherwise from its sidecar data.
+        Warns if both give a filter and they disagree, and reports an error (returning the dummy
+        filter) if neither does."""
+        fromName = None if filtpos is None else getFilter(camera, filtpos, searchtype)
+        if fromName is DUMMY_FILTER:
+            fromName = None
+        fromSidecar = sidecarFilter(anc)
+
+        if fromName is not None:
+            if fromSidecar is not None and fromSidecar != fromName:
+                ui.log(f"Multifile loader: filename {path} gives filter {fromName.name} ({fromName.position}) "
+                       f"but its sidecar gives {fromSidecar.name} ({fromSidecar.position}) - using the filename",
+                       loglevel=logging.WARNING)
+            return fromName
+        if fromSidecar is not None:
+            return fromSidecar
+
+        why = []
+        if filterre is None:
+            why.append("no valid filter pattern")
+        elif filtpos is None:
+            why.append(f"filename doesn't match pattern {filterre.pattern}")
+        else:
+            why.append(f"filename gives {searchtype}={filtpos}, which isn't in the camera")
+        n = anc.get(keys.FILTER_NUMBER.name)
+        if n is None:
+            why.append("no filter number in sidecar data")
+        else:
+            why.append(f"sidecar filter number {anc.get(keys.LENS.name) or ''}{n} isn't in the camera")
+        ui.error(f"Multifile loader cannot find the filter for {path} in camera {camera}: {'; '.join(why)}")
+        return DUMMY_FILTER
 
     # first compile the regex
     import re
@@ -313,11 +365,16 @@ def multifile(directory: Path|str,
             if len(img.shape) == 3:
                 img = np.mean(img, axis=2).astype(np.float32)
 
+            # ancillary data from any sidecar file (empty if there isn't one). We read this before
+            # building the source, because it may tell us the filter if the filename doesn't.
+            band_ancillary = multifile_loader(Path(path))
+            ancillary.append(band_ancillary)
+
             # build source data for this image
             filtpos, searchtype = getFilterSearchParam(path)
             ext = StringExternal("Multi", os.path.abspath(path))
             if camera:
-                filt = getFilter(camera, filtpos, searchtype)
+                filt = resolveBandFilter(path, filtpos, searchtype, band_ancillary)
                 source = Source().setBand(filt).setInputIdx(inpidx).setExternal(ext)
             else:
                 # sometimes we don't know what the camera is, so we can't get the filter.
@@ -327,8 +384,6 @@ def multifile(directory: Path|str,
             # img /= filt.transmission
             imgs.append(img)
             sources.append(source)
-            # ancillary data from any sidecar file (empty if there isn't one)
-            ancillary.append(multifile_loader(Path(path)))
 
     # construct the imagecube
     if len(imgs) > 0:
