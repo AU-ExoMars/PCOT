@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QComboBox
 import pcot
 from pcot import dq
 from pcot.datum import Datum
+from pcot.expressions.ops import combineSources
 from pcot.ui import theme
 from pcot.parameters.taggedaggregates import taggedColourType, TaggedDictType
 from pcot.rois import ROIPainted
@@ -33,12 +34,8 @@ class XFormROIDQ(XFormType):
     """
     Automatically generate an ROI from DQ bits in a band or in all bands.
 
-    <blockquote style="background-color: #ffd0d0;">
-    **WARNING**: the ROI will be generated from DQ data from any bands in this image.
-    It can then be applied to any other image or band - but this information is not
-    tracked by the source mechanism. This means that some source tracking information
-    can be lost. (Issue #68)
-    </blockquote>
+    The ROI's sources are those of the band(s) its DQ data came from. They are added to every band
+    of the output image, because the ROI can affect calculations on any band.
     """
 
     def __init__(self):
@@ -131,6 +128,9 @@ class XFormROIDQ(XFormType):
 
             img = img.copy()
             img.rois = [roi]
+            # the ROI may have been generated from bands other than the ones it's applied to (e.g. a mask
+            # from band R used in a calculation on band G), so add its sources to every band (Issue #68).
+            img.sources = combineSources(img.sources, sources)
 
             node.roi = roi
             outImgDatum = Datum(Datum.IMG, img)
