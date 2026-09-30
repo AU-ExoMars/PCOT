@@ -25,24 +25,46 @@ class GraphView(QtWidgets.QGraphicsView):
         if macroWindow:
             self.setStyleSheet(theme.macroWindowStyle())
 
-    def wheelEvent(self, evt):
-        """handle mouse wheel zooming"""
+    # limits on the view scale, so the graph can't be zoomed into invisibility
+    MINSCALE = 0.05
+    MAXSCALE = 10.0
+
+    def zoomAt(self, pos, factor):
+        """zoom by a factor, keeping the scene point under the viewport position (a QPoint) fixed"""
+        # clamp the factor so the resulting scale stays within limits
+        cur = self.transform().m11()
+        factor = max(self.MINSCALE / cur, min(self.MAXSCALE / cur, factor))
         # Remove possible Anchors
         self.setTransformationAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
         self.setResizeAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
         # Get Scene Pos
-        target_viewport_pos = self.mapToScene(evt.position().toPoint())
+        target_viewport_pos = self.mapToScene(pos)
         # Translate Scene
         self.translate(target_viewport_pos.x(), target_viewport_pos.y())
         # ZOOM
-        if evt.angleDelta().y() > 0:
-            factor = 1.2
-        else:
-            factor = 0.8333
         self.scale(factor, factor)
-
         # Translate back
         self.translate(-target_viewport_pos.x(), -target_viewport_pos.y())
+
+    def wheelEvent(self, evt):
+        """handle mouse wheel zooming"""
+        # Trackpads (notably on macOS) send a stream of many small deltas, some of which have no
+        # vertical component at all, so the zoom has to be proportional to the delta rather than
+        # a fixed step per event. One standard mouse wheel notch is 120, giving a factor of 1.2.
+        dy = evt.angleDelta().y()
+        if dy == 0:
+            evt.accept()
+            return
+        self.zoomAt(evt.position().toPoint(), 1.2 ** (dy / 120.0))
+        evt.accept()
+
+    def viewportEvent(self, evt):
+        """handle trackpad pinch-to-zoom (only generated on macOS)"""
+        if evt.type() == QtCore.QEvent.Type.NativeGesture and \
+                evt.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
+            self.zoomAt(evt.position().toPoint(), 1.0 + evt.value())
+            return True
+        return super().viewportEvent(evt)
 
     def mousePressEvent(self, event):
         """handle right mouse button panning (when zoomed). This works by
