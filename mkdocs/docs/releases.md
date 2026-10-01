@@ -45,6 +45,11 @@ yet re-saved will now load correctly.
 occurs during the save: the new file is written separately and only replaces the old one once it
 is complete. Appending to a PARC file is still done in place, so an error part way through an
 append can leave partial data in the file.
+* Trackpad zooming works properly in the graph, image canvas and timeline views. Previously, scrolling
+on a trackpad (particularly on a Mac) zoomed far too fast and could zoom the graph out of sight.
+Scroll zooming is now smooth, the graph can't be zoomed out of sight, and you can pinch to zoom.
+Pinch zooming may not work on Linux, depending on the windowing system - older X servers
+don't support it.
 
 Site
 
