@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QMenu
 import logging
 
 from pcot.ui import theme
+from pcot.ui.zoomevents import wheelZoomFactor, pinchZoomFactor
 
 logger = logging.getLogger(__name__)
 
@@ -47,22 +48,17 @@ class GraphView(QtWidgets.QGraphicsView):
         self.translate(-target_viewport_pos.x(), -target_viewport_pos.y())
 
     def wheelEvent(self, evt):
-        """handle mouse wheel zooming"""
-        # Trackpads (notably on macOS) send a stream of many small deltas, some of which have no
-        # vertical component at all, so the zoom has to be proportional to the delta rather than
-        # a fixed step per event. One standard mouse wheel notch is 120, giving a factor of 1.2.
-        dy = evt.angleDelta().y()
-        if dy == 0:
-            evt.accept()
-            return
-        self.zoomAt(evt.position().toPoint(), 1.2 ** (dy / 120.0))
+        """handle mouse wheel and trackpad scroll zooming"""
+        factor = wheelZoomFactor(evt, 1.2)
+        if factor is not None:
+            self.zoomAt(evt.position().toPoint(), factor)
         evt.accept()
 
     def viewportEvent(self, evt):
-        """handle trackpad pinch-to-zoom (only generated on macOS)"""
-        if evt.type() == QtCore.QEvent.Type.NativeGesture and \
-                evt.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
-            self.zoomAt(evt.position().toPoint(), 1.0 + evt.value())
+        """handle trackpad pinch-to-zoom"""
+        factor = pinchZoomFactor(evt)
+        if factor is not None:
+            self.zoomAt(evt.position().toPoint(), factor)
             return True
         return super().viewportEvent(evt)
 

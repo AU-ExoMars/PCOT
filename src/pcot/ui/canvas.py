@@ -23,6 +23,7 @@ from pcot.ui import theme
 from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.collapser import Collapser, CollapserSection
 from pcot.ui.spectrumwidget import SpectrumWidget
+from pcot.ui.zoomevents import wheelZoomFactor, pinchZoomFactor
 from pcot.utils.deb import Timer
 from pcot.utils.maths import pooled_sd
 
@@ -636,6 +637,8 @@ class InnerCanvas(QtWidgets.QWidget):
     PAN_STEP = 0.1
     PAN_STEP_FINE = 0.02
     PAN_STEP_COARSE = 0.5
+    # magnification per zoom key press or standard mouse wheel notch
+    ZOOM_STEP = math.exp(0.2)
 
     def keyPressEvent(self, e: QKeyEvent):
         # a keyHook (e.g. XFormStitch's arrow-key stitch-offset nudging) gets first
@@ -673,10 +676,10 @@ class InnerCanvas(QtWidgets.QWidget):
             self.panBy(dx * step, dy * step)
             return True
         elif key in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
-            self.zoomAtPoint(QPointF(self.width() / 2, self.height() / 2), -1)
+            self.zoomAtPoint(QPointF(self.width() / 2, self.height() / 2), self.ZOOM_STEP)
             return True
         elif key == Qt.Key.Key_Minus:
-            self.zoomAtPoint(QPointF(self.width() / 2, self.height() / 2), 1)
+            self.zoomAtPoint(QPointF(self.width() / 2, self.height() / 2), 1 / self.ZOOM_STEP)
             return True
         elif key == Qt.Key.Key_0:
             self.reset()
@@ -746,22 +749,25 @@ class InnerCanvas(QtWidgets.QWidget):
             self.canv.mouseHook.canvasMouseReleaseEvent(x, y, e)
         return super().mouseReleaseEvent(e)
 
-    def zoomAtPoint(self, pos: QPointF, wheel: int):
-        """Zoom in/out by one step, keeping the image point under `pos` (in widget
-        coordinates) fixed. `wheel` is +1 to zoom out, -1 to zoom in. Shared by the
-        mouse wheel (anchored on the cursor) and the keyboard zoom keys (anchored on
+    def zoomAtPoint(self, pos: QPointF, factor: float):
+        """Zoom by a magnification factor (>1 zooms in, <1 zooms out), keeping the image
+        point under `pos` (in widget coordinates) fixed. Shared by the mouse wheel and
+        trackpad gestures (anchored on the cursor) and the keyboard zoom keys (anchored on
         the viewport centre, since there's no cursor position for a keypress)."""
         if self.rgb is None:
             return
 
-        newzoom = self.zoomscale * math.exp(wheel * 0.2)
+        # zoomscale is the fraction of the image shown, so it shrinks as we zoom in. It can't
+        # go above 1 (the whole image); clamp rather than abort so that the small steps from a
+        # trackpad can reach the edge of the range.
+        newzoom = min(self.zoomscale / factor, 1.0)
 
         imgh, imgw = self.imgCube.h, self.imgCube.w
         # work out the new image size
         cutw = int(imgw * newzoom)
         cuth = int(imgh * newzoom)
-        # too small? too big? abort!
-        if cutw == 0 or cuth == 0 or newzoom > 1:
+        # too small? abort!
+        if cutw == 0 or cuth == 0:
             return
 
         # x,y is the image point currently under pos (at the OLD zoom level). We want
@@ -798,15 +804,27 @@ class InnerCanvas(QtWidgets.QWidget):
         self.canv.setScrollBarsFromCanvas()
         self.update()
 
-    ## mouse wheel handler, changes zoom
+    ## mouse wheel and trackpad scroll handler, changes zoom
     def wheelEvent(self, e):
         # can't zoom when there's no image
         if self.rgb is None:
             return
-        wheel = 1 if e.angleDelta().y() < 0 else -1
-        pos = e.position()
-        self.zoomAtPoint(pos, wheel)
-        self.cursorX, self.cursorY = self.getImgCoords(pos)
+        factor = wheelZoomFactor(e, self.ZOOM_STEP)
+        if factor is not None:
+            pos = e.position()
+            self.zoomAtPoint(pos, factor)
+            self.cursorX, self.cursorY = self.getImgCoords(pos)
+
+    ## trackpad pinch-to-zoom handler
+    def event(self, e):
+        factor = pinchZoomFactor(e)
+        if factor is not None:
+            if self.rgb is not None:
+                pos = e.position()
+                self.zoomAtPoint(pos, factor)
+                self.cursorX, self.cursorY = self.getImgCoords(pos)
+            return True
+        return super().event(e)
 
     def __del__(self):
         logger.debug(f"Cleaning up {self}")

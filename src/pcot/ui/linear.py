@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor, QFont, QBrush, QPen
 import numpy as np
 import pcot.ui as ui
 from pcot import utils
+from pcot.ui.zoomevents import wheelZoomFactor, pinchZoomFactor
 
 DEFAULTRANGE = 20  # default x range of set view when there are no items
 
@@ -319,22 +320,34 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         self.scene.rebuild()
         self.update()
 
-    def wheelEvent(self, evt):
-        """handle mouse wheel zooming"""
+    def zoomAt(self, pos, factor):
+        """zoom by a magnification factor (>1 zooms in), keeping the entity under the viewport
+        position (a QPoint) fixed"""
         # Remove possible Anchors
         self.setTransformationAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
         self.setResizeAnchor(QtWidgets.QGraphicsView.ViewportAnchor.NoAnchor)
         # Get Scene Pos
-        target_viewport_pos = self.mapToScene(evt.position().toPoint())
+        target_viewport_pos = self.mapToScene(pos)
         x = target_viewport_pos.x()
-        # ZOOM
-        if evt.angleDelta().y() < 0:
-            factor = 1.1
-        else:
-            factor = 1 / 1.1
-        self.scene.zoom(self.scene.sceneToEntity(x), factor)
+        # ZOOM - the scene's zoom factor multiplies the visible range, so it's the inverse
+        self.scene.zoom(self.scene.sceneToEntity(x), 1 / factor)
         self.setSceneRect(0, 0, self.width(), self.height())
         self.update()
+
+    def wheelEvent(self, evt):
+        """handle mouse wheel and trackpad scroll zooming"""
+        factor = wheelZoomFactor(evt, 1.1)
+        if factor is not None:
+            self.zoomAt(evt.position().toPoint(), factor)
+        evt.accept()
+
+    def viewportEvent(self, evt):
+        """handle trackpad pinch-to-zoom"""
+        factor = pinchZoomFactor(evt)
+        if factor is not None:
+            self.zoomAt(evt.position().toPoint(), factor)
+            return True
+        return super().viewportEvent(evt)
 
     def mousePressEvent(self, event):
         """Handles the start of a pan. Note that this ONLY calls the superclass event handler
