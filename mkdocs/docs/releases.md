@@ -50,6 +50,11 @@ on a trackpad (particularly on a Mac) zoomed far too fast and could zoom the gra
 Scroll zooming is now smooth, the graph can't be zoomed out of sight, and you can pinch to zoom.
 Pinch zooming may not work on Linux, depending on the windowing system - older X servers
 don't support it.
+* The *File/Show Filter and Reflectance Data* dialog now has a table of the selected camera's filters,
+giving each filter's position, centre wavelength, FWHM and transmission, and noting whether its
+response is simulated or clipped.
+* Splitter bars (such as the one between the image and the spectrum view in the canvas, when the spectrum is shown) now have a solid
+grip in the middle, to make it clearer that they can be dragged.
 
 Site
 
