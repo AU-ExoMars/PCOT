@@ -1,6 +1,6 @@
 """This deals with the different types of connections between xforms.
-To add a new type, you need to add the type's brush
-(for drawing) to the brushDict here, and you may also need to
+To add a new type, give its connector colour (for drawing) in its constructor
+(see datumtypes.Type), and you may also need to
 add to isCompatibleConnection if you're doing something odd.
 Note that types which start with "img" are image types, and
 should all be renderable by Canvas.
@@ -186,7 +186,7 @@ class Datum(SourcesObtainable):
     def registerType(cls, t):
         """Register a custom type, which must be a singleton datum.Type object. You can then use it where you
         would use Datum.IMG, etc. ONLY USE FOR TYPES IN PLUGINS!
-        Remember to also register a connector brush with connbrushes.register()."""
+        Remember to give it a connector colour with the connColour argument of its constructor."""
         cls.types.append(t)
 
     null = None  # gets filled in later with a null datum (i.e. type is NONE) that we can use

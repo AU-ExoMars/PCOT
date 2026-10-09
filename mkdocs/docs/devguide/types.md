@@ -9,6 +9,10 @@ A type specifies:
 since ImgType is defined after Type)
 * whether it is an "internal type" used in the expression evaluator and not for connections
 (e.g. IdentType, FuncType and NoneType)
+* for non-internal types, how its connectors are drawn in the graph: `connColour` is any colour string
+that Qt's QColor accepts (e.g. `"#008000"` or `"darkgreen"`), and the optional `connPattern` is the name
+of a Qt brush style (e.g. `"DiagCrossPattern"`). Types without a colour are drawn in magenta. For brushes
+these can't describe, such as gradients, call `connbrushes.register()` with a QBrush, which overrides them.
 * optional serialisation and deserialisation methods taking and returning Datum, which convert to and from JSON-serialisable
 values - i.e. primitive types, tuples, lists and dicts; no objects.
 
@@ -17,7 +21,7 @@ objects. To register a type:
 
 * create a type object
 * append to the Datum types list
-* if required, register a connector brush with connbrushes.register.
+* if it is not an internal type, give it a connector colour (see below).
 * Deal with binary and unary operators in *expr* expressions if required (see below).
 
 ## An example
@@ -45,9 +49,8 @@ Now we need to provide the type singleton:
 class _TestObjectType(Type):
     def __init__(self):
         # just call the superconstructor telling it the name of the type
-        # and in this case, that the stringification (the result of __str__ on the
-        # value) is short enough to fit into an expr node's graph box.
-        super().__init__('testtuple', outputStringShort=True)
+        # and the colour of its connectors in the graph
+        super().__init__('testtuple', connColour='darkmagenta')
         
     # now we have to write code which converts Datums of this type into
     # stuff which can be converted to JSON and back again. Converting
@@ -75,16 +78,13 @@ class _TestObjectType(Type):
         return Datum(self, serialisedObject, sources) 
 ```
 We register the type singleton, but keep a reference to the object so we can use
-it in our own code when we create Datum objects. We also provide a connector
-brush, so that connections of this type are rendered differently in the graph:
+it in our own code when we create Datum objects. The connector colour we gave in the
+constructor means connections of this type are rendered differently in the graph:
 ```
 # create the singleton and register it, but keep hold of the variable so
 # we can use it to create new Datum objects.
 TestObjectType = _TestObjectType()
 Datum.registerType(TestObjectType)
-
-# add a brush for the connections in the graph
-pcot.connbrushes.register(TestObjectType, QColor("darkMagenta"))
 ```
 See **example1.py** for how this new type is used.
 
@@ -123,7 +123,7 @@ be processed with addition.
 * Create a subclass of datum.Type
 * add serialisation methods if required
 * call Datum.registerType() with the type
-* If required, add a new connector brush with connbrushes.register()
+* Give it a connector colour (connColour) in its constructor if it is not an internal type
 * To use the type, use the Type object with the Datum constructor and
 Datum.get() method.
 

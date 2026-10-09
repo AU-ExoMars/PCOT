@@ -14,7 +14,6 @@ from pcot.imagecube import ImageCube
 from pcot.datum import Datum
 from pcot.value import Value
 from pcot.datumtypes import Type
-from PySide6.QtGui import QColor
 from pcot.expressions.register import datumfunc
 
 import pcot.config
@@ -126,7 +125,8 @@ class TestObject:
 class _TestObjectType(Type):
     def __init__(self):
         # just call the superconstructor telling it the name of the type
-        super().__init__('testtuple')
+        # and the colour of its connectors in the graph
+        super().__init__('testtuple', connColour='darkmagenta')
 
     def getDisplayString(self, d: 'Datum'):
         # how to turn this into a string for a graph box
@@ -162,9 +162,6 @@ class _TestObjectType(Type):
 # we can use it to create new Datum objects.
 TestObjectType = _TestObjectType()
 Datum.registerType(TestObjectType)
-
-# add a brush for the connections in the graph
-pcot.connbrushes.register(TestObjectType, QColor("darkMagenta"))
 
 # and the function itself
 

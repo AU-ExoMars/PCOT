@@ -357,7 +357,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
                 node.type.inputConnectors[index][0], node.getInputType(index), node.type.inputConnectors[index][2])
         else:
             name, typename = (node.type.outputConnectors[index][0], node.getOutputType(index))
-        brush = connbrushes.getBrush(typename)
+        brush = QBrush(connbrushes.getBrush(typename))  # copy, because the brush is shared
         t = QTransform().translate(self.rect().x(), 0)  # need to translate brush patterns
         brush.setTransform(t)
         self.setBrush(brush)

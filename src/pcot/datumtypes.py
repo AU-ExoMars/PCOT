@@ -22,17 +22,23 @@ class Type:
 
     instance = None     # the singleton instance of this type
 
-    def __init__(self, name, image=False, internal=False, valid=None):
+    def __init__(self, name, image=False, internal=False, valid=None, connColour=None, connPattern=None):
         """Parameters:
             name: the name of the type
             image: is the type for an image (i.e. is it a 'subtype' of Type("img")?)
             internal: is it an internal type used in the expression evaluator, not for connectors?
             valid: set of valid types of which the Datum's value must be an instance, or None for anything
+            connColour: colour of graph connectors of this type, as any string QColor accepts
+                (e.g. "#008000" or "darkgreen"). Should be given for all non-internal types.
+            connPattern: name of a Qt.BrushStyle for those connectors (e.g. "DiagCrossPattern"),
+                or None for solid. The brush itself is built from these in connbrushes.
         """
         self.name = name
         self.image = image
         self.internal = internal
         self.validTypes = valid
+        self.connColour = connColour
+        self.connPattern = connPattern
         # check the singleton
         if self.__class__.instance is not None:
             raise Exception(f"Type {self.name} is a singleton and already has an instance")
@@ -131,7 +137,7 @@ class Type:
 
 class AnyType(Type):
     def __init__(self):
-        super().__init__('any', valid=None)
+        super().__init__('any', valid=None, connColour='#ff0000')
 
     def getDisplayString(self, d: 'Datum', box=False):
         """Might seem a bit weird, but an unconnected input actually gives "any" as its type."""
@@ -148,7 +154,7 @@ class ImgType(Type):
     def __init__(self):
         # TODO there are reasons why we sometimes might need to create None images. I just can't
         # remember what they are.
-        super().__init__('img', image=True, valid={pcot.imagecube.ImageCube, type(None)})
+        super().__init__('img', image=True, valid={pcot.imagecube.ImageCube, type(None)}, connColour='#0000ff')
 
     def getDisplayString(self, d: 'Datum', box=False):
         if d.val is None:
@@ -215,7 +221,7 @@ class ImgType(Type):
 class RoiType(Type):
     def __init__(self):
         from pcot.rois import ROI
-        super().__init__('roi', valid={ROI, type(None)})
+        super().__init__('roi', valid={ROI, type(None)}, connColour='#00ffff')
 
     def serialise(self, d):
         v = d.val
@@ -239,7 +245,7 @@ class RoiType(Type):
 class NumberType(Type):
     """Number datums contain a Value object (scalar or vector, currently)."""
     def __init__(self):
-        super().__init__('number', valid=[pcot.value.Value])
+        super().__init__('number', valid=[pcot.value.Value], connColour='#008000')
 
     def getDisplayString(self, d: 'Datum', box=False):
         """in the graph box, a vec is just displayed as VEC[n] where n is the number of elements"""
@@ -286,7 +292,7 @@ class NumberType(Type):
 
 class VariantType(Type):
     def __init__(self):
-        super().__init__('variant', valid=None)
+        super().__init__('variant', valid=None, connColour='#000000', connPattern='DiagCrossPattern')
 
     def copy(self, d):
         return d    # this type is immutable
@@ -302,7 +308,7 @@ class GenericDataType(Type):
 
 class TabularDataType(Type):
     def __init__(self):
-        super().__init__('table', valid=None)
+        super().__init__('table', valid=None, connColour='#800080')
 
     def copy(self, d):
         return d    # this type is immutable
@@ -313,7 +319,7 @@ class TabularDataType(Type):
 
 class TestResultType(Type):
     def __init__(self):
-        super().__init__('testresult', valid=[list])
+        super().__init__('testresult', valid=[list], connColour='#808000')
 
     def getDisplayString(self, d: 'Datum', box=False):
         failed = len(d.val)
@@ -355,7 +361,7 @@ class FuncType(Type):
 
 class NoneType(Type):
     def __init__(self):
-        super().__init__('none', internal=True)
+        super().__init__('none', internal=True, connColour='#ff0000', connPattern='BDiagPattern')
 
     def serialise(self, d):
         return self.name, None
