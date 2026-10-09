@@ -4,10 +4,18 @@ Code for showing filters, reflectances and their products.
 import numpy as np
 from PySide6 import QtWidgets
 
+import pcot.ui
 from pcot.cameras.filters import Filter
 from pcot.ui import uiloader
 from pcot.ui.mplwidget import MplWidget
 from pcot import cameras
+
+
+def _cell(v):
+    """Format a filter parameter for a table cell: blank for None, compact for floats."""
+    if v is None:
+        return ""
+    return f"{v:g}" if isinstance(v, (float, np.floating)) else str(v)
 
 
 class Dialog(QtWidgets.QDialog):
@@ -24,12 +32,15 @@ class Dialog(QtWidgets.QDialog):
     reflPlotButton: QtWidgets.QPushButton
     filtReflPlotButton: QtWidgets.QPushButton
     errorText: QtWidgets.QLabel
+    tableWidget: QtWidgets.QTableWidget
     mpl_widget: MplWidget
+    splitter: QtWidgets.QSplitter
 
     def __init__(self, parent):
         super().__init__(parent)
 
         uiloader.loadUi('ui/dialogs/showcamsrefls.ui', self)
+        self.tableWidget.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.cameraBox.currentIndexChanged.connect(self._camera_or_target_changed)
         self.reflBox.currentIndexChanged.connect(self._camera_or_target_changed)
         self.filterAngleSpin.valueChanged.connect(self._replot)
@@ -42,6 +53,7 @@ class Dialog(QtWidgets.QDialog):
         self.filtReflPlotButton.clicked.connect(self._filt_refl_plot)
 
         self._current_plot_func = None
+        pcot.ui.decorateSplitter(self.splitter, 1)
 
         # populate the boxes for the cameras
         for cname in cameras.getCameraNames():
@@ -70,6 +82,30 @@ class Dialog(QtWidgets.QDialog):
         cam = cameras.getCamera(self.cameraBox.currentText())
         for filter in cam.params.filters:
             self.filterBox.addItem(filter)
+
+        # populate the filter table widget
+        table = self.tableWidget
+        table.clear()
+        table.setColumnCount(5)
+        # (name, filter) pairs for the true filters only
+        true_filters = [(n, cam.getFilter(n)) for n in cam.params.filters]
+        true_filters = [(n, f) for n, f in true_filters if isinstance(f, Filter)]
+        table.setRowCount(len(true_filters))
+        table.setHorizontalHeaderLabels(["Position","CWL","FWHM","Trans","Notes"]) # name is in the header
+        table.setVerticalHeaderLabels([n for n, _ in true_filters])
+        for i, (_, f) in enumerate(true_filters):
+            table.setItem(i, 0, QtWidgets.QTableWidgetItem(_cell(f.position)))
+            table.setItem(i, 1, QtWidgets.QTableWidgetItem(_cell(f.cwl)))
+            table.setItem(i, 2, QtWidgets.QTableWidgetItem(_cell(f.fwhm)))
+            table.setItem(i, 3, QtWidgets.QTableWidgetItem(_cell(f.transmission)))
+            notes = []
+            if f.response.is_simulated:
+                notes.append("Simulated")
+            if f.response.clipped_to:
+                notes.append(f"Clipped to {f.response.clipped_to}%")
+            table.setItem(i, 4, QtWidgets.QTableWidgetItem(", ".join(notes)))
+
+
         # add patches for the currently selected target
         rname = self.reflBox.currentText()
         if rname is not None and rname!="":
@@ -204,11 +240,6 @@ class Dialog(QtWidgets.QDialog):
         ax.fill_between(wavelengths, res, alpha=0.5)
         ax.hlines([known], wavelengths[0], wavelengths[-1], colors="r")
         ax.annotate(f"{known:.4}", (wavelengths[-1], known), fontsize=8, ha='right')
-        ax.legend()
-        mpl.draw()
-        ax.legend()
-        mpl.draw()
-
         ax.legend()
         mpl.draw()
 
