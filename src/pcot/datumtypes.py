@@ -298,14 +298,6 @@ class VariantType(Type):
         return d    # this type is immutable
 
 
-class GenericDataType(Type):
-    def __init__(self):
-        super().__init__('data', valid=None)
-
-    def copy(self, d):
-        return d    # this type is immutable
-
-
 class TabularDataType(Type):
     def __init__(self):
         super().__init__('table', valid=None, connColour='#800080')

@@ -85,7 +85,6 @@ def test_datum_str_all_types():
         'number': Value(3.0, 0.5, dq.NONE),
         'variant': None,
         'table': None,
-        'data': None,
         'testresult': [],
         'ident': 'someident',
         'string': 'somestring',

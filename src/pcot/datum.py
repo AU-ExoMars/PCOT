@@ -171,7 +171,6 @@ class Datum(SourcesObtainable):
         VARIANT := pcot.datumtypes.VariantType().setOKForConnectors().setOKForParameters(),
         # generic tabular
         TABLE := pcot.datumtypes.TabularDataType().setOKForConnectors(),
-        DATA := pcot.datumtypes.GenericDataType().setOKForConnectors(),
         # test results - this is a list of failing tests, or an empty list for all passed.
         TESTRESULT := pcot.datumtypes.TestResultType().setOKForConnectors(),
 
