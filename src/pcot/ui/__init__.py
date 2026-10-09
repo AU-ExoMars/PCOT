@@ -3,7 +3,7 @@ import traceback
 from datetime import datetime
 
 import pcot.ui.mainwindow as mainwindow
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMessageBox
 from pcot.ui.help import markdownWrapper
@@ -123,36 +123,51 @@ def decorateSplitter(splitter: QtWidgets.QSplitter, index: int):
     them more visible, creating a double-bar handle that goes the whole width/height.
     Adapted from https://stackoverflow.com/questions/2545577/qsplitter-becoming-undistinguishable-between-qwidget-and-qtabwidget/13513631#13513631
     """
-    gripLength = 1200
-    gripWidth = 2
-    grips = 2
-
     splitter.setOpaqueResize(False)
     splitter.setChildrenCollapsible(False)
 
     splitter.setHandleWidth(7)
     handle = splitter.handle(index)
     layout = QtWidgets.QHBoxLayout(handle)
-    layout.setSpacing(0)
     layout.setContentsMargins(0, 0, 0, 0)
-    if splitter.orientation() == Qt.Orientation.Horizontal:
-        for i in range(grips):
-            line = QtWidgets.QFrame(handle)
-            line.setMinimumSize(gripWidth, gripLength)
-            line.setMaximumSize(gripWidth, gripLength)
-            line.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-            layout.addWidget(line)
-    else:
-        layout.addStretch()
-        vbox = QtWidgets.QVBoxLayout()
-        for i in range(grips):
-            line = QtWidgets.QFrame(handle)
-            line.setMinimumSize(gripWidth, gripLength)
-            line.setMaximumSize(gripWidth, gripLength)
-            line.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-            vbox.addWidget(line)
-        layout.addWidget(vbox)
-        layout.addStretch()
+    layout.addWidget(_SplitterGrip(handle, splitter.orientation()))
+
+
+class _SplitterGrip(QtWidgets.QWidget):
+    """Fills a splitter handle, drawing two thin lines along its length with a solid block in the
+    middle to show that it can be dragged. Mouse events pass through to the handle."""
+
+    blockLength = 40
+
+    def __init__(self, parent, orientation):
+        super().__init__(parent)
+        self.horizontal = orientation == Qt.Orientation.Horizontal
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+    def _rect(self, along, across, alongLen, acrossLen):
+        """Make a rect from coordinates along and across the handle, so the drawing code
+        doesn't care about orientation (a horizontal splitter has a vertical handle)."""
+        if self.horizontal:
+            return QtCore.QRect(across, along, acrossLen, alongLen)
+        return QtCore.QRect(along, across, alongLen, acrossLen)
+
+    def paintEvent(self, event):
+        r = self.rect()
+        length, thickness = (r.height(), r.width()) if self.horizontal else (r.width(), r.height())
+        pal = self.palette()
+        p = QtGui.QPainter(self)
+        p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+
+        # the lines
+        mid = thickness // 2
+        for across in (mid - 2, mid + 1):
+            p.fillRect(self._rect(0, across, length, 1), pal.color(QtGui.QPalette.ColorRole.Mid))
+
+        # the block in the middle
+        blockLen = min(self.blockLength, length // 3)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(pal.color(QtGui.QPalette.ColorRole.Dark))
+        p.drawRoundedRect(self._rect((length - blockLen) // 2, 0, blockLen, thickness), 2, 2)
 
 
 def pyperclipErrorDialog():
