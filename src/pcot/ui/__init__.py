@@ -5,8 +5,6 @@ from datetime import datetime
 import pcot.ui.mainwindow as mainwindow
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QMessageBox
-from pcot.ui.help import markdownWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -168,23 +166,3 @@ class _SplitterGrip(QtWidgets.QWidget):
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(pal.color(QtGui.QPalette.ColorRole.Dark))
         p.drawRoundedRect(self._rect((length - blockLen) // 2, 0, blockLen, thickness), 2, 2)
-
-
-def pyperclipErrorDialog():
-    """sometimes we need to actually pop up a dialog to make sure the error is noticed"""
-
-    errortxt = """*Assuming your error was "Pyperclip could not find a copy/paste mechanism for your system":*
-    
-    PCOT uses Pyperclip for clipboard operations. On Mac and Windows this is Just Works.
-    On Linux, it requires a little more to be done. You can fix this by installing one of the copy/paste
-    mechanisms:
-
-    * ```sudo apt-get install xsel``` to install the xsel utility.
-    * ```sudo apt-get install xclip``` to install the xclip utility.
-    * ```pip install gtk``` to install the gtk Python module.
-    * ```pip install PyQt4``` to install the PyQt4 Python module. 
-    """
-
-    errortxt = markdownWrapper('\n'.join([x.strip() for x in errortxt.split('\n')]))
-
-    QMessageBox.critical(None, "Pyperclip error", errortxt)
