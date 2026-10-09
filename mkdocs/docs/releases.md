@@ -53,6 +53,10 @@ don't support it.
 * The *File/Show Filter and Reflectance Data* dialog now has a table of the selected camera's filters,
 giving each filter's position, centre wavelength, FWHM and transmission, and noting whether its
 response is simulated or clipped.
+* Copying and pasting nodes now uses Qt's own clipboard, and PCOT no longer depends on the
+`pyperclip` package. On Linux you no longer need to install `xclip`, `xsel` or `wl-clipboard`
+for copy and paste to work. Linux clipboards vary a lot between distributions and desktops, so
+please report any problems with copying and pasting nodes.
 * Splitter bars (such as the one between the image and the spectrum view in the canvas, when the spectrum is shown) now have a solid
 grip in the middle, to make it clearer that they can be dragged.
 
