@@ -76,7 +76,7 @@ class PARCInputMethod(InputMethod):
             self.fname = data['fname']
             self.itemname = data['itemname']
             if internal and data['datum'] is not None:
-                self.datum = Datum.deserialise(data['datum'], self._document())
+                self.datum = Datum.deserialise(data['datum'])
             else:
                 self.datum = None
             Canvas.deserialise(self, data)

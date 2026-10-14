@@ -48,3 +48,20 @@ def test_parc_load(globaldatadir):
     assert np.allclose(img.uncertainty[9][18], (0,1))
     assert img.dq[9][18][0] == dq.ERROR
     assert img.dq[9][18][1] == dq.ERROR
+
+
+def test_parc_internal_roundtrip(globaldatadir):
+    """Internal (undo/redo) serialisation of a document with a PARC input should keep the cached datum"""
+    pcot.setup()
+    doc = Document()
+    assert doc.setInputPARC(0, str(globaldatadir/"parc/testimage.parc")) is None
+    node = doc.graph.create("input 0")
+    doc.run()
+    orig = node.getOutput(0, Datum.IMG)
+
+    d = doc.serialise(internal=True)
+    doc2 = Document()
+    doc2.deserialise(d, internal=True)
+    datum = doc2.inputMgr.inputs[0].getActive().datum
+    assert datum is not None
+    assert np.array_equal(datum.val.img, orig.img)
