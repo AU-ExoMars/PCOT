@@ -63,7 +63,7 @@ class TabGeneric(pcot.ui.tabs.Tab):
             wid.setText(txt)
             right_layout.addWidget(wid)
 
-        if self.editor is not None or help_markdown is not None:
+        if self.editor or help_markdown:
             splitter.addWidget(right_widget)
 
         self.source = src
