@@ -241,8 +241,8 @@ class RoiType(Type):
         r = copy(d.val)  # deep copy with __copy__
         return pcot.datum.Datum(pcot.datum.Datum.ROI, r, d.sources)
 
-    def getSize(self, v):
-        return v.getSize()
+    def getSize(self, d):
+        return d.val.getSize()
 
 
 class NumberType(Type):

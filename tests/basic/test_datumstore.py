@@ -308,3 +308,15 @@ def test_roi_serialise():
         d = Datum.deserialise(Datum(Datum.ROI, r, nullSourceSet).serialise())
         assert type(d.val) is type(r)
         assert d.val.serialise() == r.serialise()
+
+
+def test_roi_parc():
+    """ROI datums should survive a round trip through a PARC (which needs getSize for the cache)"""
+    with tempfile.TemporaryDirectory() as td:
+        fn = td + "/roi.parc"
+        for r in _roi_examples():
+            with FileArchive(fn, 'w') as a:
+                DatumStore(a).writeDatum("main", Datum(Datum.ROI, r, nullSourceSet))
+            d = DatumStore(FileArchive(fn)).get("main")
+            assert type(d.val) is type(r)
+            assert d.val.serialise() == r.serialise()
