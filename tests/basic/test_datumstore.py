@@ -293,3 +293,18 @@ def test_manifest_read(globaldatadir):
     tt = datetime.fromisoformat("2024-11-20")
     delta = m.created - tt
     assert delta.days < 1
+
+
+def _roi_examples():
+    from pcot.rois import ROIRect, ROICircle
+    rect = ROIRect()
+    rect.set(1, 2, 10, 20)
+    return rect, ROICircle()
+
+
+def test_roi_serialise():
+    """ROI datums should survive a serialise/deserialise round trip"""
+    for r in _roi_examples():
+        d = Datum.deserialise(Datum(Datum.ROI, r, nullSourceSet).serialise())
+        assert type(d.val) is type(r)
+        assert d.val.serialise() == r.serialise()

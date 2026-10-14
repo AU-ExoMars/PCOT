@@ -231,7 +231,10 @@ class RoiType(Type):
     def deserialise(self, d):
         roitype, roidata, s = d
         s = pcot.sources.SourceSet.deserialise(s)
-        r = pcot.rois.deserialise(self.name, roidata)
+        if roitype not in pcot.rois.ROI.roiTypes:
+            raise pcot.datumexceptions.DatumException(f"cannot deserialise unknown ROI type {roitype}")
+        r = pcot.rois.ROI.roiTypes[roitype]()
+        r.deserialise(roidata)
         return pcot.datum.Datum(self, r, s)
 
     def copy(self, d):
