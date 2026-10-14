@@ -7,9 +7,7 @@ should all be renderable by Canvas.
 These types are also used by the expression evaluator.
 """
 import builtins
-import getpass
 import logging
-import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -473,29 +471,29 @@ class Datum(SourcesObtainable):
         This is a method for saving single arbitrary Datum objects as a FileArchive (PARC).
         We keep to the types in ArchiveType in that images are saved as IMAGECUBE,
         other things are saved as UNSPECIFIED.
-        """
-        from pcot.utils.archive import ArchiveType, Metadata
-        from pcot.utils.datumstore import DatumStore
-        from pcot.utils.archive import FileArchive
 
-        # note - factor out the code in ImageCube.save to use this.
+        When appending to an existing archive, the archive's own metadata (name, description etc.)
+        is left as it is (FileArchive never writes metadata when appending); only the new item is added.
+        """
+        from pcot.utils.archive import ArchiveType, Metadata, FileArchive
+        from pcot.utils.datumstore import DatumStore
 
         archiveType = ArchiveType.UNSPECIFIED
         if self.tp == Datum.IMG:
             archiveType = ArchiveType.IMAGECUBE
 
+        # author, date and version are filled in by the archive when it is written
         meta = Metadata(
-            author=getpass.getuser(),
+            type=archiveType,
+            name=Path(filename).stem,
             description="Saved from PCOT",
-            short = self.tp.name,   # better than nothing
-            full_source_filename=os.path.abspath(filename),
-            name = filename,
-            type = archiveType
+            short=self.tp.name,  # better than nothing
         )
 
-
-
-        with FileArchive(filename, "a" if append else "w", metadata=meta) as a:
+        # appending to a file that isn't there yet is just writing a new one - and must be done
+        # in write mode, because append mode doesn't write any archive metadata.
+        mode = "a" if append and Path(filename).is_file() else "w"
+        with FileArchive(filename, mode, metadata=meta) as a:
             ds = DatumStore(a)
             ds.writeDatum(name, self, description)
 

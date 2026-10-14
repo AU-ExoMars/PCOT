@@ -320,3 +320,45 @@ def test_roi_parc():
             d = DatumStore(FileArchive(fn)).get("main")
             assert type(d.val) is type(r)
             assert d.val.serialise() == r.serialise()
+
+
+def test_datum_save_metadata():
+    """Datum.save sets archive metadata on a new file, but appending leaves the existing archive
+    metadata alone and just adds the item."""
+    from pcot.utils.archive import ArchiveType, Metadata
+
+    with tempfile.TemporaryDirectory() as td:
+        # new file: name is the basename without extension, no source filename
+        fn = td + "/first.parc"
+        Datum.k(1).save(fn)
+        md = FileArchive(fn).metadata
+        assert md.name == "first"
+        assert md.type == ArchiveType.UNSPECIFIED
+        assert md.short == "number"
+        assert md.full_source_filename == ""
+
+        # appending an image to it keeps the archive's metadata
+        img = Datum(Datum.IMG, pcot.imagecube.ImageCube(np.zeros((4, 4, 3), dtype=np.float32)))
+        img.save(fn, name="img", append=True)
+        md = FileArchive(fn).metadata
+        assert md.name == "first"
+        assert md.type == ArchiveType.UNSPECIFIED
+        assert md.short == "number"
+        assert set(DatumStore(FileArchive(fn)).getManifest().keys()) == {"main", "img"}
+
+        # and so does appending to an archive with metadata set some other way
+        fn = td + "/other.parc"
+        with FileArchive(fn, "w", metadata=Metadata(type=ArchiveType.CAMERADATA, name="cam",
+                                                     description="camera stuff")) as a:
+            DatumStore(a).writeDatum("x", Datum.k(2))
+        Datum.k(3).save(fn, name="y", append=True)
+        md = FileArchive(fn).metadata
+        assert (md.name, md.description, md.type) == ("cam", "camera stuff", ArchiveType.CAMERADATA)
+        assert set(DatumStore(FileArchive(fn)).getManifest().keys()) == {"x", "y"}
+
+        # appending to a file that doesn't exist yet creates it with new metadata
+        fn = td + "/new.parc"
+        img.save(fn, append=True)
+        md = FileArchive(fn).metadata
+        assert md.name == "new"
+        assert md.type == ArchiveType.IMAGECUBE
