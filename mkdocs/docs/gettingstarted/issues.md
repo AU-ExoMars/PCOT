@@ -36,3 +36,15 @@ the installation.
 
 To fix it, I just ran the command again - it installed OpenSSH correctly
 and I was able to proceed.
+
+## Problems with pre-existing Python packages
+
+You may have pre-existing packages in your system level Python installation which conflict
+with those in Anaconda. Typically, this manifests as lots of errors when you run
+`poetry install`. To fix this, tell Anaconda not to look at your system install at all:
+```
+conda env config vars set PYTHONNOUSERSITE=1 -n pcot
+conda deactivate
+conda activate pcot
+```
+Then run `poetry install` again.

@@ -52,12 +52,12 @@ PCOT as above:
 
 * Open a bash shell
 * **cd** to the PCOT directory (which contains this file).
-* Run the command **conda create -n pcot python=3.10 poetry**.
-This will create an environment called **pcot** which uses Python 3.10 and
+* Run the command **conda create -n pcot python=3.11 poetry**.
+This will create an environment called **pcot** which uses Python 3.11 and
 the Poetry dependency and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
 * Now run **poetry install**. This will set up all the packages PCOT is
-dependent on and install PCOT.
+dependent on and install PCOT. See [issues](issues.md#problems-with-pre-existing-python-packages) if you see errors here.
 * You should now be able to run **pcot** to start the application.
 
 ### Installing on Windows
@@ -65,12 +65,12 @@ Assuming you have successfully installed Anaconda and cloned or downloaded PCOT 
 
 * Open the Anaconda PowerShell Prompt application from the Start Menu.
 * **cd** to the PCOT directory (which contains this file).
-* Run the command **conda create -n pcot python=3.10 poetry**.
-This will create an environment called **pcot** which uses Python 3.10 and the Poetry dependency
+* Run the command **conda create -n pcot python=3.11 poetry**.
+This will create an environment called **pcot** which uses Python 3.11 and the Poetry dependency
 and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
 * Now run **poetry install**. This will set up all the packages PCOT is dependent on and install
-PCOT.
+PCOT. See [issues](issues.md#problems-with-pre-existing-python-packages) if you see errors here.
 * You should now be able to run **pcot** to start the application.
 
 <!--- No longer necessary now that everything is in Pypi.
@@ -98,7 +98,7 @@ are testing a custom node.
     * Open PyCharm and open the PCOT directory as an existing project.
     * Open **File/Settings..** (Ctrl+Alt+S)
     * Select **Project:PCOT / Python Interpreter**
-    * If the Python Interpreter is not already Python 3.10 with something like **anaconda3/envs/pcot/bin/python**
+    * If the Python Interpreter is not already Python 3.11 with something like **anaconda3/envs/pcot/bin/python**
         * Select the cogwheel to the right of the Python Interpreter dropdown and then select  **Add**.
         * Select **Conda Environment**.
         * Select **Existing Environment**.
@@ -108,7 +108,7 @@ are testing a custom node.
     * Select **Edit Configurations...** (or it might be **Add Configuration...**) from the configurations drop down in the menu bar
     * Add a new configuration (the + symbol) and select **Python**
     * Set **Script Path** to **PCOT/src/pcot/\_\_main\_\_.py**
-    * Make sure the interpreter is something like **Project Default (Python 3.10 (pcot))**, i.e. the Python interpreter of the pcot environment.
+    * Make sure the interpreter is something like **Project Default (Python 3.11 (pcot))**, i.e. the Python interpreter of the pcot environment.
 * You should now be able to run and debug PCOT.
 
 ## Environment variables
