@@ -1684,7 +1684,9 @@ class Canvas(QtWidgets.QWidget):
                 annotations = (r == QMessageBox.StandardButton.Yes)
                 desc = ''
 
-            self.previmg.save(path, annotations=annotations, description=desc, gamma=self.canvaspersist.gamma)
+            # 'main' is the default item name used when reading PARCs
+            self.previmg.save(path, annotations=annotations, name='main', description=desc,
+                              gamma=self.canvaspersist.gamma)
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
