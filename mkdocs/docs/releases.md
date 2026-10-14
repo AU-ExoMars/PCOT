@@ -59,6 +59,12 @@ for copy and paste to work. Linux clipboards vary a lot between distributions an
 please report any problems with copying and pasting nodes.
 * Splitter bars (such as the one between the image and the spectrum view in the canvas, when the spectrum is shown) now have a solid
 grip in the middle, to make it clearer that they can be dragged.
+* The *sink* node's tab has a new *Save...* button, which saves the data it shows to a file: as a
+PARC file for images, numbers and ROIs, or as a CSV file for tables (the same CSV that `pcotbatch`
+writes). Non-image data is saved to a new default location, `saveddata` in the configuration. ROIs
+saved in PARC files can now be loaded again - previously this failed.
+* Fixed two bugs with PARC files: saving an image as PARC from the image canvas always failed, and
+undo or redo in a document with a PARC input failed with an error.
 
 Site
 
