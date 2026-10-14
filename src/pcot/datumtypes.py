@@ -83,7 +83,11 @@ class Type:
     def deserialise(self, d) -> 'Datum':
         """This must take the second element of the tuple returned from serialise()"""
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
-        
+
+    def canSerialise(self) -> bool:
+        """True if this type overrides serialise(), so it can be saved (e.g. to a PARC)"""
+        return type(self).serialise is not Type.serialise
+
     def view(self, d) -> str:
         """Used by the viewparc command to view to stdout the contents of a datum"""
         return str(d.val)

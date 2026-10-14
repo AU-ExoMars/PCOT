@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass
 class Metadata:
     """An item in the manifest. The name is not included, because this is always part of a dict
-    of name -> manifest item."""
+    of name -> manifest item. This is not the same as an Archive Metadata object."""
     datumtype: str  # the type of the datum (as a string)
     description: str  # a description of the datum - could be empty
     repr: str  # the string representation of the datum
@@ -149,12 +149,15 @@ class DatumStore:
             # we may be appending, so we need to permit replacement of the manifest
             self.archive.writeJson("MANIFEST", m, permit_replace=True)
 
-    def writeDatum(self, name: str, d: Datum, description: str = ""):
+    def writeDatum(self, name: str, d: Datum, description: str = None):
         """This is used to write a Datum object to the archive; it doesn't write to the cache. It will
         probably only be used in scripts that prepare archives.
 
         description: an optional text description of the datum
         """
+
+        if description is None:
+            description = str(d)
 
         if not self.archive.is_open() or not self.archive.is_writable():
             raise Exception("archive must be open to write")

@@ -35,6 +35,7 @@ CONFIG_DICT_TYPE = TaggedDictType(
         images=("Source image default location", Path, os.path.expanduser("~/Pictures"), True),
         mplplots=("Matplotlib outputs default location", Path, Path.home(), True),
         savedimages=("Default location for saving images", Path, Path.home() / "Pictures", True),
+        saveddata=("Default location for non-image data", Path, Path.home(), True),
         pcotfiles=("Default location for PCOT documents", Path, Path.home(), True),
         pluginpath=("Locations for plugins", TaggedListType(Path, [Path.home() / "pcotplugins"], deflt_append=Path(), valid_choices=True)),
         cameras=("Location of camera files", Maybe(Path), None, True),        # will be initialised on load if not present

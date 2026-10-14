@@ -7,7 +7,10 @@ should all be renderable by Canvas.
 These types are also used by the expression evaluator.
 """
 import builtins
+import getpass
 import logging
+import os
+from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
@@ -464,6 +467,37 @@ class Datum(SourcesObtainable):
             return np.sqrt(varianceOfMeans + sumOfVariances)
 
         return stats_wrapper(self, lambda n, u, d: (np.sum(n), sum_of_variances(n, u), pcot.dq.NONE))
+
+    def save(self, filename: Path | str, name="main", append=False, description=None):
+        """
+        This is a method for saving single arbitrary Datum objects as a FileArchive (PARC).
+        We keep to the types in ArchiveType in that images are saved as IMAGECUBE,
+        other things are saved as UNSPECIFIED.
+        """
+        from pcot.utils.archive import ArchiveType, Metadata
+        from pcot.utils.datumstore import DatumStore
+        from pcot.utils.archive import FileArchive
+
+        # note - factor out the code in ImageCube.save to use this.
+
+        archiveType = ArchiveType.UNSPECIFIED
+        if self.tp == Datum.IMG:
+            archiveType = ArchiveType.IMAGECUBE
+
+        meta = Metadata(
+            author=getpass.getuser(),
+            description="Saved from PCOT",
+            short = self.tp.name,   # better than nothing
+            full_source_filename=os.path.abspath(filename),
+            name = filename,
+            type = archiveType
+        )
+
+
+
+        with FileArchive(filename, "a" if append else "w", metadata=meta) as a:
+            ds = DatumStore(a)
+            ds.writeDatum(name, self, description)
 
 
 # a handy null datum object

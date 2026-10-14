@@ -1242,7 +1242,6 @@ class ImageCube(SourcesObtainable):
         """
 
         from pcot import imageexport
-        from pcot.utils.datumstore import DatumStore
 
         if format is None:
             if '.' not in filename:
@@ -1281,9 +1280,8 @@ class ImageCube(SourcesObtainable):
             if annotations:
                 raise ValueError("PARC format does not support annotations")
             else:
-                with FileArchive(filename, "a" if append else "w", type=ArchiveType.IMAGECUBE) as a:
-                    from pcot.datum import Datum  # late import otherwise cyclic fun
-                    ds = DatumStore(a)
-                    ds.writeDatum(name, Datum(Datum.IMG, self), description)
+                from pcot.datum import Datum  # late import otherwise cyclic fun
+                d = Datum(Datum.IMG, self)
+                d.save(filename, append=append, description=description, name=name)
         else:
             raise ValueError(f"Unsupported file format for image save: {format}")

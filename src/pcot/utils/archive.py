@@ -40,7 +40,8 @@ def _getdate():
 @dataclasses.dataclass
 class Metadata:
     """
-    Objects of this class hold common data to all PCOT archives.
+    Objects of this class hold common data to all PCOT archives. This is not the same as a
+    DatumStore metadata object; it applies to the archive as a whole.
     
     * metadata is created when the archive is initialised. Initially the date is unset.
     * When the file is opened, any metadata is read, overwriting that initial
@@ -57,7 +58,7 @@ class Metadata:
     # written to an archive. We use this to check whether we need to save this
     # data to history when we write, and also to check whether there is "real"
     # metadata in an archive.
-    date: str = None
+    date: str = None        # DO NOT SET WHEN CREATING NEW METADATA
     
     # ugly hack for circular import
     pcotversion: str = dataclasses.field(default_factory=_getpcotversion)
