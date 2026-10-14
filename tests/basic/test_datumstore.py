@@ -362,3 +362,15 @@ def test_datum_save_metadata():
         md = FileArchive(fn).metadata
         assert md.name == "new"
         assert md.type == ArchiveType.IMAGECUBE
+
+
+def test_datum_save_unserialisable():
+    """Saving a datum whose type can't be serialised raises, and leaves no file (or temporary file) behind"""
+    from pcot.datumexceptions import CannotSerialiseDatumType
+    import os
+
+    with tempfile.TemporaryDirectory() as td:
+        for append in (False, True):
+            with pytest.raises(CannotSerialiseDatumType):
+                Datum(Datum.STRING, "hi", nullSourceSet).save(td + "/str.parc", append=append)
+            assert os.listdir(td) == []
