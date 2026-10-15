@@ -4,6 +4,8 @@ from collections import OrderedDict
 
 import numpy as np
 
+import pcot.config
+
 from pcot.sources import nullSource
 from pcot.utils.html import HTML, Col
 
@@ -39,7 +41,6 @@ class Table:
         self._currow = None
         self._internalLabelCt = 0  # used for when we don't give a label to newRow
         self.NA = 'NA'
-        self.sigfigs = 5
 
     def getByIndices(self, args, sources):
         """Given a list of Datum index objects, return a Datum for the item in the row and column indicated.
@@ -113,17 +114,21 @@ class Table:
         return TableIter(self)
 
     def _printable(self, v):
-        """Convert a value to a printable string. If it's a float, round it to the sigfigs"""
-        if isinstance(v, float) or isinstance(v, np.float32):
-            return round(v, self.sigfigs)
+        """Convert a value to a printable string. Floats are given to the number of significant
+        figures in the config (read at output time so changes take effect), but never with fewer
+        digits than they have before the decimal point - so large values don't lose whole digits
+        or turn into scientific notation."""
+        if isinstance(v, (float, np.floating)):
+            sf = pcot.config.data.sigfigs
+            if np.isfinite(v) and abs(v) >= 1:
+                # count digits after rounding, so 99999.5 doesn't gain a digit and go to 1e+05.
+                # Beyond 17 digits a float has no real precision left, so allow scientific notation.
+                digits = len(str(int(round(abs(float(v))))))
+                if digits <= 17:
+                    sf = max(sf, digits)
+            return f"{v:.{sf}g}"
         else:
             return str(v).strip()
-
-    def rowAsStrings(self, i):
-        """Return row i as list of strings"""
-        if i < 0 or i >= len(self.rows):
-            raise IndexError("Row index out of range")
-        return [self._printable(self.rows[self._keys[i]][k]) for k in self._keys]
 
     def __str__(self):
         """Convert entire table to a string"""
