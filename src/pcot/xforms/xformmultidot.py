@@ -103,6 +103,13 @@ class XFormMultiDot(XFormType):
     - **ctrl-click** to add a circle or flood fill to a selected painted ROI, provided we are in the same mode as the selected ROI. Circle or fill depends on Paint Mode.
     - **alt-click** to "unpaint" a circle from a selected painted ROI
 
+    ## Scripting
+
+    In a Python script it's easiest to edit the ROIs directly: they are `node.rois`, a list of `ROICircle`
+    and `ROIPainted` objects (see the help for the *circle* and *painted* nodes). `node.params` is only a copy
+    used for saving and parameter files: if you edit it instead, call `doc.graph.nodeDataFromParams()` before
+    running the document. That rebuilds all nodes which work this way from its params, so make any direct edits
+    after calling it.
 
     (Internal: Note that this type doesn't inherit from XFormROI.)
     """

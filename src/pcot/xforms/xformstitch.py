@@ -37,7 +37,17 @@ NUMINPUTS = 8
 
 @xformtype
 class XFormStitch(XFormType):
-    """This node performs manual stitching of multiple images into a single image."""
+    """
+    This node performs manual stitching of multiple images into a single image.
+
+    ## Scripting
+
+    In a Python script it's easiest to edit the layout directly: `node.offsets` is a list of (x, y) offsets,
+    one for each input, and `node.order` is the list of input numbers in the order they are drawn.
+    `node.params.offsets` and `node.params.order` are only copies used for saving and parameter files: if
+    you edit them instead, call `doc.graph.nodeDataFromParams()` before running the document. That rebuilds
+    all nodes which work this way from its params, so make any direct edits after calling it.
+    """
 
     def __init__(self):
         super().__init__("stitch", "processing", "0.0.0")
@@ -87,6 +97,9 @@ class XFormStitch(XFormType):
         # RGB image used on canvas
         node.canvimage = None
         node.showImage = True
+        # write the offsets and order into the params, so they agree with the node data. Otherwise
+        # nodeDataFromParams() on a new node would replace the offsets with the (empty) default list.
+        self.serialise(node)
 
     def perform(self, node):
         inputs = [node.getInput(i, Datum.IMG) for i in range(NUMINPUTS)]

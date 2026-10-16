@@ -54,6 +54,14 @@ class XFormROIExpr(XFormType):
     * **-a** :   the negative of ROI 'a' (i.e. the entire image area as an ROI but with a hole in it)
     * **roi(img) - p**  : any ROIs on the image already, but with the ROI on input 'p' cut out
 
+    ## Scripting
+
+    In a Python script the expression can be set with `node.params.expr` as normal, but it's easiest to edit
+    the ROIs directly: they are `node.rois`, a list of `ROIRect`, `ROICircle`, `ROIPoly` and `ROIPainted`
+    objects (see the help for the *rect*, *circle*, *poly* and *painted* nodes). `node.params.rois` is only
+    a copy used for saving and parameter files: if you edit it instead, call `doc.graph.nodeDataFromParams()`
+    before running the document. That rebuilds all nodes which work this way from its params, so make any direct
+    edits after calling it.
     """
 
     TAGGEDVDICT = TaggedVariantDictType("type",

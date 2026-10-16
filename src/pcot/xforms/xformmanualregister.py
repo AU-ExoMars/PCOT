@@ -114,6 +114,13 @@ class XFormManualRegister(XFormType):
     Uncertainty is warped along with the original image, as is DQ using nearest-neighbour (**which may not be
     sufficient**).
 
+    ## Scripting
+
+    In a Python script the other parameters can be set in `node.params` as normal, but it's easiest to edit
+    the points directly: they are `node.moving` and `node.fixed`, lists of (x, y) tuples. `node.params.moving`
+    and `node.params.fixed` are only copies used for saving and parameter files: if you edit them instead, call
+    `doc.graph.nodeDataFromParams()` before running the document. That rebuilds all nodes which work this way from
+    its params, so make any direct edits after calling it.
     """
 
     def __init__(self):

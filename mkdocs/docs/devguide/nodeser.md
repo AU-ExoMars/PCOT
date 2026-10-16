@@ -24,7 +24,7 @@ In order of preference, with the best at the top:
 This is the method we use when we want to be able to edit the parameters of nodes in batch mode, using parameter files (see [batch mode](../userguide/batch/index.md)). It is probably the best method to use because of this, but it is rather more complicated.
 
 We make use of **tagged aggregate structures**, which can be found in
-`pcot.utils.taggedaggregate`. These are dictionaries and lists, but
+`pcot.parameters.taggedaggregates`. These are dictionaries and lists, but
 each has a formal, typed structure with "tags" giving the names of the
 members, their types, and default values.
 
@@ -70,7 +70,7 @@ r.h = 30
 
 @@@info
 Bear in mind that there are functions for generating rectangle and colour type object in
-pcot.utils.taggedaggregates: taggedColourType and taggedRectType. You probably shouldn't
+pcot.parameters.taggedaggregates: taggedColourType and taggedRectType. You probably shouldn't
 create a rectangle type yourself.
 @@@
 
@@ -96,11 +96,11 @@ taggedThingType = TaggedDictType(
 We can then create our parameters and add a new default rect to the list:
 ```python
 thing = taggedThingType.create()
-listOfThings.others.append_default()
+thing.others.append_default()
 ```    
 We can then access these items:
 ```python
-print(taggedThingType.others.[0].x)
+print(thing.others[0].x)
 ```
 
 The `TaggedListType` constructor takes the following arguments:
@@ -109,7 +109,7 @@ The `TaggedListType` constructor takes the following arguments:
 * Default length (if a list of aggregates) or default list (if a list of primitives)
 * Optional default value to append when a new item is created, ignored for lists of aggregates which will create their own default item
 
-For more details on how to use these structures, read the tests in `tests/test_taggedaggs.py`.
+For more details on how to use these structures, read the tests in `tests/taggedaggs/test_taggedaggs.py`.
 
 You'll note that all the elements of a TaggedAggregate structure are JSON-serialisable[^1], although
 some can be numpy arrays. However, the nature of the structure allows defaults - and documentation -
@@ -211,6 +211,53 @@ Gradient object. They also handle a *preset* string which can override the
 data when set from a [parameter file](../userguide/batch/index.md).
 
 [Regions of interest are a rather more complex example...](roi_ctas.md)
+@@@
+
+### Problems with CTAS
+
+CTAS means the node's state exists in two places: the node's own data (e.g. `node.roi`, `node.gradient`)
+and its `node.params`. Nothing keeps these in step automatically; they are only synchronised at
+particular times:
+
+* **node data → params** in `serialise()`, which runs whenever the document is saved or an undo point is
+  marked.
+* **params → node data** in `nodeDataFromParams()`, which runs when a node is deserialised (on load and
+  undo), and in the batch runner after a parameter file has modified the params.
+
+Between those points, one of the two copies may be out of date, and the node only ever uses its own data
+when it runs. This causes several problems.
+
+**Scripts that edit params.** A Python script which loads a document, changes `node.params` and then
+calls `doc.run()` will find its changes are ignored. It must call `doc.graph.nodeDataFromParams()` first.
+But that rebuilds *every* CTAS node in the graph from its params, so any changes the script has made
+directly to node data (e.g. `node.roi.set(...)`) are lost unless they are made after that call. Saving
+has the opposite effect: `serialise()` overwrites any edits to the params with the node data. Each CTAS
+node's help text has a *Scripting* section which tells users which node data to edit instead.
+
+**Mixed params.** Often only some of a node's params are CTAS - for example *manual register* rebuilds
+its point lists from `params.moving` and `params.fixed`, but reads `params.translate` directly in
+`perform()`. The ordinary params work as expected in scripts; only the CTAS ones are affected. Make sure
+the node's help text says which is which.
+
+**`init()` must agree with the param defaults.** A newly created node has default params, and whatever
+data `init()` creates. If those don't match, rebuilding from the params replaces the node's data with
+the defaults - which may not even be valid. For example, *stitch* sets up staggered image offsets in
+`init()`, but a list of points in a `TaggedListType` can only default to a number of `(0,0)` points, so
+the params started out with no offsets at all, and the node crashed when run after
+`nodeDataFromParams()`. The fix is to call `self.serialise(node)` at the end of `init()`, so the params
+start out as a copy of the initial data.
+
+**Don't share objects between params and node data.** `nodeDataFromParams()` must build fresh node data,
+not refer to objects which could be shared. *colourmap* used to set `node.gradient` to the preset gradient
+object itself, so editing the node's gradient changed the preset for every other node; it now uses
+`copy.deepcopy`.
+
+@@@danger
+Attempts to make `doc.run()` synchronise the two copies automatically haven't worked, because when both
+have changed there's no way to tell which should win (see issue
+[#101](https://github.com/AU-ExoMars/PCOT/issues/101)). The proper fix is probably to keep a single
+copy of the state. Until then, if your node's data can be stored directly in a TaggedAggregate, use plain
+TaggedAggregate serialisation instead of CTAS.
 @@@
 
 

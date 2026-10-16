@@ -348,6 +348,15 @@ class XformColourMap(XFormType):
     * legendPos: string describing position:
         * 'In image', 'Top margin', 'Bottom margin', 'Left margin', 'Right margin', 'None'
         These are also defined as constants LEFT_MARGIN... IN_IMAGE (and None)
+
+    ## Scripting
+
+    In a Python script the legend parameters can be set in `node.params` as normal, but it's easiest to
+    edit the gradient directly: it is `node.gradient`, so use e.g.
+    `node.gradient.setData([(0, (0, 0, 1)), (1, (1, 0, 0))])` with a list of (position 0-1, (r,g,b) 0-1)
+    pairs. `node.params.gradient` and `node.params.preset` are only used for saving and parameter files:
+    if you edit them instead, call `doc.graph.nodeDataFromParams()` before running the document. That
+    rebuilds all nodes which work this way from its params, so make any direct edits after calling it.
     """
 
     def __init__(self):
@@ -388,7 +397,7 @@ class XformColourMap(XFormType):
         else:
             # a preset has been given from a parameter file (usually) so set node.gradient from that
             if node.params.preset in presetGradients:
-                node.gradient = presetGradients[node.params.preset]
+                node.gradient = copy.deepcopy(presetGradients[node.params.preset])
             else:
                 raise XFormException('DATA', f"Unknown gradient preset {node.params.preset}")
 
