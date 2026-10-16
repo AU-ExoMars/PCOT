@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import numbers
 from abc import ABC, abstractmethod
@@ -125,7 +127,7 @@ class TaggedAggregate(ABC):
     # we may change this object and want to reset back - this will store the original data. If it's None,
     # restoring (which is done in ParameterFile) is not possible.
 
-    original: Optional['TaggedAggregate']
+    original: Optional[TaggedAggregate]
 
     def __init__(self, tp: TaggedAggregateType):
         self._type = tp
@@ -353,7 +355,7 @@ class TaggedDictType(TaggedAggregateType):
             raise ValueError("Can only create headers for ordered TaggedDicts")
         return self.ordering
 
-    def setOrdered(self) -> 'TaggedDictType':
+    def setOrdered(self) -> TaggedDictType:
         """Make the dict ordered, so it will be serialised and deserialised as a tuple/list and can use integer keys.
         The key ordering will be that given in the constructor."""
         self.isOrdered = True
@@ -366,7 +368,7 @@ class TaggedDictType(TaggedAggregateType):
         """Create a the appropriate default values"""
         return TaggedDict(self)
 
-    def deserialise(self, data) -> 'TaggedDict':
+    def deserialise(self, data) -> TaggedDict:
         """Create a new TaggedDict of this type from a JSON-serialisable structure. It's important that data can
         have a subset or superset of the keys of the TaggedDict."""
         return TaggedDict(self, data)
@@ -492,7 +494,7 @@ class TaggedDict(TaggedAggregate):
         tag.check_value(value)
         self._values[key] = value
 
-    def set(self, *args) -> 'TaggedDict':
+    def set(self, *args) -> TaggedDict:
         """If there is an ordering, set the values in the order given. If fewer values are given than there are keys,
         the remaining keys will be set to their default values. If more values are given we throw an exception."""
         if not self._type.isOrdered:
@@ -633,7 +635,7 @@ class TaggedListType(TaggedAggregateType):
         """Create a the appropriate default values"""
         return TaggedList(self)
 
-    def deserialise(self, data) -> 'TaggedList':
+    def deserialise(self, data) -> TaggedList:
         """Create a new TaggedList of this type from a JSON-serialisable structure"""
         return TaggedList(self, data)
 
@@ -817,7 +819,7 @@ class TaggedVariantDictType(TaggedAggregateType):
             subd[self.discriminator_field] = type_name
         return d
 
-    def deserialise(self, data) -> 'TaggedVariantDict':
+    def deserialise(self, data) -> TaggedVariantDict:
         return TaggedVariantDict(self, data)
 
     def get_tag(self, key):
