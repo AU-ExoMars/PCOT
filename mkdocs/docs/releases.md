@@ -65,6 +65,10 @@ writes). Non-image data is saved to a new default location, `saveddata` in the c
 saved in PARC files can now be loaded again - previously this failed.
 * Fixed two bugs with PARC files: saving an image as PARC from the image canvas always failed, and
 undo or redo in a document with a PARC input failed with an error.
+* For Python scripts: changing the `params` of an ROI, *colourmap*, *manual register* or *stitch*
+node and then running the document has no effect unless `doc.graph.nodeDataFromParams()` is called
+first, because these nodes keep their real data elsewhere. The help for each of these nodes now has
+a *Scripting* section saying which data to edit directly instead, which is usually easier.
 
 Site
 
