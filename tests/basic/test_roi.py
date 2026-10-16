@@ -423,3 +423,25 @@ def test_roiexpr_painted_roi_survives_repeated_save(tmp_path):
         node, = [n for n in doc.graph.nodes if n.type.name == "roiexpr"]
         assert node.rois[0].bb().astuple() == (5, 6, 4, 3)
         doc.save(fn)
+
+
+def test_modified_roi_serialisation_roundtrip(tmp_path):
+    """Test that we can serialise and deserialise a modified ROI"""
+    import pcot
+    from pcot.document import Document
+    pcot.setup()
+
+    fn = str(tmp_path / "roiserround1.pcot")
+    doc = Document()
+    node = doc.graph.create("circle")
+    node.roi.set(20, 20, 50)
+    doc.save(fn)
+
+    doc = Document(fn)
+    roi2 = doc.getNodeByName("circle")
+    assert roi2.roi.x == 20
+    assert roi2.roi.y == 20
+    assert roi2.roi.r == 50
+    assert roi2.params.croi.x == 20
+    assert roi2.params.croi.y == 20
+    assert roi2.params.croi.r == 50
