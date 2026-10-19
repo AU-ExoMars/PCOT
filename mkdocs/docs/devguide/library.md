@@ -43,7 +43,9 @@ doc = Document("1.pcot")
 
 for file in ("1",):
 
-    # load the given ENVI file into input 0
+    # load the given ENVI file into input 0. To apply the header's data gain
+    # and offset values, add apply_gains_and_offsets=True (they are not
+    # applied by default, and the setting is kept if you don't give it).
     rv = doc.setInputENVI(0, file+".hdr")
     if rv is not None:
         raise Exception(f"{rv}")
@@ -81,8 +83,9 @@ pcot.setup()
 
 doc = pcot.document.Document()
 
-result = doc.setInputENVI(0, "/home/white/PCOT/fff.hdr") is not None
-assert result is not None
+# setInputENVI returns None on success, or an error message
+result = doc.setInputENVI(0, "/home/white/PCOT/fff.hdr")
+assert result is None, result
 
 # create a document with just an input node in it, to bring that input into the document's graph
 innode = doc.graph.create("input 0")

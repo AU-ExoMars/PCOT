@@ -69,6 +69,19 @@ undo or redo in a document with a PARC input failed with an error.
 node and then running the document has no effect unless `doc.graph.nodeDataFromParams()` is called
 first, because these nodes keep their real data elsewhere. The help for each of these nodes now has
 a *Scripting* section saying which data to edit directly instead, which is usually easier.
+* ENVI input now handles many more kinds of file. Previously only 32-bit float BSQ data was supported:
+now BSQ, BIL and BIP interleaves, all the integer and float data types (except complex), both byte
+orders, header offsets, and files with no wavelengths are loaded. Pixels matching the header's
+`data ignore value` are marked as NODATA. ENVI files written by PCOT no longer have an ignore value
+of 241, but files written by earlier versions do, so any pixel which is exactly 241 in those files
+will be NODATA.
+* ENVI headers' `data gain values` and `data offset values` can be applied to the data
+(as `gain × value + offset`) with a new checkbox in the ENVI input, or with
+`envi.apply_gains_and_offsets` in a `pcotbatch` parameter file, or the `apply_gains_and_offsets`
+argument to `Document.setInputENVI()` in Python scripts. This is off by default, because
+many files have already had them applied. They are stored as `gain` and `offset` ancillary data either
+way, and the new `ancillary()` function gets any numeric ancillary data from an image, such as
+`ancillary("gain", a)`.
 
 Site
 

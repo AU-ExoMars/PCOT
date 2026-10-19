@@ -13,7 +13,7 @@ from typing import Dict
 @dataclass(frozen=True)
 class AncillaryKey:
     name: str           # the key used in ancillary data dicts
-    unit: str           # the unit all loaders must convert to
+    unit: str           # the unit all loaders must convert to, or empty string
     description: str    # human-readable description
 
 
@@ -24,9 +24,15 @@ EXPOSURE = AncillaryKey("exposure", "s", "Exposure time")
 FILTER_NUMBER = AncillaryKey("filter_number", "", "Filter wheel position number (an int)")
 LENS = AncillaryKey("lens", "", "Lens the band was captured through: 'L' or 'R'")
 
+# ENVI-specific (probably)
+GAIN = AncillaryKey("gain", "", "Gain value from ENVI file")
+OFFSET = AncillaryKey("offset", "", "Offset value from ENVI file")
+
 # all the keys, by name
 ALL_KEYS: Dict[str, AncillaryKey] = {k.name: k for k in [
     EXPOSURE,
     FILTER_NUMBER,
     LENS,
+    GAIN,
+    OFFSET,
 ]}

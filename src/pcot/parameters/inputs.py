@@ -39,7 +39,9 @@ rgbDictType = TaggedDictType(
 # ENVI files also just have a filename WITHOUT an extension (remember that ENVI
 # files are actually two files, one with the .hdr extension and one with .dat).
 enviDictType = TaggedDictType(
-    filename=("filename (without extension)", Maybe(str), None)
+    filename=("filename (without extension)", Maybe(str), None),
+    # None means "not set", leaving the setting in the document unchanged
+    apply_gains_and_offsets=("Apply gains and offsets from the header (default: unchanged)", Maybe(bool), None),
 )
 
 # Multifile input is rather more complex. We have two ways of specifying the files:

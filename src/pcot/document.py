@@ -236,9 +236,14 @@ class Document:
         i.get()
         return i.exception
 
-    def setInputENVI(self, inputidx, fname):
-        """set graph's input to an ENVI"""
-        return self.setInputData(inputidx, inputs.Input.ENVI, lambda method: method.setFileName(fname))
+    def setInputENVI(self, inputidx, fname, apply_gains_and_offsets: Optional[bool] = None):
+        """set graph's input to an ENVI. If apply_gains_and_offsets is None the input's existing
+        setting is kept (False for a new document)."""
+        def f(method):
+            method.setFileName(fname)
+            if apply_gains_and_offsets is not None:
+                method.apply_gains_and_offsets = apply_gains_and_offsets
+        return self.setInputData(inputidx, inputs.Input.ENVI, f)
 
     def setInputPARC(self, inputidx, fname, itemname='main'):
         """set graph's input to a PARC"""

@@ -21,13 +21,13 @@
 # DEALINGS IN THE SOFTWARE. 
 
 import os
-import sys
 from pathlib import Path
 from typing import List, Tuple, Optional
 
 import numpy as np
 
 import pcot.ui as ui
+from pcot import dq
 from pcot.ancillary import keys
 from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
@@ -76,6 +76,20 @@ def parseHeader(lines):
 
 
 class ENVIHeader:
+    w: int
+    h: int
+    bands: int
+    interleave: str # bsq, bil, bip.
+    datatype: type
+    defaultBands: Optional[List[int]]
+    gains: Optional[List[float]]      # gains to be applied or None
+    offsets: Optional[List[float]]  # offsets to be applied or None
+    exposureTimes: Optional[List[float]]  # in seconds, or None if not in the file
+    filters: List[Filter]
+    ignoreValue: Optional[float]
+    headerOffset: int   # bytes to skip at the start of the data file
+
+
     def __init__(self, f):
         try:
             isENVI = f.readline().strip().startswith('ENVI')
@@ -96,17 +110,42 @@ class ENVIHeader:
         # some odd nomeclature I will accept, but calling "width" and
         # "height" by these names seems needlessly obtuse.
 
-        self.w = int(d['samples'])
-        self.h = int(d['lines'])
-        self.bands = int(d['bands'])
+        try:
+            self.w = int(d['samples'])
+            self.h = int(d['lines'])
+            self.bands = int(d['bands'])
+        except KeyError as e:
+            f.close()
+            raise Exception(f'ENVI parsing error - key {e.args[0]} not found')
 
-        self.headerOffset = [int(d['headerOffset']) if 'headerOffset' in d else 0]
-        self.byteorder = 'little' if d['byte order'] == '0' else 'big'
+        self.headerOffset = int(d['header offset']) if 'header offset' in d else 0
+        self.byteorder = 'little' if ('byte order' not in d) or (d['byte order'] == '0') else 'big'
 
-        if d['interleave'] != 'bsq':
-            raise Exception("Only BSQ interleave is supported")
-        if d['data type'] != '4':
-            raise Exception("Data type must be 32-bit float")
+        if 'interleave' not in d:
+            raise Exception('ENVI parsing error: no "interleave" field')
+        self.interleave = d['interleave'].lower()
+        if self.interleave not in ('bsq', 'bil', 'bip'):
+            raise Exception(f"Unknown interleave in ENVI header: {self.interleave}")
+        try:
+            self.datatype = {
+                1: np.uint8,
+                2: np.int16,
+                3: np.int32,
+                4: np.float32,
+                5: np.float64,
+                12: np.uint16,
+                13: np.uint32,
+                14: np.int64,
+                15: np.uint64,
+            }[int(d['data type'])]
+        except KeyError as e:
+            f.close()
+            if 'data type' not in d:
+                raise Exception('ENVI parsing error: no "data type" field')
+            raise Exception(f"Unknown data type in ENVI header: {d['data type']}")
+        except ValueError as e:
+            f.close()
+            raise Exception(f"Error in ENVI header, data type should be in integer: {d['data type']}")
 
         if 'default bands' in d:
             # based at one, for heaven's sake.
@@ -119,6 +158,29 @@ class ENVIHeader:
         else:
             bandNames = [str(x) for x in range(self.bands)]
 
+        if 'data gain values' in d:
+            self.gains = [float(x) for x in d['data gain values']]
+        else:
+            self.gains = None
+
+        if 'data offset values' in d:
+            self.offsets = [float(x) for x in d['data offset values']]
+        else:
+            self.offsets = None
+
+        if 'exposure times' in d:
+            # these are assumed to be in seconds.
+            self.exposureTimes = [float(x) for x in d['exposure times']]
+        else:
+            self.exposureTimes = None
+
+        # per-band lists must have one entry per band
+        for name, lst in (('data gain values', self.gains),
+                          ('data offset values', self.offsets),
+                          ('exposure times', self.exposureTimes)):
+            if lst is not None and len(lst) != self.bands:
+                raise Exception(f"ENVI header has {len(lst)} {name} but {self.bands} bands")
+
         if 'wavelength' in d:
             wavelengths = [float(x) for x in d['wavelength']]
             if 'fwhm' in d:
@@ -126,22 +188,15 @@ class ENVIHeader:
             else:
                 fwhm = [0 for _ in wavelengths]
 
-            if 'data gain values' in d:
-                gain = [float(x) for x in d['data gain values']]
-            else:
-                gain = [0 for _ in wavelengths]
-            self.gains = gain
-
-            if 'exposure times' in d:
-                # these are assumed to be in seconds.
-                self.exposureTimes = [float(x) for x in d['exposure times']]
-            else:
-                self.exposureTimes = None
-
-
             self.filters = []
-            for w, f, g, n in zip(wavelengths, fwhm, gain, bandNames):
-                self.filters.append(Filter(w, f, g, n, n))
+            for w, f, n in zip(wavelengths, fwhm, bandNames):
+                # I'm setting the transmissions to 1 here because any gain value will be applied in the loader.
+                self.filters.append(Filter(w, f, 1.0, n, n))
+        else:
+            # no wavelengths, create dummy filters using the band names if we have them
+            if 'band names' not in d:
+                bandNames = [f"band {n}" for n in range(self.bands)]
+            self.filters = [Filter(0, 0, 1.0, n, n) for n in bandNames]
 
 
         if 'data ignore value' in d:
@@ -150,8 +205,10 @@ class ENVIHeader:
             self.ignoreValue = None
 
 
-def load(fn:Path|str) -> Tuple[ENVIHeader, np.ndarray]:
-    """Takes the ENVI header name. Actually loads the envi, returning a tuple of (header, ndarray)"""
+def load(fn:Path|str, apply_gain_and_offset:bool=False) -> Tuple[ENVIHeader, np.ndarray, Optional[np.ndarray]]:
+    """Takes the ENVI header name. Actually loads the envi, returning a tuple of (header, ndarray, dq).
+    The ndarray is (h,w,bands) float32. The dq is a uint16 array of the same shape with NODATA set wherever
+    the raw data matches the "data ignore value", or None if there is no ignore value."""
 
     if not fn:
         raise Exception("No filename given in ENVI load!")
@@ -173,31 +230,57 @@ def load(fn:Path|str) -> Tuple[ENVIHeader, np.ndarray]:
     if datfile is None:
         raise Exception("cannot find ENVI data file")
 
+    # make sure the data is the right size.
     size = os.stat(datfile).st_size
-
-    # remember, we only support float format BSQ right now.
-
-    requiredSize = 4 * h.bands * h.w * h.h
-
-    if size != requiredSize:
+    count = h.bands * h.w * h.h
+    # set the byte order on the file's data type so numpy reads it correctly
+    dtype = np.dtype(h.datatype).newbyteorder('<' if h.byteorder == 'little' else '>')
+    if size != h.headerOffset + dtype.itemsize * count:
         raise Exception("Size of ENVI data file is incorrect")
 
-    bands = []
-    with open(datfile, "rb") as f:
-        for i in range(0, h.bands):
-            band = np.fromfile(f, np.float32, h.w * h.h).reshape(h.h, h.w)
-            gain = h.gains[i]
-            if sys.byteorder != h.byteorder:
-                band = band.byteswap()
-            bands.append(band)  # Do I need to apply the data gain values here??
+    # now read the data into a big single array.
+    data = np.fromfile(datfile, dtype, count, offset=h.headerOffset)
 
-    # now have list of 6 bands. Interleave.
-    img = np.stack(bands, axis=-1)
+    # get a boolean mask for where the ignored values are, using the raw values
+    if h.ignoreValue is None:
+        ignored = None
+    elif np.isnan(h.ignoreValue):
+        ignored = np.isnan(data)
+    else:
+        ignored = data == h.ignoreValue
 
-    return h, img
+    # convert to native float32
+    data = data.astype(np.float32)
+
+    # now process the interleaved data
+    def deinterleave(a):
+        if h.interleave == "bsq":
+            a = a.reshape(h.bands, h.h, h.w).transpose(1, 2, 0)
+        elif h.interleave == "bil":
+            a = a.reshape(h.h, h.bands, h.w).transpose(0, 2, 1)
+        else:   # bip, already in this order
+            a = a.reshape(h.h, h.w, h.bands)
+        # ensures the data is contiguous in memory but don't reshape to 1D
+        return np.ascontiguousarray(a)
+
+    data = deinterleave(data)
+    if ignored is not None:
+        dqdata = np.where(deinterleave(ignored), dq.NODATA, 0).astype(np.uint16)
+    else:
+        dqdata = None
+
+    if apply_gain_and_offset:
+        if h.gains:
+            for band,gain in enumerate(h.gains):
+                data[:,:,band] *= gain
+        if h.offsets:
+            for band,off in enumerate(h.offsets):
+                data[:,:,band] += off
+
+    return h, data, dqdata
 
 
-def _genheader(f, w: int, h: int, freqs: List[float], exp_times: Optional[List[float]] = None, camname="LWAC"):
+def _genheader(f, w: int, h: int, freqs: List[float], exp_times: Optional[List[float]] = None, camname="LWAC",):
     """Crude envi header writer"""
 
     f.write("ENVI\n")
@@ -220,7 +303,7 @@ def _genheader(f, w: int, h: int, freqs: List[float], exp_times: Optional[List[f
     fwhm = 25
     s = ", ".join([f"{fwhm:0.6f}" for f in freqs])
     f.write(f"fwhm = {{\n {s}}}\n")
-    f.write("wavelength units = nm\ndata ignore value = 241.000000\n")
+    f.write("wavelength units = nm\n")
     f.write("default stretch = 0.000000000000e+000 1.000000000000e+000 linear\n")
     g = 1.0
     s = ", ".join([f"{g:.4e}" for f in freqs])

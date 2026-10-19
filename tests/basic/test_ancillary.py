@@ -180,6 +180,35 @@ def test_exposure_missing_gives_clear_error():
     assert "the image has no exposure data" in node.error.message
 
 
+def test_ancillary_function():
+    """ancillary() gets any numeric ancillary item as a per-band vector"""
+    cube = makeImage()
+    for i, g in enumerate([2, 3, 4]):
+        cube.ancillary[i]["gain"] = g
+    node = runExpr(cube, 'ancillary("gain", a)')
+    assert node.error is None, node.error.message
+    assert np.allclose(node.getOutput(0, Datum.NUMBER).n, [2, 3, 4])
+
+    node = runExpr(cube, 'ancillary("exposure", a)')
+    assert np.allclose(node.getOutput(0, Datum.NUMBER).n, EXPOSURES)
+
+
+def test_ancillary_function_errors():
+    cube = makeImage()
+    node = runExpr(cube, 'ancillary("gain", a)')
+    assert "the image has no ancillary data 'gain'" in node.error.message
+
+    del cube.ancillary[2]["exposure"]
+    node = runExpr(cube, 'ancillary("exposure", a)')
+    assert "no 'exposure' data for band(s) 2" in node.error.message
+
+    cube = makeImage()
+    for i in range(3):
+        cube.ancillary[i]["lens"] = "L"
+    node = runExpr(cube, 'ancillary("lens", a)')
+    assert "data must be a list of numbers" in node.error.message
+
+
 def makeFilteredImage():
     """As makeImage(), but with filters on the bands: 440, 540, 640nm"""
     from pcot.cameras.filters import Filter

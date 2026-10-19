@@ -1,3 +1,5 @@
+from numbers import Number
+
 import cv2 as cv
 import numpy as np
 import logging
@@ -1354,6 +1356,11 @@ def colourcorrect(img):
     return Datum(Datum.IMG, out)
 
 
+def _bandName(img, band):
+    f = img.filter(band)
+    return f"{band} ({f.name})" if f is not None else str(band)
+
+
 @datumfunc
 def exposure(img):
     """
@@ -1377,9 +1384,35 @@ def exposure(img):
     if len(missing) == len(data):
         raise XFormException('DATA', "exposure(): the image has no exposure data")
     if missing:
-        def bandName(i):
-            f = img.filter(i)
-            return f"{i} ({f.name})" if f is not None else str(i)
-        raise XFormException('DATA', f"exposure(): no exposure data for band(s) {', '.join(bandName(i) for i in missing)}")
+        errs = ', '.join(_bandName(img,i) for i in missing)
+        raise XFormException('DATA', f"exposure(): no exposure data for band(s) {errs}")
+
+    return Datum(Datum.NUMBER, Value(data), sources=img.sources)
+
+
+@datumfunc
+def ancillary(name, img):
+    """
+    Get a named ancillary piece of data from an image. Some may not be present, in which case you'll
+    get an error. It's better to use the 'exposure' function to get the exposure - it's used more often so
+    it's provided as a shortcut, although you can get it here.
+
+    @param name:string:the name of the ancillary data
+    @param img:img:the image
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return Datum.null
+    name = name.get(Datum.STRING)
+    data = img.ancillary.get(name)
+    missing = [i for i, x in enumerate(data) if x is None]
+    if len(missing) == len(data):
+        raise XFormException('DATA', f"ancillary(): the image has no ancillary data {name!r}")
+    if missing:
+        errs = ', '.join(_bandName(img,i) for i in missing)
+        raise XFormException('DATA', f"ancillary(): no {name!r} data for band(s) {errs}")
+
+    if not isinstance(data, list) or len(data) == 0 or not isinstance(data[0], Number):
+        raise XFormException('DATA', "ancillary(): data must be a list of numbers")
 
     return Datum(Datum.NUMBER, Value(data), sources=img.sources)
