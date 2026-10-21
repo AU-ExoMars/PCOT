@@ -2,13 +2,16 @@
 This file tests the fundamental functionality of the spectrum system. If you
 want to look at tests for the spectrum XForm, check the graphs directory.
 """
+import json
 import os
+
+import pytest
 
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.rois import ROICircle, ROIRect, ROI
-from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver
+from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver, SpectrumSetData
 from pcot.value import Value
 from fixtures import globaldatadir
 
@@ -63,7 +66,7 @@ def test_coalesce():
     img2.rois.append(ROICircle(60, 60, 20, label="2"))
     img2.rois.append(ROICircle(80, 80, 20, label="2"))
 
-    # now we'll build the dict that coalence (and SpectrumSet) works on
+    # now we'll build the dict that coalesce (and SpectrumSet) works on
     d = {
         'img1': img1,
         'img2': img2
@@ -375,3 +378,75 @@ def test_spectrum_table(globaldatadir):
     })
     t = str(ss3.table()).strip().replace('\r\n', '\n')
     assert t == res3
+
+
+def test_spectrum_data():
+    # Create two images, both 256x256. We use the gen node for this.
+    img1 = create_test_image1()
+    img2 = create_test_image1()
+    # add some ROIs to each image.
+    # For img1 we'll add two rects with the same name and a circle.
+    img1.rois.append(ROIRect(rect=(10, 10, 20, 20), label="1"))
+    img1.rois.append(ROIRect(rect=(30, 30, 40, 40), label="1"))
+    img1.rois.append(ROICircle(50, 50, 10, label="2"))
+    # For img2 we'll do the same, but with three rects and two circles.
+    img2.rois.append(ROIRect(rect=(0, 0, 30, 50), label="1"))
+    img2.rois.append(ROIRect(rect=(100, 100, 20, 20), label="1"))
+    img2.rois.append(ROIRect(rect=(100, 60, 20, 20), label="1"))
+    img2.rois.append(ROICircle(60, 60, 20, label="2"))
+    img2.rois.append(ROICircle(80, 80, 20, label="2"))
+
+    d = {
+        'img1': img1,
+        'img2': img2
+    }
+    ss = SpectrumSet(d)
+    ssd = SpectrumSetData.fromSpectrumSet(ss)
+
+    # let's check we can access both SpectrumSet and SpectrumSetData
+
+    # SpectrumSet is a dict of ROI name (or img:ROI) to Spectrum, essentially.
+    s = ss["img1:1"]
+    assert isinstance(s, Spectrum)
+
+    # and Spectrum contains a map of Filter to data but has accessors for that. First, let's check
+    # the wavelengths are right.
+    assert sorted(s.getFilterWavelengths()) == [100, 200, 300]
+    # now the actual values
+    assert s.get(100).v == Value(0, 0, 0)
+    assert s.get(100).pixels == 2000
+    assert s.get(200).v == Value(0, 0, 0)
+    assert s.get(200).pixels == 2000
+    assert s.get(300).v.approxeq(Value(0.475,0.8511,0) )
+    assert s.get(300).pixels == 2000
+
+    # round trip test
+    data = json.dumps(ssd.serialise())
+    data = json.loads(data)
+    ssd = SpectrumSetData.deserialise(data)
+
+
+    # now check the SpectrumSetData
+    ss = ssd.spectra['img1:1']
+    assert isinstance(ss, SpectrumSetData._Spectrum)
+    # make sure it has all the filters
+    assert set(ss.filters.keys()) == {'100', '200', '300'}
+    # gen nodes always set fwhm = 30 in all the "fake" filters
+    assert ss.filters['100'] == (100,30)
+    assert ss.filters['200'] == (200,30)
+    assert ss.filters['300'] == (300,30)
+
+    for fname in ss.filters.keys():
+        cwl, fwhm = ss.filters[fname]
+        if cwl == 100:
+            assert ss.spectrum[fname].v == Value(0, 0, 0)
+        elif cwl == 200:
+            assert ss.spectrum[fname].v == Value(0, 0, 0)
+        elif cwl == 300:
+            assert ss.spectrum[fname].v.approxeq(Value(0.475,0.8511,0))
+        else:
+            pytest.fail(f"Unexpected filter: {fname}")
+        # all filters were measured over the same coalesced ROI
+        assert ss.spectrum[fname].pixels == 2000
+
+

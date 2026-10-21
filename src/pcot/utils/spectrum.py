@@ -68,15 +68,29 @@ def getMeanValue(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
     return mean, std, 0
 
 
-@dataclass
 class SpectrumValue:
     """The output of the get methods in Spectrum - a single value and the number of pixels from which
-    it was obtained."""
+    it was obtained. It can return JSON-serialisable data and be deserialised from such data."""
     v: Value
     pixels: int  # the number of pixels from which the value was obtained
 
+    def __init__(self, v: Value, pixels: int):
+        self.v = v
+        # and this is why this isn't a dataclass. What gets passed in is typically
+        # an int32, which isn't JSON-serialisable.
+        self.pixels = int(pixels)
+
     def as_tuple(self):
         return dataclasses.astuple(self)
+
+    def serialise(self):
+        return [self.v.serialise(), self.pixels]
+
+    @staticmethod
+    def deserialise(d):
+        serv, serp = d
+        return SpectrumValue(Value.deserialise(serv), serp)
+
 
 
 class Spectrum:
@@ -178,6 +192,16 @@ class Spectrum:
         f = self.filters[channel]
         return self.data[f] if f in self.data else None
 
+    def getFilterNames(self):
+        """Get all filter names"""
+        return [f.name for f in self.filters]
+
+    def getFilterWavelengths(self):
+        return [f.cwl for f in self.filters]
+
+    def getFilters(self):
+        return self.filters
+
     def __repr__(self):
         return "Spectrum: " + "; ".join([f"{f}:{v}" for f, v in self.data.items()])
 
@@ -241,6 +265,9 @@ class SpectrumSet(dict, SourcesObtainable):
     # the problem here is that each spectrum can be associated with an imagecube, an ROI within an image, or a
     # set of ROIs within an image all with the same name.
 
+    sources: SourceSet
+    colours: Dict[str, Tuple[float, float, float]]
+
     def __init__(self, images: Dict[str, ImageCube], ignorePixSD=False):
         """create a set of spectra from a dictionary of ImageCube objects and the ROIs they contain.
         The keys are the names of the ImageCubes and the values are the ImageCube objects. The names
@@ -251,6 +278,7 @@ class SpectrumSet(dict, SourcesObtainable):
         with the same name in different image cubes, they are kept separate and the name associated with the
         spectrum is the image cube name followed by a colon and the ROI name.
         """
+
 
         # First step - we need to combine ROIs with the same name in the same image cube. We iterate over
         # the image cubes. If a cube contains multiple ROIs with the same name, we combine them into a single
@@ -374,4 +402,64 @@ class SpectrumSet(dict, SourcesObtainable):
                 # replace the cube with a new one containing only the combined ROI
                 images[name] = img.shallowCopy()
                 images[name].rois = rois
+
+
+class SpectrumSetData:
+    """
+    This is a simplified version of a SpectrumSet which is used as a Datum object, and can be
+    serialised. It doesn't carry the full filter data. Nor does it carry source data, because
+    that's held in the containing Datum.
+
+    Technically you could reconstruct a SpectrumSet from this (and sources), but I doubt it's needed.
+    """
+    @dataclass
+    class _Spectrum:
+        """Internal class for storing the data for a single spectrum."""
+        # Each filter's wavelength and fwhm (or bandwidth - might not actually be gaussian)
+        filters: Dict[str, Tuple[float,float]]
+        # For each filter, a spectrum value
+        spectrum: Dict[str, SpectrumValue]
+        def serialise(self):
+            return {
+                # will convert tuples to lists
+                "filters": self.filters,
+                "spectrum": {k: v.serialise() for k,v in self.spectrum.items()},
+            }
+        @staticmethod
+        def deserialise(data):
+            # convert JSON lists to tuples
+            f = {k: tuple(v) for k, v in data["filters"].items()}
+            return SpectrumSetData._Spectrum(f, {k: SpectrumValue.deserialise(v) for k, v in data["spectrum"].items()})
+
+    spectra: Dict[str, _Spectrum]
+
+    def __init__(self, spectra: Dict[str, _Spectrum]):
+        """Internal use only; we either deserialise or build from a SpectrumSet"""
+        self.spectra = spectra
+
+    @staticmethod
+    def fromSpectrumSet(ss: SpectrumSet):
+        """Construct from a SpectrumSet"""
+        spectra = {}
+        # SpectrumSet is a dict, so we can do this.
+        # k will be the ROI name (or image+ROI name). spectrum will be a Spectrum object.
+        for roiname,spectrum in ss.items():
+            filters = {}
+            values = {}
+            for filter,spectrumvalue in spectrum.data.items():
+                filters[filter.name] = (filter.cwl, filter.fwhm)
+                values[filter.name] = spectrumvalue
+            spectra[roiname] = SpectrumSetData._Spectrum(filters, values)
+
+        return SpectrumSetData(spectra)
+
+    def serialise(self):
+        return {
+            'spectra': {k: v.serialise() for k,v in self.spectra.items()},
+        }
+
+    @staticmethod
+    def deserialise(data):
+        spectra = {k: SpectrumSetData._Spectrum.deserialise(v) for k,v in data["spectra"].items()}
+        return SpectrumSetData(spectra)
 
