@@ -6,8 +6,8 @@ import numpy as np
 
 import pcot.config
 
-from pcot.sources import nullSource
-from pcot.utils.html import HTML, Col
+from pcot.utils.html import HTML
+
 
 
 class TableIter:
@@ -27,7 +27,7 @@ class TableIter:
 
 
 class Table:
-    """Provides a way to construct tabular data on the fly, for output as a CSV.
+    """Provides a way to construct tabular data on the fly, for output as a CSV, HTML or Markdown.
     Create a new row with newRow(label) - if the label has already been used, an old row
     is selected to add more data or replace old data. Then add data with add(k,v).
     Once done, a table iterator will iterate over the rows fetching a list of entries. If
@@ -47,7 +47,6 @@ class Table:
         Row is first."""
         from pcot.datum import Datum
         from pcot.value import Value
-
         def get(d: Datum, c: OrderedDict, txt):
             if d.tp == Datum.NUMBER:
                 if not d.val.isscalar():
