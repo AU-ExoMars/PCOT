@@ -11,7 +11,7 @@ import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.rois import ROICircle, ROIRect, ROI
-from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver, SpectrumSetData
+from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver, SpectrumSetData, SpectrumValue
 from pcot.value import Value
 from fixtures import globaldatadir
 
@@ -48,9 +48,7 @@ def get_dot(img, x, y, r=3):
     return Spectrum(img, roi)
 
 
-def test_coalesce():
-    """Test that ROIs with the same name are combined into one ROI, but not across images"""
-
+def generate_test_data():
     # Create two images, both 256x256. We use the gen node for this.
     img1 = create_test_image1()
     img2 = create_test_image1()
@@ -65,6 +63,14 @@ def test_coalesce():
     img2.rois.append(ROIRect(rect=(100, 60, 20, 20), label="1"))
     img2.rois.append(ROICircle(60, 60, 20, label="2"))
     img2.rois.append(ROICircle(80, 80, 20, label="2"))
+
+    return img1, img2
+
+
+def test_coalesce():
+    """Test that ROIs with the same name are combined into one ROI, but not across images"""
+
+    img1, img2 = generate_test_data()
 
     # now we'll build the dict that coalesce (and SpectrumSet) works on
     d = {
@@ -381,20 +387,7 @@ def test_spectrum_table(globaldatadir):
 
 
 def test_spectrum_data():
-    # Create two images, both 256x256. We use the gen node for this.
-    img1 = create_test_image1()
-    img2 = create_test_image1()
-    # add some ROIs to each image.
-    # For img1 we'll add two rects with the same name and a circle.
-    img1.rois.append(ROIRect(rect=(10, 10, 20, 20), label="1"))
-    img1.rois.append(ROIRect(rect=(30, 30, 40, 40), label="1"))
-    img1.rois.append(ROICircle(50, 50, 10, label="2"))
-    # For img2 we'll do the same, but with three rects and two circles.
-    img2.rois.append(ROIRect(rect=(0, 0, 30, 50), label="1"))
-    img2.rois.append(ROIRect(rect=(100, 100, 20, 20), label="1"))
-    img2.rois.append(ROIRect(rect=(100, 60, 20, 20), label="1"))
-    img2.rois.append(ROICircle(60, 60, 20, label="2"))
-    img2.rois.append(ROICircle(80, 80, 20, label="2"))
+    img1, img2 = generate_test_data()
 
     d = {
         'img1': img1,
@@ -450,3 +443,66 @@ def test_spectrum_data():
         assert ss.spectrum[fname].pixels == 2000
 
 
+def test_tabular_provider():
+    img1, img2 = generate_test_data()
+
+    d = {
+        'img1': img1,
+        'img2': img2
+    }
+    ss = SpectrumSet(d)
+    ssd = SpectrumSetData.fromSpectrumSet(ss)
+
+    # get a tabular provider
+    t = ssd.tabularProvider()
+    # can we get the headers and are they correct?
+    hdrs = t.getHeaders()
+    assert hdrs == ['name', 'm100', 's100', 'p100', 'm200', 's200', 'p200', 'm300', 's300', 'p300']
+    # can we iterate over the data?
+    for x in t:
+        # are the right keys - and only those - there?
+        assert set(x.keys()) == set(hdrs)
+        # I'll leave checking the actual data for now. That can be done in a graph,
+        # converting to strings (as we do right now). But I will show what it
+        # roughly looks like
+        roiname = x['name']
+        Value(x['m100'],x['s100'])
+
+
+def test_tabular_provider_awkward_spectra():
+    """Spectra built by hand to hit the awkward cases: float wavelengths (including a fractional one),
+    and a spectrum which doesn't have a filter at every wavelength the others do."""
+    S = SpectrumSetData._Spectrum
+    a = S({'F1': (440.0, 25), 'F2': (438.5, 25)},
+          {'F1': SpectrumValue(Value(0.25, 0.01, 0), 10),
+           'F2': SpectrumValue(Value(0.5, 0.02, 0), 20)})
+    b = S({'F3': (500.0, 25)},
+          {'F3': SpectrumValue(Value(1, 0.1, 0), 30)})
+    t = SpectrumSetData({'a': a, 'b': b}).tabularProvider()
+
+    # 440.0 loses its ".0", but 438.5 isn't merged with anything
+    assert t.getHeaders() == ['name', 'm438.5', 's438.5', 'p438.5',
+                              'm440', 's440', 'p440',
+                              'm500', 's500', 'p500']
+
+    rows = list(t)
+    assert rows == [
+        {'name': 'a',
+         'm438.5': '0.5', 's438.5': '0.02', 'p438.5': '20',
+         'm440': '0.25', 's440': '0.01', 'p440': '10',
+         'm500': 'NA', 's500': 'NA', 'p500': '0'},
+        {'name': 'b',
+         'm438.5': 'NA', 's438.5': 'NA', 'p438.5': '0',
+         'm440': 'NA', 's440': 'NA', 'p440': '0',
+         'm500': '1', 's500': '0.1', 'p500': '30'},
+    ]
+
+
+def test_tabular_provider_duplicate_wavelength():
+    """Two filters at the same wavelength in one spectrum can't both be shown, so that's an error."""
+    S = SpectrumSetData._Spectrum
+    a = S({'F1': (440, 25), 'F2': (440, 30)},
+          {'F1': SpectrumValue(Value(0.25, 0.01, 0), 10),
+           'F2': SpectrumValue(Value(0.5, 0.02, 0), 20)})
+    with pytest.raises(ValueError):
+        SpectrumSetData({'a': a}).tabularProvider()
