@@ -1,6 +1,7 @@
 # lookup by name for serialisation
 import os
 from copy import copy
+from pathlib import Path
 
 import numpy as np
 
@@ -88,6 +89,19 @@ class Type:
         """True if this type overrides serialise(), so it can be saved (e.g. to a PARC)"""
         return type(self).serialise is not Type.serialise
 
+
+    def getTabularProvider(self, d):
+        raise pcot.datumexceptions.CannotProvideTable(self.name)
+
+    def canProvideTable(self):
+        """True if this type overrides getTabularProvider(), so it can generate tabular data"""
+        return type(self).getTabularProvider is not Type.getTabularProvider
+
+    def writeCSV(self, f:Path, d):
+        """Write the datum as CSV, using its tabular provider (so only for types which canProvideTable)"""
+        with f.open(mode='w', newline='', encoding='utf-8') as csvfile:
+            self.getTabularProvider(d).writeCSV(csvfile)
+
     def view(self, d) -> str:
         """Used by the viewparc command to view to stdout the contents of a datum"""
         return str(d.val)
@@ -128,7 +142,11 @@ class Type:
         with open(outputDescription.file, "a" if outputDescription.append else "w") as f:
             if outputDescription.prefix is not None:
                 f.write(outputDescription.prefix)
-            s = str(d.val)
+            if self.canProvideTable():
+                # tabular data is written as CSV
+                s = self.getTabularProvider(d).csvString()
+            else:
+                s = str(d.val)
             f.write(s+"\n")
 
     def getByIndices(self, d, args):
@@ -314,6 +332,36 @@ class TabularDataType(Type):
 
     def getByIndices(self, d, args):
         return d.val.getByIndices(args, d.sources)
+
+    def getTabularProvider(self, d):
+        return d.val.tabularProvider()
+
+
+
+class SpectraDataType(Type):
+    def __init__(self):
+        from pcot.utils.spectrumdata import SpectrumSetData
+        super().__init__("spectra", valid=[SpectrumSetData], connColour="#a0a000")
+
+    def serialise(self,d):
+        v = d.val
+        return self.name, (v.serialise(), d.getSources().serialise())
+
+    def deserialise(self,d):
+        from pcot.utils.spectrumdata import SpectrumSetData
+        v, s = d
+        ssd = SpectrumSetData.deserialise(v)
+        s = pcot.sources.SourceSet.deserialise(s)
+        return pcot.datum.Datum(self, ssd, s)
+
+    def getByIndices(self, d, args):
+        return d.val.getByIndices(args, d.sources)
+
+    def copy(self,d):
+        return d  # type is immutable
+
+    def getTabularProvider(self,d ):
+        return d.val.tabularProvider()
 
 
 class TestResultType(Type):

@@ -11,7 +11,8 @@ import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.rois import ROICircle, ROIRect, ROI
-from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver, SpectrumSetData, SpectrumValue
+from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver
+from pcot.utils.spectrumdata import SpectrumSetData, SpectrumValue
 from pcot.value import Value
 from fixtures import globaldatadir
 
@@ -364,13 +365,13 @@ def test_spectrum_table(globaldatadir):
     # create the spectrum sets and tables for the gen1/md1 set (look at the graph, you can see that
     # gen1 and md1 connect to inputs 0 and 4 on the spectrum node).
     ss1 = SpectrumSet({"in0": gen1img, "in4": md1img})
-    t = str(ss1.table()).strip().replace('\r\n', '\n')
+    t = str(SpectrumSetData.fromSpectrumSet(ss1)).strip().replace('\r\n', '\n')
     assert t == res1
 
     # same with md2
     res2 = doc.graph.getByDisplayName("stringtest 2", single=True).params.string.strip().replace('\r\n', '\n')
     ss2 = SpectrumSet({"in0": md2img})
-    t = str(ss2.table()).strip().replace('\r\n', '\n')
+    t = str(SpectrumSetData.fromSpectrumSet(ss2)).strip().replace('\r\n', '\n')
     assert t == res2
 
     # and finally the complex test with md3
@@ -382,7 +383,7 @@ def test_spectrum_table(globaldatadir):
         "in3": gen2img,
         "in4": md3img
     })
-    t = str(ss3.table()).strip().replace('\r\n', '\n')
+    t = str(SpectrumSetData.fromSpectrumSet(ss3)).strip().replace('\r\n', '\n')
     assert t == res3
 
 
@@ -506,3 +507,74 @@ def test_tabular_provider_duplicate_wavelength():
            'F2': SpectrumValue(Value(0.5, 0.02, 0), 20)})
     with pytest.raises(ValueError):
         SpectrumSetData({'a': a}).tabularProvider()
+
+
+def test_tabular_provider_natural_row_order():
+    """Rows are sorted by name, comparing runs of digits as numbers - so multidot's "2" comes before
+    its "10", and "img2:..." before "img10:...", which a plain string sort gets wrong."""
+    S = SpectrumSetData._Spectrum
+    names = ['10', 'img10:1', '2', 'in0', 'img2:1', '0', 'img2:10', 'img2:2', '1']
+    spectra = {n: S({'F1': (440, 25)}, {'F1': SpectrumValue(Value(1, 0.1, 0), 10)}) for n in names}
+    rows = [r['name'] for r in SpectrumSetData(spectra).tabularProvider()]
+    assert rows == ['0', '1', '2', '10', 'img2:1', 'img2:2', 'img2:10', 'img10:1', 'in0']
+
+
+def make_indexable_spectra():
+    """A spectra Datum for the indexing tests: spectrum "0" has a saturated value at 440 and a fractional
+    wavelength at 438.5; "fish" has 440 and 500."""
+    from pcot import dq
+    from pcot.sources import nullSourceSet
+    S = SpectrumSetData._Spectrum
+    ssd = SpectrumSetData({
+        '0': S({'F1': (440, 25), 'F2': (438.5, 25)},
+               {'F1': SpectrumValue(Value(0.25, 0.01, dq.SAT), 10),
+                'F2': SpectrumValue(Value(0.5, 0.02, dq.NONE), 20)}),
+        'fish': S({'F1': (440, 25), 'F3': (500, 25)},
+                  {'F1': SpectrumValue(Value(0.75, 0.03, dq.NONE), 30),
+                   'F3': SpectrumValue(Value(1.5, 0.04, dq.NONE), 40)}),
+    })
+    return Datum(Datum.SPECTRA, ssd, sources=nullSourceSet)
+
+
+def test_spectra_indexing():
+    """Spectra can be indexed in expressions by name and wavelength, giving the stored Value with its
+    uncertainty and DQ, or by name and column name as when spectra were output as tables."""
+    from pcot import dq
+    from pcot.expressions import ExpressionEvaluator
+    e = ExpressionEvaluator()
+    a = make_indexable_spectra()
+
+    def run(expr):
+        r = e.run(expr, {"a": a})
+        assert r.tp == Datum.NUMBER
+        return r.val
+
+    # by wavelength - the stored value, DQ and all
+    assert run("a[0,440]").approxeq(Value(0.25, 0.01, dq.SAT))
+    assert run("a[0,438.5]").approxeq(Value(0.5, 0.02, dq.NONE))
+    assert run("a[fish,500]").approxeq(Value(1.5, 0.04, dq.NONE))
+
+    # table-style mean and SD of the same wavelength is the stored value too, so keeps its DQ
+    assert run("a[0,m440,s440]").approxeq(Value(0.25, 0.01, dq.SAT))
+    # a single column has no uncertainty, as with tables
+    assert run("a[0,m440]").approxeq(Value(0.25, 0, dq.NOUNCERTAINTY))
+    assert run("a[0,s440]").approxeq(Value(0.01, 0, dq.NOUNCERTAINTY))
+    assert run("a[fish,p500]").approxeq(Value(40, 0, dq.NOUNCERTAINTY))
+    # mixing wavelengths just pairs the two numbers up, with no DQ
+    assert run("a[fish,m440,s500]").approxeq(Value(0.75, 0.04, dq.NONE))
+
+
+@pytest.mark.parametrize("expr,message", [
+    ("a[0,500]", "no value at wavelength 500"),
+    ("a[7,440]", "no spectrum called 7"),
+    ("a[1.5,440]", "not a whole number"),
+    ("a[0,m500]", "has no column m500"),
+    ("a[0,x440]", "bad spectrum column x440"),
+    ("a[0]", "need a name and a wavelength or column"),
+    ("a[0,440,s440]", "third index can only be used with column names"),
+])
+def test_spectra_indexing_errors(expr, message):
+    """Unknown spectra, wavelengths and columns are errors rather than NA strings"""
+    from pcot.expressions import ExpressionEvaluator
+    with pytest.raises(Exception, match=message):
+        ExpressionEvaluator().run(expr, {"a": make_indexable_spectra()})

@@ -262,7 +262,7 @@ def test_multiple_text_output_append_shorthand_from_file_jinja(globaldatadir):
 
 
 def test_spectrum(globaldatadir):
-    """Test a spectrum (just Datum.TABLE) is output correctly, and that we can add a point
+    """Test a spectrum (Datum.SPECTRA, written as CSV) is output correctly, and that we can add a point
     in the parameter file."""
 
     pcot.setup()
@@ -287,18 +287,18 @@ def test_spectrum(globaldatadir):
               data_for_template={"out": out, "globaldatadir": globaldatadir})
         txt = open(out).read().strip() # remove trailing newline
         assert txt == inspect.cleandoc("""
-        name,m640,s640,p640,m540,s540,p540,m440,s440,p440
-        0,0.64584,0.074259,29,0.42077,0.059979,29,0.23643,0.033949,29
-        1,0.79805,0.050374,29,0.5183,0.056277,29,0.31383,0.058334,29
-        2,0.68998,0.08074,29,0.43359,0.061242,29,0.25298,0.040795,29
-        3,0.72292,0.051378,29,0.44966,0.04938,29,0.24049,0.044064,29
-        4,0.7445,0.066349,29,0.48617,0.053827,29,0.28073,0.044938,29
-        fish,0.65038,0.10801,2821,0.41504,0.086674,2821,0.23329,0.067911,2821
+        name,m440,s440,p440,m540,s540,p540,m640,s640,p640
+        0,0.23643,0.033949,29,0.42077,0.059979,29,0.64584,0.074259,29
+        1,0.31383,0.058334,29,0.5183,0.056277,29,0.79805,0.050374,29
+        2,0.25298,0.040795,29,0.43359,0.061242,29,0.68998,0.08074,29
+        3,0.24049,0.044064,29,0.44966,0.04938,29,0.72292,0.051378,29
+        4,0.28073,0.044938,29,0.48617,0.053827,29,0.7445,0.066349,29
+        fish,0.23329,0.067911,2821,0.41504,0.086674,2821,0.65038,0.10801,2821
         """)
 
 
 def test_add_circle_to_multidot_using_list(globaldatadir):
-    """Test a spectrum (just Datum.TABLE) is output correctly, and that we can add a point
+    """Test a spectrum (Datum.SPECTRA, written as CSV) is output correctly, and that we can add a point
     in the parameter file using a list format for the .croi (circular ROI)"""
     pcot.setup()
     r = Runner(globaldatadir / "runner/test2.pcot")
@@ -323,13 +323,13 @@ def test_add_circle_to_multidot_using_list(globaldatadir):
               data_for_template={"out": out, "globaldatadir": globaldatadir})
         txt = open(out).read().strip() # remove trailing newline
         assert txt == inspect.cleandoc("""
-        name,m640,s640,p640,m540,s540,p540,m440,s440,p440
-        0,0.64584,0.074259,29,0.42077,0.059979,29,0.23643,0.033949,29
-        1,0.79805,0.050374,29,0.5183,0.056277,29,0.31383,0.058334,29
-        2,0.68998,0.08074,29,0.43359,0.061242,29,0.25298,0.040795,29
-        3,0.72292,0.051378,29,0.44966,0.04938,29,0.24049,0.044064,29
-        4,0.7445,0.066349,29,0.48617,0.053827,29,0.28073,0.044938,29
-        fish,0.57056,0.16577,49,0.37397,0.12172,49,0.23904,0.087885,49
+        name,m440,s440,p440,m540,s540,p540,m640,s640,p640
+        0,0.23643,0.033949,29,0.42077,0.059979,29,0.64584,0.074259,29
+        1,0.31383,0.058334,29,0.5183,0.056277,29,0.79805,0.050374,29
+        2,0.25298,0.040795,29,0.43359,0.061242,29,0.68998,0.08074,29
+        3,0.24049,0.044064,29,0.44966,0.04938,29,0.72292,0.051378,29
+        4,0.28073,0.044938,29,0.48617,0.053827,29,0.7445,0.066349,29
+        fish,0.23904,0.087885,49,0.37397,0.12172,49,0.57056,0.16577,49
         """)
 
 

@@ -60,11 +60,25 @@ please report any problems with copying and pasting nodes.
 * Splitter bars (such as the one between the image and the spectrum view in the canvas, when the spectrum is shown) now have a solid
 grip in the middle, to make it clearer that they can be dragged.
 * The *sink* node's tab has a new *Save...* button, which saves the data it shows to a file: as a
-PARC file for images, numbers and ROIs, or as a CSV file for tables (the same CSV that `pcotbatch`
-writes). Non-image data is saved to a new default location, `saveddata` in the configuration. ROIs
+PARC file for images, numbers, ROIs and spectra, or as a CSV file for tables and spectra (the same CSV
+that `pcotbatch` writes). Non-image data is saved to a new default location, `saveddata` in the configuration. ROIs
 saved in PARC files can now be loaded again - previously this failed.
 * Fixed two bugs with PARC files: saving an image as PARC from the image canvas always failed, and
 undo or redo in a document with a PARC input failed with an error.
+* The *spectrum* node now outputs a new `spectra` type instead of a table. Spectra keep each
+value's uncertainty and DQ, and can be saved in PARC files. **This changes the output of existing
+documents:** rows are now sorted by ROI name (with numbers in numerical order, so "2" comes before
+"10"), and columns by ascending wavelength. Previously they followed the order of the inputs and
+bands. Graphs which connect the spectrum node to something expecting a table may need changing.
+* Spectra can be indexed in expressions by ROI name and wavelength: `a[0,440]` gives the value at
+440nm for ROI "0", with its uncertainty and DQ. The old table-style indexing, such as
+`a[0,m440,s440]`, still works. Unknown ROIs, wavelengths and columns are now errors, rather than
+giving "NA" and failing later.
+* Tables and spectra are shown as tables (in rows and columns) in the sink node and other views of
+data, rather than as CSV text.
+* Numbers in tables are now given to the number of significant figures set in the configuration
+(`sigfigs`), as they are elsewhere in PCOT. Previously they were rounded to five decimal places, so
+very small values were written as 0. Large values keep all the digits before the decimal point.
 
 Site
 

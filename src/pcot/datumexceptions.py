@@ -17,6 +17,12 @@ class CannotSerialiseDatumType(DatumException):
         super().__init__(f"Datum type {typename} is not yet serialisable")
 
 
+class CannotProvideTable(DatumException):
+    """thrown when we try get a table from something that can't"""
+    def __init__(self, typename):
+        super().__init__(f"Datum type {typename} cannot provide tabular data")
+
+
 class UnknownDatumTypeException(DatumException):
     """thrown when we try to process an unknown datum type by name."""
     def __init__(self, typename):

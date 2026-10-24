@@ -174,6 +174,8 @@ class Datum(SourcesObtainable):
         TABLE := pcot.datumtypes.TabularDataType().setOKForConnectors(),
         # test results - this is a list of failing tests, or an empty list for all passed.
         TESTRESULT := pcot.datumtypes.TestResultType().setOKForConnectors(),
+        # spectral data
+        SPECTRA := pcot.datumtypes.SpectraDataType().setOKForConnectors(),
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
         IDENT := pcot.datumtypes.IdentType(),

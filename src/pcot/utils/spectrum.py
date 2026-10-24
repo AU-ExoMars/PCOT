@@ -3,21 +3,18 @@ Extract spectra from ImageCube objects
 """
 from __future__ import annotations
 
-import dataclasses
-from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, List, Iterator
+from typing import Dict, Optional, Tuple, List
 
 import numpy as np
 
 from pcot.dq import BAD
 from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.rois import ROI
 from pcot.sources import SourceSet, SourcesObtainable
 from pcot.utils.maths import pooled_sd
-from pcot.utils.table import Table, printable
-from pcot.utils.tabular_provider import TabularProvider, TabularIterator
+from pcot.utils.spectrumdata import SpectrumValue
+from pcot.utils.table import Table
 from pcot.value import Value
 from pcot.xform import XFormException
 
@@ -71,29 +68,6 @@ def getMeanValue(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
     # return the mean, SD, and a zero value for the DQ (because there were good pixels)
     return mean, std, 0
 
-
-class SpectrumValue:
-    """The output of the get methods in Spectrum - a single value and the number of pixels from which
-    it was obtained. It can return JSON-serialisable data and be deserialised from such data."""
-    v: Value
-    pixels: int  # the number of pixels from which the value was obtained
-
-    def __init__(self, v: Value, pixels: int):
-        self.v = v
-        # and this is why this isn't a dataclass. What gets passed in is typically
-        # an int32, which isn't JSON-serialisable.
-        self.pixels = int(pixels)
-
-    def as_tuple(self):
-        return dataclasses.astuple(self)
-
-    def serialise(self):
-        return [self.v.serialise(), self.pixels]
-
-    @staticmethod
-    def deserialise(d):
-        serv, serp = d
-        return SpectrumValue(Value.deserialise(serv), serp)
 
 
 
@@ -406,174 +380,3 @@ class SpectrumSet(dict, SourcesObtainable):
                 # replace the cube with a new one containing only the combined ROI
                 images[name] = img.shallowCopy()
                 images[name].rois = rois
-
-
-class SpectrumSetData:
-    """
-    This is a simplified version of a SpectrumSet which is used as a Datum object, and can be
-    serialised. It doesn't carry the full filter data. Nor does it carry source data, because
-    that's held in the containing Datum.
-
-    Technically you could reconstruct a SpectrumSet from this (and sources), but I doubt it's needed.
-    """
-    class _Spectrum:
-        """Internal class for storing the data for a single spectrum."""
-        # Each filter's wavelength and fwhm (or bandwidth - might not actually be gaussian)
-        filters: Dict[str, Tuple[float,float]]
-        # For each filter, a spectrum value
-        spectrum: Dict[str, SpectrumValue]
-        # each wavelength's filter - useful in the iterator
-        filter_names_by_wavelength: Dict[float, str]
-
-        def __init__(self, filters: Dict[str, Tuple[float,float]], spectrum: Dict[str, SpectrumValue]):
-            self.filters = filters
-            self.spectrum = spectrum
-            self.filter_names_by_wavelength = {v[0]: k for k, v in filters.items()}
-
-        def serialise(self):
-            return {
-                # will convert tuples to lists
-                "filters": self.filters,
-                "spectrum": {k: v.serialise() for k,v in self.spectrum.items()},
-            }
-        @staticmethod
-        def deserialise(data):
-            # convert JSON lists to tuples
-            f = {k: tuple(v) for k, v in data["filters"].items()}
-            return SpectrumSetData._Spectrum(f, {k: SpectrumValue.deserialise(v) for k, v in data["spectrum"].items()})
-
-    spectra: Dict[str, _Spectrum]
-
-    def __init__(self, spectra: Dict[str, _Spectrum]):
-        """Internal use only; we either deserialise or build from a SpectrumSet"""
-        self.spectra = spectra
-
-    @staticmethod
-    def fromSpectrumSet(ss: SpectrumSet):
-        """Construct from a SpectrumSet"""
-        spectra = {}
-        # SpectrumSet is a dict, so we can do this.
-        # k will be the ROI name (or image+ROI name). spectrum will be a Spectrum object.
-        for roiname,spectrum in ss.items():
-            filters = {}
-            values = {}
-            for filter,spectrumvalue in spectrum.data.items():
-                filters[filter.name] = (filter.cwl, filter.fwhm)
-                values[filter.name] = spectrumvalue
-            spectra[roiname] = SpectrumSetData._Spectrum(filters, values)
-
-        return SpectrumSetData(spectra)
-
-    def serialise(self):
-        return {
-            'spectra': {k: v.serialise() for k,v in self.spectra.items()},
-        }
-
-    @staticmethod
-    def deserialise(data):
-        spectra = {k: SpectrumSetData._Spectrum.deserialise(v) for k,v in data["spectra"].items()}
-        return SpectrumSetData(spectra)
-
-    #
-    # Provider of a tabular view of this data
-    #
-
-    class Provider(TabularProvider):
-        spectra: Dict[str, SpectrumSetData._Spectrum]
-        wavelengths: List[float]
-
-        def __init__(self, ssd: SpectrumSetData):
-            self.spectra = ssd.spectra
-            # find all wavelengths in all spectra
-            wavelengths = set()
-            for roiname, spectrum in self.spectra.items():
-                # filter_names_by_wavelength can only hold one filter per wavelength, so if
-                # two filters share a wavelength we'd silently lose one of them.
-                if len(spectrum.filter_names_by_wavelength) != len(spectrum.filters):
-                    raise ValueError(f"Spectrum {roiname} has more than one filter at the same wavelength")
-                for filter in spectrum.filters.values():
-                    wavelengths.add(filter[0]) # add wavelength as float
-            # store the wavelengths as a sorted list
-            self.wavelengths = sorted(list(wavelengths))
-
-        @staticmethod
-        def colname(prefix: str, w: float) -> str:
-            """Column name for a wavelength; 440.0 gives "440" but 438.5 stays as "438.5"."""
-            return f"{prefix}{w:g}"
-
-        def getHeaders(self) -> List[str]:
-            # Header will be "ROI,mwavelength,swavelength,pwavelength...."
-            # for all wavelengths in all spectra.
-            cols = []
-            for w in self.wavelengths:
-                # m, s, p prefix for each wavelength
-                cols.extend([self.colname(p, w) for p in "msp"])
-            return ["name"] + cols
-
-        def __iter__(self) -> TabularIterator:
-            return SpectrumSetData.Provider.RowIterator(self)
-
-        def getParams(self) -> Optional[TaggedDict]:
-            return None  # not parameterisable yet - TODO
-
-
-
-        class RowIterator(TabularIterator):
-            """Iterator object for this tabular provider, generating row
-            data for the table."""
-            provider: SpectrumSetData.Provider
-            iter: Iterator[str]
-
-            def __init__(self, provider: SpectrumSetData.Provider):
-                self.provider = provider
-                # so we can errorcheck as we write the output dict
-                self.headers = set(self.provider.getHeaders())
-                # we iterate over a sorted list of the spectra keys (ROI names)
-                self.iter = iter(sorted(list(provider.spectra.keys())))
-
-            def __next__(self) -> Dict[str, str]:
-                # this will throw a StopIteration when it runs out
-                roiname = next(self.iter)
-                # get spectrum for the next ROI
-                spectrum = self.provider.spectra[roiname]
-                # this is the output dict, which will have an entry for each
-                # thing in the header
-                out = {}
-                def write(prefix, w, v):
-                    # write to the output dict, making sure the header exists
-                    k = SpectrumSetData.Provider.colname(prefix, w)
-                    if k not in self.headers:
-                        raise KeyError(f"Unknown header {k} being written to row")
-                    out[k] = v
-                if "name" not in self.headers:
-                    raise KeyError("Unknown header name being written to row")
-                out["name"] = roiname
-
-                # each spectrum is completely different, so there could be weird stuff going on -
-                # for example, spectrum A could have a different filter for wavelength X than spectrum B.
-                # That's permitted, and it's why I don't try to collate the filter data (e.g. produce a
-                # dict of wavelength to filter name) in the constructor.
-
-                # for each wavelength we know about
-                for w in self.provider.wavelengths:
-                    # get the appropriate filter name from this spectrum, which might not have
-                    # a filter at this wavelength at all
-                    fname = spectrum.filter_names_by_wavelength.get(w)
-                    # look up the data
-                    v: Optional[SpectrumValue] = spectrum.spectrum.get(fname) if fname is not None else None
-                    # write it to the output dict if there, otherwise write NA
-                    if v is None:
-                        write("m", w, "NA")
-                        write("s", w, "NA")
-                        write("p", w, "0")
-                    else:
-                        write("m", w, printable(v.v.n))
-                        write("s", w, printable(v.v.u))
-                        write("p", w, str(v.pixels)) # it's just an int
-                return out
-
-    def tabularProvider(self):
-        """Return a tabular provider object for this spectrum set"""
-        return SpectrumSetData.Provider(self)
-
-

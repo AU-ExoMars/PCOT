@@ -1,12 +1,15 @@
-import csv
-import io
+from __future__ import annotations
+
 from collections import OrderedDict
+from typing import List, Dict, Optional
 
 import numpy as np
 
 import pcot.config
 
+from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.utils.html import HTML
+from pcot.utils.tabular_provider import TabularProvider, TabularIterator
 
 
 
@@ -130,18 +133,38 @@ class Table:
     def __iter__(self):
         return TableIter(self)
 
-    def _printable(self, v):
-        return printable(v)
-
     def __str__(self):
-        """Convert entire table to a string"""
-        s = io.StringIO()
-        w = csv.writer(s,lineterminator='\n')
-        w.writerow(self._keys)  # headers
-        for r in self:
-            r = [self._printable(v) for v in r]
-            w.writerow(r)  # each row
-        return s.getvalue()
+        """Convert entire table to a CSV string"""
+        return self.tabularProvider().csvString()
+
+    class Provider(TabularProvider):
+        """Tabular view of a Table, with every cell converted to its printable string"""
+        table: Table
+
+        def __init__(self, table: Table):
+            self.table = table
+
+        def getHeaders(self) -> List[str]:
+            return [str(k) for k in self.table.keys()]
+
+        def getParams(self) -> Optional[TaggedDict]:
+            return None
+
+        def __iter__(self) -> TabularIterator:
+            return Table.Provider.RowIterator(self.table)
+
+        class RowIterator(TabularIterator):
+            def __init__(self, table: Table):
+                self.headers = [str(k) for k in table.keys()]
+                # TableIter fills in missing cells with the table's NA item
+                self.iter = iter(table)
+
+            def __next__(self) -> Dict[str, str]:
+                return dict(zip(self.headers, [printable(v) for v in next(self.iter)]))
+
+    def tabularProvider(self):
+        """Return a tabular provider object for this table"""
+        return Table.Provider(self)
 
     def htmlObj(self):
         """convert to html object"""
@@ -152,7 +175,7 @@ class Table:
         # now the rows
         rows = []
         for r in self:
-            r = [self._printable(v) for v in r]
+            r = [printable(v) for v in r]
             rows.append(HTML("tr", [HTML("td", x) for x in r]))
         return HTML("table", headerRow, rows)
 
@@ -165,14 +188,14 @@ class Table:
         out = "|" + ("|".join(self._keys)) + "|\n"
         out += "|" + ("|".join(["-----" for _ in self._keys])) + "|\n"
         for r in self:
-            r = [self._printable(v) for v in r]
+            r = [printable(v) for v in r]
             out += "|" + ("|".join(str(x) for x in r)) + "|\n"
         return out
     def text(self,titletext=None):
         """output as columns of text, each wide enough for its widest item"""
         # convert every value to its printable string form up front, so widths and
         # justification both work on strings rather than raw ints/floats/np.float32
-        strRows = [[str(self._printable(v)) for v in r] for r in self]
+        strRows = [[printable(v) for v in r] for r in self]
 
         # calculate column content widths
         colwidths = { k: len(k) for k in self._keys }

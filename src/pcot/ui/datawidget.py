@@ -1,7 +1,9 @@
 """
-Data widget that shows either a text view or a canvas view of the data.
+Data widget that shows a text view, a canvas view or a table view of the data.
 """
 import os
+from pathlib import Path
+from typing import Optional
 
 from PySide6 import QtWidgets
 
@@ -10,13 +12,30 @@ from pcot import ui
 from pcot.datum import Datum
 from pcot.datumexceptions import CannotSerialiseDatumType
 from pcot.ui.canvas import Canvas
+from pcot.ui.tabulardatawidget import TabularDataWidget
 from pcot.utils import SignalBlocker
 from pcot.utils.text import generateIndenting
 
 
 class DataWidget(QtWidgets.QWidget):
-    DATA = 0
-    SOURCES = 1
+    # these are the types of the main display - we're viewing either data in different ways or sources
+    DISP_IMAGE = 0
+    DISP_TABLE = 1
+    DISP_TEXT = 2
+    DISP_SOURCES = 10
+    
+    dispType: int   # DISP_ value
+
+    displayingSources: bool     # true if we're displaying sources
+
+    # widgets
+    typeEdit: QtWidgets.QLineEdit
+    dispTypeCombo: QtWidgets.QComboBox
+    saveButton: Optional[QtWidgets.QPushButton]
+    canvas: Canvas
+    text: QtWidgets.QTextEdit
+    table: TabularDataWidget
+    
 
     def __init__(self, parent, source_section=False, save_button=None):
         """source_section shows the type and data/sources controls; save_button adds a "Save..." button
@@ -61,12 +80,23 @@ class DataWidget(QtWidgets.QWidget):
 
         self.canvas = Canvas(self)
         self.text = QtWidgets.QTextEdit(self)
+        self.text.setReadOnly(True)
+        self.table = TabularDataWidget(self)
+
         outer.addWidget(self.canvas)
         outer.addWidget(self.text)
-        self.text.setVisible(False) # either the canvas or text will become visible..
+        outer.addWidget(self.table)
 
-        self.dispType = self.DATA
+        self.displayingSources = False
+        self.setDispType(self.DISP_TEXT)  # default value
         self.datum = None
+
+    def setDispType(self, subtype:int):
+        self.dispType = subtype
+        self.canvas.setVisible(self.dispType == self.DISP_IMAGE)
+        self.text.setVisible(self.dispType == self.DISP_TEXT or self.dispType == self.DISP_SOURCES)
+        self.table.setVisible(self.dispType == self.DISP_TABLE)
+
 
     # file formats data can be saved in: name filter -> extension
     PARC_FILTER = "PARC files (*.parc)"
@@ -79,7 +109,7 @@ class DataWidget(QtWidgets.QWidget):
         if d is None or d.isNone():
             return []
         filters = []
-        if d.tp == Datum.TABLE:
+        if d.tp.canProvideTable():
             filters.append(self.CSV_FILTER)
         if d.tp.canSerialise():
             filters.append(self.PARC_FILTER)
@@ -118,8 +148,7 @@ class DataWidget(QtWidgets.QWidget):
 
         try:
             if ext == "csv":
-                with open(path, "w", newline="") as f:
-                    f.write(str(self.datum.val))  # the same CSV that batch outputs write for tables
+                self.datum.tp.writeCSV(Path(path), self.datum)
             else:
                 desc, ok = QtWidgets.QInputDialog.getText(self, "Description",
                                                           "Enter text description (optional):",
@@ -138,7 +167,7 @@ class DataWidget(QtWidgets.QWidget):
         ui.log(f"Saved as {path}")
 
     def dispTypeChanged(self, i):
-        self.dispType = i
+        self.displayingSources = i==1
         self.refresh()
 
     def display(self, d):
@@ -148,23 +177,30 @@ class DataWidget(QtWidgets.QWidget):
     def refresh(self):
         d = self.datum
         if self.datum is None:
+            # really this shouldn't happen; callers should provide Datum.null
             self.text.setText("No data present")
             self.typeEdit.setText("unconnected")
-            canvVis = False
+            self.setDispType(self.DISP_TEXT)
         else:
             self.typeEdit.setText(str(d.tp))
-            if self.dispType == self.SOURCES:
+            if self.displayingSources:
+                self.setDispType(self.DISP_SOURCES)
                 self.text.setText(generateIndenting(d.sources.long()))
-                canvVis = False
             elif d.isImage():
+                self.setDispType(self.DISP_IMAGE)
                 self.canvas.display(d.val)
-                canvVis = True
+            elif d.tp.canProvideTable() and not d.isNone():
+                try:
+                    self.table.display(d.tp.getTabularProvider(d))
+                    self.setDispType(self.DISP_TABLE)
+                except Exception as e:
+                    # e.g. data the provider can't lay out as a table; show why rather than a stale table
+                    self.table.display(None)
+                    self.setDispType(self.DISP_TEXT)
+                    self.text.setText(f"Cannot show as a table: {e}")
             else:
+                self.setDispType(self.DISP_TEXT)
                 self.text.setText(str(d.val))
-                canvVis = False
-
-        self.canvas.setVisible(canvVis)
-        self.text.setVisible(not canvVis)
 
         if self.saveButton is not None:
             canSave = len(self.saveFilters()) > 0
@@ -175,4 +211,4 @@ class DataWidget(QtWidgets.QWidget):
                 self.saveButton.setToolTip("")
 
         with SignalBlocker(self.dispTypeCombo):
-            self.dispTypeCombo.setCurrentIndex(self.dispType)
+            self.dispTypeCombo.setCurrentIndex(1 if self.displayingSources else 0)
