@@ -4,9 +4,11 @@ Configuration data system, also handles hooks for plugins
 import getpass
 import logging
 import os
+import tempfile
+from abc import abstractmethod, ABC
 from collections import deque
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Any
 
 import yaml
 from PySide6 import QtWidgets
@@ -23,6 +25,7 @@ CONFIG_PATH = Path('~/pcot_config.yaml').expanduser()
 # the recent files list; that's handled by storing it as a separate part
 # of the YAML file. The main config is saved under the "configuration" section
 # of the YAML.
+
 
 CONFIG_DICT_TYPE = TaggedDictType(
     loadfile=("File to load by default at startup, or empty",Maybe(Path),None, "*.pcot"),
@@ -97,47 +100,146 @@ class Recents:
 
 _recents:Optional[Recents] = None
 
+class ConfigSectionHandler(ABC):
+    def __init__(self,section_name):
+        """Initialise this config section handler with the name
+        of the top-level YAML entity that it should process."""
+        self.secname = section_name
+        super().__init__()
+
+    @abstractmethod
+    def load(self, config_section):
+        """takes a configuration section (or possibly other value) returned
+        by indexing on the name # in the config file."""
+    @abstractmethod
+    def save(self) -> Any:
+        """Serialises config data (typically a TaggedDict) into a JSON-serialisable
+        structure and returns it"""
+    def create(self):
+        """creates new data associated with this config section; called instead
+        of load() when the section isn't in the config file"""
+
+# This is a list of config sections
+_config_sections = []
+
+# The entire YAML as loaded, including sections with no registered handler (e.g. from
+# plugins which haven't registered yet, or have been removed). Kept so that save()
+# doesn't drop those sections.
+_raw_config = {}
+
+# set once load_config() has run, so that sections registered later (e.g. by plugins,
+# which are loaded after the config) get initialised on registration.
+_config_loaded = False
+
+
+def _initSection(section: ConfigSectionHandler):
+    """Load a section from the raw config data, or create it if it isn't there"""
+    if section.secname in _raw_config:
+        section.load(_raw_config[section.secname])
+    else:
+        section.create()
+
+
+def addConfigSection(section:ConfigSectionHandler):
+    """Add a section to the config. If the config has already been loaded, the
+    section is initialised immediately."""
+    assert isinstance(section, ConfigSectionHandler), "Argument must be a ConfigSectionHandler"
+    _config_sections.append(section)
+    if _config_loaded:
+        _initSection(section)
+
+
+class MainConfigHandler(ConfigSectionHandler):
+    """This config section handler deals with most of the config
+    options, deserialising them into "data" in this module. This
+    data lives in the "configuration" section of the config file."""
+
+    def __init__(self):
+        super().__init__("configuration")
+
+    def load(self, conf):
+        global data
+        # legacy data has dodgy patterns
+        if 'defaultbayerpattern' in conf and conf['defaultbayerpattern'] not in VALID_BAYER_PATTERNS:
+            conf['defaultbayerpattern'] = "RGGB"
+        data = CONFIG_DICT_TYPE.deserialise(conf)
+
+    def save(self):
+        # serialise as a full dict so we can edit it!
+        return data.serialise(forceUnordered=True)
+
+    def create(self):
+        """Creates the main config section's data"""
+        global data
+        data = CONFIG_DICT_TYPE.create()
+
+
+class RecentsConfigHandler(ConfigSectionHandler):
+    """This handles the recent files list, which is stored as
+    "recents" at the top level of the config file."""
+
+    def __init__(self):
+        super().__init__("recents")
+
+    def load(self, conf):
+        global _recents
+        _recents = Recents(5)
+        _recents.deserialise(conf)
+
+    def save(self):
+        return _recents.serialise()
+
+    def create(self):
+        global _recents
+        _recents = Recents(5)
+
+# Add the core config section handlers
+addConfigSection(MainConfigHandler())
+addConfigSection(RecentsConfigHandler())
+
 def getRecents():
     if _recents is None:
         raise Exception("Configuration not yet loaded")
     return _recents.paths
 
 def load_config():
-    """Read the configuration data into the TaggedDict and recents list"""
-    global _recents
-    global data
-    _recents = Recents(5)
+    """Read the configuration data from the YAML file, passing each section to its
+    handler. Sections missing from the file (or the whole file being missing) cause
+    the handler to create default data."""
+    global _raw_config, _config_loaded
 
-    # create a new config dict with the defaults (some of which will
-    # be None and need to be set here)
-    # load if it is present, otherwise just create a new one
+    _raw_config = {}
     if CONFIG_PATH.is_file():
         with open(CONFIG_PATH, 'r') as f:
             # get the serialized YAML data
-            s = yaml.load(f, Loader=yaml.SafeLoader)
-            conf = s['configuration']
-            # legacy data has dodgy patterns
-            if conf['defaultbayerpattern'] not in VALID_BAYER_PATTERNS:
-                conf['defaultbayerpattern'] = "RGGB"
-            # the recent files are in a separate section from the main config
-            data = CONFIG_DICT_TYPE.deserialise(conf)
-            _recents.deserialise(s['recents'])
-    else:
-        data = CONFIG_DICT_TYPE.create()
-        # recents will be empty
+            _raw_config = yaml.load(f, Loader=yaml.SafeLoader) or {}
+    # process each handler
+    for v in _config_sections:
+        _initSection(v)
+    _config_loaded = True
 
 
 def save():
-    """Write the configuration TaggedDict and recent files data to a YAML file"""
-    with open(CONFIG_PATH, 'w') as f:
-        # serialise as a full dict so we can edit it!
-        s = data.serialise(forceUnordered=True)
-        out = {
-            'configuration': s,
-            'recents': _recents.serialise(),
-        }
-        yaml.dump(out, f, Dumper=yaml.SafeDumper)
+    """Write all config sections to the YAML file. We write to a temporary file first
+    and then replace the config file, so a failure doesn't destroy the existing file."""
+    # start with the raw data so we keep sections we have no handler for
+    out = dict(_raw_config)
+    for v in _config_sections:
+        out[v.secname] = v.save()
 
+    fd, tmp = tempfile.mkstemp(prefix=f"{CONFIG_PATH.name}.", suffix=".yaml", dir=CONFIG_PATH.parent)
+    try:
+        with os.fdopen(fd, "w") as f:
+            yaml.dump(out, f, Dumper=yaml.SafeDumper)
+        # written successfully to temp, file is closed - replace the original
+        os.replace(tmp, CONFIG_PATH)
+    except Exception as e:
+        logger.error(f"Failed to write to {CONFIG_PATH}: {e}")
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def setDefaultDir(kind, directory):
