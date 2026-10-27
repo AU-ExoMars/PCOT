@@ -236,9 +236,14 @@ class Document:
         i.get()
         return i.exception
 
-    def setInputENVI(self, inputidx, fname):
-        """set graph's input to an ENVI"""
-        return self.setInputData(inputidx, inputs.Input.ENVI, lambda method: method.setFileName(fname))
+    def setInputENVI(self, inputidx, fname, apply_gains_and_offsets: Optional[bool] = None):
+        """set graph's input to an ENVI. If apply_gains_and_offsets is None the input's existing
+        setting is kept (False for a new document)."""
+        def f(method):
+            method.setFileName(fname)
+            if apply_gains_and_offsets is not None:
+                method.apply_gains_and_offsets = apply_gains_and_offsets
+        return self.setInputData(inputidx, inputs.Input.ENVI, f)
 
     def setInputPARC(self, inputidx, fname, itemname='main'):
         """set graph's input to a PARC"""
@@ -276,10 +281,12 @@ class Document:
     def getNodeByName(self, name):
         """get a node by its DISPLAY name, not its internal UUID. Raises a NameError if not found."""
         # this is a little ugly, but it's plenty quick enough and avoids problems
-        for x in self.graph.nodes:
-            if name == x.displayName:
-                return x
-        raise NameError(name)
+        xs = [n for n in self.graph.nodes if n.displayName == name]
+        if len(xs) == 0:
+            raise NameError("Node {} not found".format(name))
+        if len(xs) > 1:
+            raise NameError("Node {} found multiple times".format(name))
+        return xs[0]
 
     def mark(self):
         """We are about to perform a change, so mark an undo/redo point"""

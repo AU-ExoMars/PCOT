@@ -20,6 +20,16 @@ class XFormPainted(XFormROIType):
     be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROI on the 'ann' RGB input,
     or the input image converted to RGB if that input is not connected.
+
+    ## Scripting
+
+    In a Python script it's easiest to edit the ROI directly: it is `node.roi` (an `ROIPainted`). To set
+    it from a boolean mask array, use `node.roi = ROIPainted(mask=m)` and then set its position with
+    `node.roi.bbrect = Rect(x, y, w, h)`, where w and h are the mask's width and height. Its label, colour
+    etc. are attributes like `node.roi.label` and `node.roi.colour` (an (r,g,b) tuple, 0-1).
+    `node.params` is only a copy used for saving and parameter files: if you edit it instead, call
+    `doc.graph.nodeDataFromParams()` before running the document. That rebuilds all nodes which work this way
+    from its params, so make any direct edits after calling it.
     """
 
     def __init__(self):

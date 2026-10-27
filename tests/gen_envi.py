@@ -23,7 +23,7 @@ def _genheader(f, w: int, h: int, freqs: List[float]):
     fwhm = 25
     s = ", ".join([f"{fwhm:0.6f}" for f in freqs])
     f.write(f"fwhm = {{\n {s}}}\n")
-    f.write("wavelength units = nm\ndata ignore value = 241.000000\n")
+    f.write("wavelength units = nm\n")
     f.write("default stretch = 0.000000000000e+000 1.000000000000e+000 linear\n")
     g = 1.0
     s = ", ".join([f"{g:.4e}" for f in freqs])
@@ -55,3 +55,28 @@ def gen_envi(name: str, freqs: List[float], img: np.ndarray):
             assert b.shape == img.shape[:2]
             data = b.reshape(w * h).astype(np.float32)
             f.write(data)
+
+
+def gen_envi_raw(name, img: np.ndarray, dtype=np.float32, interleave="bsq", byteorder=0, header_offset=0,
+                 extra: str = ""):
+    """Write an ENVI file with a minimal header, for testing the different formats. The image is
+    a (h,w,bands) array which is converted to dtype and written with the given interleave, byte
+    order (0=little, 1=big) and number of junk bytes before the data. Extra is added to the header."""
+    h, w, bands = img.shape
+    codes = {np.uint8: 1, np.int16: 2, np.int32: 3, np.float32: 4, np.float64: 5,
+             np.uint16: 12, np.uint32: 13, np.int64: 14, np.uint64: 15}
+    with open(f"{name}.hdr", "w") as f:
+        f.write(f"ENVI\nsamples = {w}\nlines = {h}\nbands = {bands}\ndata type = {codes[dtype]}\n")
+        f.write(f"interleave = {interleave}\nbyte order = {byteorder}\nheader offset = {header_offset}\n")
+        f.write(extra)
+
+    if interleave == "bsq":
+        data = img.transpose(2, 0, 1)
+    elif interleave == "bil":
+        data = img.transpose(0, 2, 1)
+    else:
+        data = img
+    data = np.ascontiguousarray(data).astype(np.dtype(dtype).newbyteorder('<' if byteorder == 0 else '>'))
+    with open(f"{name}.dat", "wb") as f:
+        f.write(b"\xff" * header_offset)
+        f.write(data.tobytes())

@@ -68,18 +68,20 @@ def rgb(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None,
     return Datum(Datum.IMG, img)
 
 
-def envi(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None) -> Datum:
+def envi(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None, apply_gains_and_offsets = False) -> Datum:
     """Load an imagecube from an ENVI file
 
     - fname: the name of the .hdr (header) file - the .dat (data) file must be in the same directory
       and have the same name (except for the extension)
     - inpidx: the input index to use or None if not connected to a graph input
     - mapping: the channel mapping to use or None if the default
+    - apply_gains_and_offsets: apply the header's data gain and offset values to the pixels
+      (they are stored as ancillary data either way)
     """
 
     from pcot.dataformats.envi import load
 
-    h, img = load(fname)
+    h, img, dqdata = load(fname, apply_gains_and_offsets)
 
     # construct the source data
     e = StringExternal("ENVI", f"ENVI:{str(fname)}")
@@ -88,20 +90,20 @@ def envi(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None) ->
     if mapping is None:
         mapping = ChannelMapping()
 
-    # prepare ancillary data for each band
+    # prepare ancillary data for each band (the header has checked the lists are the right length)
     ancillary_data = [{} for _ in range(h.bands)]     # empty ancillary dict for each band
-    if h.exposureTimes is not None:
-        if len(h.exposureTimes) != h.bands:
-            raise ValueError("Number of exposure times does not match number of bands")
-        for i in range(h.bands):
-            ancillary_data[i][keys.EXPOSURE.name] = h.exposureTimes[i]
+    for key, lst in ((keys.EXPOSURE, h.exposureTimes), (keys.GAIN, h.gains), (keys.OFFSET, h.offsets)):
+        if lst is not None:
+            for i in range(h.bands):
+                ancillary_data[i][key.name] = lst[i]
+
     ancillary = BandAncillary(ancillary_data)
 
     if h.defaultBands is not None:
         mapping.set(*h.defaultBands)
-        img = ImageCube(img, mapping, sources, defaultMapping=mapping.copy(),ancillary=ancillary)
+        img = ImageCube(img, mapping, sources, defaultMapping=mapping.copy(), ancillary=ancillary, dq=dqdata)
     else:
-        img = ImageCube(img, mapping, sources,ancillary=ancillary)
+        img = ImageCube(img, mapping, sources, ancillary=ancillary, dq=dqdata)
 
     return Datum(Datum.IMG, img)
 

@@ -20,6 +20,14 @@ class XformRect(XFormROIType):
     be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROI on the 'ann' RGB input, or the input
     image converted to RGB if that input is not connected.
+
+    ## Scripting
+
+    In a Python script it's easiest to edit the ROI directly: it is `node.roi` (an `ROIRect`), so use
+    e.g. `node.roi.set(x, y, w, h)`. Its label, colour etc. are attributes like `node.roi.label` and
+    `node.roi.colour` (an (r,g,b) tuple, 0-1). `node.params` is only a copy used for saving and parameter
+    files: if you edit it instead, call `doc.graph.nodeDataFromParams()` before running the document. That
+    rebuilds all nodes which work this way from its params, so make any direct edits after calling it.
     """
 
     def __init__(self):

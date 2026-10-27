@@ -17,7 +17,7 @@
    <item row="0" column="0">
     <widget class="QSplitter" name="splitter">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <widget class="QWidget" name="treePanel" native="true">
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -28,6 +28,13 @@
         <widget class="QPushButton" name="selDirButton">
          <property name="text">
           <string>Select Directory</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="gainsBox">
+         <property name="text">
+          <string>Apply gains and offsets from file</string>
          </property>
         </widget>
        </item>
