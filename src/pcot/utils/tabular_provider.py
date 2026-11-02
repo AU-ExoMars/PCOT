@@ -1,6 +1,6 @@
 """
 Abstract data class for tabular data providers. These convert certain data
-(e.g. SpectrumSetData) into tabular data which can be shown in a TabularDataWidget.
+(e.g. SpectrumSet) into tabular data which can be shown in a TabularDataWidget.
 """
 import csv
 import io

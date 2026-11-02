@@ -33,7 +33,7 @@ def test_direct_load_envi(envi_image_1):
     img.rois.append(ROICircle(8, 8, 4, label="b"))
 
     # generate a spectrum set and convert the results to a CSV table
-    ss = SpectrumSet({"in": img}).table().html()
+    ss = SpectrumSet.fromImages({"in": img}).table().html()
     # print
     print(ss)
 
@@ -60,7 +60,7 @@ def test_direct_load_rgb(globaldatadir):
     img.rois.append(ROICircle(8, 8, 4, label="b"))
 
     with pytest.raises(XFormException) as info:
-        ss = SpectrumSet({"in": img}).table().html()
+        ss = SpectrumSet.fromImages({"in": img}).table().html()
     assert "no single-wavelength channels in image" in str(info.value)
 
 

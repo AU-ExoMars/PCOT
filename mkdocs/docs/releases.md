@@ -87,6 +87,8 @@ value's uncertainty and DQ, and can be saved in PARC files. **This changes the o
 documents:** rows are now sorted by ROI name (with numbers in numerical order, so "2" comes before
 "10"), and columns by ascending wavelength. Previously they followed the order of the inputs and
 bands. Graphs which connect the spectrum node to something expecting a table may need changing.
+The spectrum node's inputs can now be spectra as well as images, so the output of one spectrum node
+can be plotted together with images or other spectra in another.
 * Spectra can be indexed in expressions by ROI name and wavelength: `a[0,440]` gives the value at
 440nm for ROI "0", with its uncertainty and DQ. The old table-style indexing, such as
 `a[0,m440,s440]`, still works. Unknown ROIs, wavelengths and columns are now errors, rather than

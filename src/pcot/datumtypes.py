@@ -340,19 +340,20 @@ class TabularDataType(Type):
 
 class SpectraDataType(Type):
     def __init__(self):
-        from pcot.utils.spectrumdata import SpectrumSetData
-        super().__init__("spectra", valid=[SpectrumSetData], connColour="#a0a000")
+        from pcot.utils.spectrumdata import SpectrumSet
+        super().__init__("spectra", valid=[SpectrumSet], connColour="#a0a000")
 
     def serialise(self,d):
         v = d.val
         return self.name, (v.serialise(), d.getSources().serialise())
 
     def deserialise(self,d):
-        from pcot.utils.spectrumdata import SpectrumSetData
+        from pcot.utils.spectrumdata import SpectrumSet
         v, s = d
-        ssd = SpectrumSetData.deserialise(v)
-        s = pcot.sources.SourceSet.deserialise(s)
-        return pcot.datum.Datum(self, ssd, s)
+        ss = SpectrumSet.deserialise(v)
+        # the sources are stored in the datum, not the spectrum set, so put them back
+        ss.sources = pcot.sources.SourceSet.deserialise(s)
+        return pcot.datum.Datum(self, ss, ss.sources)
 
     def getByIndices(self, d, args):
         return d.val.getByIndices(args, d.sources)

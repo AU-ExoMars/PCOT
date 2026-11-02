@@ -7,7 +7,7 @@ from pcot.datum import Datum
 from pcot.datumtypes import Type
 from pcot.rois import ROIRect
 from pcot.sources import SourceSet, nullSourceSet
-from pcot.utils.spectrumdata import SpectrumSetData
+from pcot.utils.spectrumdata import SpectrumSet
 from pcot.value import Value
 
 from fixtures import *
@@ -92,7 +92,7 @@ def test_datum_str_all_types():
         'func': None,
         'none': None,
         'cameradata': None,
-        'spectra': SpectrumSetData({}),
+        'spectra': SpectrumSet({}),
     }
 
     builtin_types = {v.name: v for v in vars(Datum).values() if isinstance(v, Type)}

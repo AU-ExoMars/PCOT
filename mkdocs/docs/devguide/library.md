@@ -151,8 +151,15 @@ img.rois.append(ROICircle(32,32,3))
 # construct a spectrum set from this image - this can create spectra
 # for multiple sources and combine them. Here we are just using a single
 # source - the image we are working with - and we're calling it "in."
-ss = SpectrumSet({"in": img})
+ss = SpectrumSet.fromImages({"in": img})
 
-# Generate a table from the results and print it (as a CSV table).
-print(ss.table())
+# Print the results as a CSV table.
+print(ss)
+
+# The set acts as a dictionary of spectrum names to Spectrum objects. Each
+# Spectrum has a value for each filter, which you can get by wavelength or
+# filter name.
+for name, spectrum in ss.items():
+    for f in spectrum.filters():
+        print(name, f.name, f.cwl, spectrum.get(f.cwl).v)
 ```

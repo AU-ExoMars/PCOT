@@ -1,4 +1,3 @@
-import dataclasses
 import math
 
 import matplotlib
@@ -10,56 +9,15 @@ from PySide6.QtWidgets import QDialog
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
-from pcot.cameras.filters import wav2RGB, Filter
+from pcot.cameras.filters import wav2RGB
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.ui import uiloader
 from pcot.ui import theme
 from pcot.ui.tabs import Tab
 from pcot.utils import SignalBlocker
-from pcot.utils.spectrum import SpectrumSet
-from pcot.utils.spectrumdata import SpectrumSetData
-from pcot.value import Value
-from pcot.xform import XFormType, xformtype
-
-
-def processData(legend, data, spec):
-    """
-    Process the data from a single ROI/image into the data dictionary, which contains
-
-    legend: name of ROI/image to be added.
-    data: data dictionary
-        processData's responsibility is to add to the entries in here
-            - key is ROI/image name (legend), value is a list of data.
-            - value is a list of tuples - see below - (chanidx, filter, mean, sd, label, pixct)
-    spec: a Spectrum object describing the spectrum for this ROI/image
-    """
-
-    @dataclasses.dataclass
-    class DataPoint:
-        # this is our data point object.
-        chan: int
-        filter: Filter
-        value: Value
-        pixcount: int
-
-    # build the data points
-    dp = []
-    for i in range(spec.channels):
-        p = spec.getByChannel(i)
-        if p is not None:
-            p = DataPoint(i, spec.filters[i], p.v, p.pixels)
-            dp.append(p)
-
-    # now we have a list of data points - channel, filter, value, pixcount.
-
-    # add them to the data set, which is indexed by legend (ROI or image name).
-    if legend not in data:
-        data[legend] = []  # make a new list if there isn't one
-    data[legend] += dp
-
-    # you end up with a dict of ROI/image data e.g.
-    #   "ROI/image" -> [value @ frequency, value @ frequency...]
-    # where each entry in the dict should be a line in the result.
+from pcot.utils.spectrum import spectraFromImages
+from pcot.utils.spectrumdata import SpectrumSet
+from pcot.xform import XFormType, xformtype, XFormException
 
 
 # number of inputs on the node
@@ -98,12 +56,14 @@ class XFormSpectrum(XFormType):
     Show the mean intensities for each frequency band in each region of interest (ROI) in each input.
     If an input has no ROI, the intensities of all the pixels in the input are used.
 
+    Each input can be an image or a set of spectra (for example, the output of another spectrum node).
     It's quite possible for the different inputs to be different images, to permit comparison.
 
     Each region (or input) has a separate line in
-    the resulting plot, labelled with the annotation for the ROI (or "inputN" for an input with no ROI).
-    If ROIs in different inputs have the same annotation, they are labelled as "inN:annotation" where N is
-    the input number.
+    the resulting plot, labelled with the annotation for the ROI (or "inN" for an image input with no ROI).
+    If ROIs in different images have the same annotation, they are labelled as "inN:annotation" where N is
+    the input number. Spectra from a spectra input keep their names unless another input has a spectrum
+    with the same name, in which case they are also prefixed with "inN:".
 
     Each pixel has its own variance, so the shown variance is the pooled variance of all the pixels in
     the region. This is calculated as the variance of the means, plus the mean of the variances
@@ -114,7 +74,7 @@ class XFormSpectrum(XFormType):
     If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
     are no good points, the point is not plotted for that band.
 
-    A table of the values is also produced, and this output as a table datum. The table has one row per
+    The spectra are output as a spectra datum, which can be shown as a table. The table has one row per
     ROI or input, and the columns
 
     * name - the name of the ROI or input
@@ -146,7 +106,7 @@ class XFormSpectrum(XFormType):
         )
 
         for i in range(NUMINPUTS):
-            self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
+            self.addInputConnector(str(i), Datum.ANY, "an image or a set of spectra")
         self.addOutputConnector("spectra", Datum.SPECTRA, "a set of spectra")
 
     def createTab(self, n, window):
@@ -168,17 +128,29 @@ class XFormSpectrum(XFormType):
         node.data = None
 
     def perform(self, node):
-        # first we need to create a SpectrumSet from the inputs
-        inputDict = {
-            f"in{i}": node.getInput(i, Datum.IMG) for i in range(NUMINPUTS)
-        }
-        # filter out null inputs
-        inputDict = {k: v for k, v in inputDict.items() if v is not None}
-        # and construct the SpectrumSet
-        node.data = SpectrumSet(inputDict, ignorePixSD=node.params.ignorePixSD)
+        # sort the inputs into images and spectra, ignoring null inputs
+        images = {}
+        spectra = {}
+        for i in range(NUMINPUTS):
+            d = node.getInput(i)
+            if d.isNone():
+                continue
+            if d.isImage():
+                images[f"in{i}"] = d.val
+            elif d.tp == Datum.SPECTRA:
+                spectra[f"in{i}"] = d.val
+            else:
+                raise XFormException('TYPE', f"input {i} must be an image or spectra, not {d.tp.name}")
+
+        # all the images are done together, so that ROI names are disambiguated across them
+        imageSpectra = spectraFromImages(images, ignorePixSD=node.params.ignorePixSD)
+        # and then the spectra inputs are merged in
+        try:
+            node.data = SpectrumSet.merge(spectra, base=imageSpectra)
+        except ValueError as e:
+            raise XFormException('DATA', str(e))
         fixSortList(node)
-        ssd = SpectrumSetData.fromSpectrumSet(node.data)
-        node.setOutput(0, Datum(Datum.SPECTRA, ssd, sources=node.data.getSources()))
+        node.setOutput(0, Datum(Datum.SPECTRA, node.data, sources=node.data.getSources()))
 
 
 class ReorderDialog(QDialog):
@@ -294,13 +266,13 @@ class TabSpectrum(ui.tabs.Tab):
             # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
             # These also seem to show up as None sometimes, so we have to check for that too.
 
-            x = {filt: spec for filt, spec in unfiltered.data.items() if spec.v is not None and
+            x = {filt: spec for filt, spec in unfiltered.values.items() if spec.v is not None and
                  spec.v.n is not np.ma.masked}
 
             if len(x) == 0:
                 ui.error(f"No points have good data for point {legend}", False)
                 continue
-            if len(x) != len(unfiltered.data):
+            if len(x) != len(unfiltered.values):
                 ui.error(f"Some points have bad data for point {legend}", False)
 
             # get a list of the filters (the dict keys) sorted by filter cwl
@@ -312,8 +284,9 @@ class TabSpectrum(ui.tabs.Tab):
             sds = [a.v.u for a in values]
             pixcounts = [a.pixels for a in values]
 
-            if self.node.params.colourmode == 'fromROIs':
-                col = self.node.data.getColour(legend)
+            # spectra which didn't come from images (e.g. from a spectrometer) may not have a colour
+            if self.node.params.colourmode == 'fromROIs' and unfiltered.colour is not None:
+                col = unfiltered.colour
             else:
                 col = cols[colidx % len(cols)]
             means = [x + stackSep * stackpos for x in means]
