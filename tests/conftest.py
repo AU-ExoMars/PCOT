@@ -12,4 +12,8 @@ def check_config():
     pcot.setup()    # we have to load the config first!
     if data.sigfigs != 5:
         pytest.exit("Significant figures should be 5 in the configuration to run tests correctly")
+    # Tests expect the default layout for spectra tables (and the CSV files made from them), so
+    # replace any settings from the config file. This isn't saved, so the user's settings are kept.
+    from pcot.utils.spectrumdata import SpectrumSet
+    SpectrumSet.Provider.config = SpectrumSet.Provider.PROVIDER_PARAMS.create()
 

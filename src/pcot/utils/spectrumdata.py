@@ -198,10 +198,12 @@ class SpectrumSet(SourcesObtainable):
     def table(self) -> Table:
         """Return a Table representation (as used in older versions of PCOT)"""
         provider = self.tabularProvider()
+        headers = provider.getHeaders()
         table = Table()
         for row in provider:
-            table.newRow(row["name"])
-            for k in provider.getHeaders():
+            # the first column is the spectrum name (or the wavelength, if wavelengths are rows)
+            table.newRow(row[headers[0]])
+            for k in headers:
                 table.add(k, row[k])
         return table
 
@@ -303,6 +305,13 @@ class SpectrumSet(SourcesObtainable):
                          ["wavelengths as columns", "wavelengths as rows"]),
         )
 
+        # For each format, the prefixes for the columns for each wavelength (with wavelengths as columns, e.g.
+        # m440,s440,p440) and the suffixes for the columns for each spectrum (with wavelengths as rows, e.g.
+        # "a mean","a sd","a pixels"). In the "combined" format the m/mean column holds mean±sd.
+        FORMAT_PREFIXES = {"separate": "msp", "mean": "mp", "combined": "mp"}
+        FORMAT_SUFFIXES = {"separate": ["mean", "sd", "pixels"], "mean": ["mean", "pixels"],
+                           "combined": ["mean", "pixels"]}
+
         def __init__(self, ss: SpectrumSet):
             self.spectra = ss.spectra
 
@@ -316,20 +325,49 @@ class SpectrumSet(SourcesObtainable):
                 wavelengths.update(spectrum.filters_by_wavelength.keys())
             # store the wavelengths as a sorted list
             self.wavelengths = sorted(list(wavelengths))
+            # and the spectrum names in natural order, so "2" comes before "10"
+            self.names = sorted(self.spectra.keys(), key=naturalSortKey)
 
         @staticmethod
         def colname(prefix: str, w: float) -> str:
             """Column name for a wavelength; 440.0 gives "440" but 438.5 stays as "438.5"."""
             return f"{prefix}{w:g}"
 
+        # The settings are read when they are used rather than when the provider is created, so a provider
+        # which is being displayed changes when the settings are changed.
+
+        def format(self) -> str:
+            c = SpectrumSet.Provider.config
+            return c.format if c is not None else "separate"
+
+        def wavelengthsAsRows(self) -> bool:
+            c = SpectrumSet.Provider.config
+            return c is not None and c.orientation == "wv_rows"
+
+        def cells(self, v: Optional[SpectrumValue]) -> List[str]:
+            """The cells for a single value in the current format (in the order of FORMAT_PREFIXES
+            and FORMAT_SUFFIXES), or for a missing value if v is None"""
+            fmt = self.format()
+            if fmt == "separate":
+                return ["NA", "NA", "0"] if v is None else [printable(v.v.n), printable(v.v.u), str(v.pixels)]
+            elif fmt == "mean":
+                return ["NA", "0"] if v is None else [printable(v.v.n), str(v.pixels)]
+            elif fmt == "combined":
+                return ["NA", "0"] if v is None else [f"{printable(v.v.n)}±{printable(v.v.u)}", str(v.pixels)]
+            raise ValueError(f"unknown spectrum table format {fmt}")
+
         def getHeaders(self) -> List[str]:
-            # Header will be "ROI,mwavelength,swavelength,pwavelength...."
-            # for all wavelengths in all spectra.
-            cols = []
-            for w in self.wavelengths:
-                # m, s, p prefix for each wavelength
-                cols.extend([self.colname(p, w) for p in "msp"])
-            return ["name"] + cols
+            if self.wavelengthsAsRows():
+                # "wavelength" and then the columns for each spectrum, e.g. "a mean","a sd","a pixels"...
+                cols = [f"{name} {suffix}" for name in self.names
+                        for suffix in SpectrumSet.Provider.FORMAT_SUFFIXES[self.format()]]
+                cols = ["wavelength"] + cols
+            else:
+                # "name" and then the columns for each wavelength, e.g. m440,s440,p440...
+                cols = [self.colname(prefix, w) for w in self.wavelengths
+                        for prefix in SpectrumSet.Provider.FORMAT_PREFIXES[self.format()]]
+                cols = ["name"] + cols
+            return cols
 
         def __iter__(self) -> TabularIterator:
             return SpectrumSet.Provider.RowIterator(self)
@@ -344,54 +382,43 @@ class SpectrumSet(SourcesObtainable):
 
         class RowIterator(TabularIterator):
             """Iterator object for this tabular provider, generating row
-            data for the table."""
+            data for the table. Rows are spectra, or wavelengths if the provider's
+            settings say wavelengths should be rows."""
             provider: SpectrumSet.Provider
-            iter: Iterator[str]
+            headers: List[str]
+            iter: Iterator
 
             def __init__(self, provider: SpectrumSet.Provider):
                 self.provider = provider
-                # so we can errorcheck as we write the output dict
-                self.headers = set(self.provider.getHeaders())
-                # we iterate over the spectra keys (ROI names) in natural order, so "2" comes before "10"
-                self.iter = iter(sorted(provider.spectra.keys(), key=naturalSortKey))
+                self.headers = self.provider.getHeaders()
+                self.byWavelength = self.provider.wavelengthsAsRows()
+                self.iter = iter(provider.wavelengths if self.byWavelength else provider.names)
 
             def __next__(self) -> Dict[str, str]:
                 # this will throw a StopIteration when it runs out
-                roiname = next(self.iter)
-                # get spectrum for the next ROI
-                spectrum = self.provider.spectra[roiname]
-                # this is the output dict, which will have an entry for each
-                # thing in the header
-                out = {}
-                def write(prefix, w, v):
-                    # write to the output dict, making sure the header exists
-                    k = SpectrumSet.Provider.colname(prefix, w)
-                    if k not in self.headers:
-                        raise KeyError(f"Unknown header {k} being written to row")
-                    out[k] = v
-                if "name" not in self.headers:
-                    raise KeyError("Unknown header name being written to row")
-                out["name"] = roiname
+                rowkey = next(self.iter)
 
-                # each spectrum is completely different, so there could be weird stuff going on -
+                # Each spectrum is completely different, so there could be weird stuff going on -
                 # for example, spectrum A could have a different filter for wavelength X than spectrum B.
                 # That's permitted, and it's why I don't try to collate the filter data (e.g. produce a
-                # dict of wavelength to filter) in the constructor.
+                # dict of wavelength to filter) in the constructor. A spectrum may not have a filter
+                # at a wavelength at all, in which case we get None and the cells are NA.
+                if self.byWavelength:
+                    # a row for a wavelength, with cells for each spectrum's value at that wavelength
+                    row = [f"{rowkey:g}"]
+                    for name in self.provider.names:
+                        row.extend(self.provider.cells(self.provider.spectra[name].valueAtWavelength(rowkey)))
+                else:
+                    # a row for a spectrum, with cells for its value at each wavelength
+                    spectrum = self.provider.spectra[rowkey]
+                    row = [rowkey]
+                    for w in self.provider.wavelengths:
+                        row.extend(self.provider.cells(spectrum.valueAtWavelength(w)))
 
-                # for each wavelength we know about
-                for w in self.provider.wavelengths:
-                    # look up the data - this spectrum might not have a filter at this wavelength at all
-                    v: Optional[SpectrumValue] = spectrum.valueAtWavelength(w)
-                    # write it to the output dict if there, otherwise write NA
-                    if v is None:
-                        write("m", w, "NA")
-                        write("s", w, "NA")
-                        write("p", w, "0")
-                    else:
-                        write("m", w, printable(v.v.n))
-                        write("s", w, printable(v.v.u))
-                        write("p", w, str(v.pixels)) # it's just an int
-                return out
+                # the cells are in the same order as the headers
+                if len(row) != len(self.headers):
+                    raise ValueError(f"row has {len(row)} cells but there are {len(self.headers)} headers")
+                return dict(zip(self.headers, row))
 
     def tabularProvider(self):
         """Return a tabular provider object for this spectrum set"""

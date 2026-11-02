@@ -704,3 +704,75 @@ def test_spectrum_node_bad_input():
     doc.run()
     assert spec.error is not None
     assert "input 2 must be an image or spectra" in spec.error.message
+
+
+@pytest.fixture
+def provider_settings():
+    """Lets a test change the spectra table settings, restoring the defaults afterwards"""
+    P = SpectrumSet.Provider
+
+    def setter(format, orientation):
+        P.config = P.PROVIDER_PARAMS.create()
+        P.config.format = format
+        P.config.orientation = orientation
+
+    yield setter
+    P.config = P.PROVIDER_PARAMS.create()
+
+
+def awkward_spectra():
+    """the same spectra as test_tabular_provider_awkward_spectra"""
+    a = S({'F1': (440.0, 25), 'F2': (438.5, 25)},
+          {'F1': SpectrumValue(Value(0.25, 0.01, 0), 10),
+           'F2': SpectrumValue(Value(0.5, 0.02, 0), 20)})
+    b = S({'F3': (500.0, 25)},
+          {'F3': SpectrumValue(Value(1, 0.1, 0), 30)})
+    return SpectrumSet({'b': b, 'a': a})
+
+
+@pytest.mark.parametrize("format,orientation,expected", [
+    ("separate", "wv_cols",
+     "name,m438.5,s438.5,p438.5,m440,s440,p440,m500,s500,p500\n"
+     "a,0.5,0.02,20,0.25,0.01,10,NA,NA,0\n"
+     "b,NA,NA,0,NA,NA,0,1,0.1,30\n"),
+    ("mean", "wv_cols",
+     "name,m438.5,p438.5,m440,p440,m500,p500\n"
+     "a,0.5,20,0.25,10,NA,0\n"
+     "b,NA,0,NA,0,1,30\n"),
+    ("combined", "wv_cols",
+     "name,m438.5,p438.5,m440,p440,m500,p500\n"
+     "a,0.5±0.02,20,0.25±0.01,10,NA,0\n"
+     "b,NA,0,NA,0,1±0.1,30\n"),
+    ("separate", "wv_rows",
+     "wavelength,a mean,a sd,a pixels,b mean,b sd,b pixels\n"
+     "438.5,0.5,0.02,20,NA,NA,0\n"
+     "440,0.25,0.01,10,NA,NA,0\n"
+     "500,NA,NA,0,1,0.1,30\n"),
+    ("mean", "wv_rows",
+     "wavelength,a mean,a pixels,b mean,b pixels\n"
+     "438.5,0.5,20,NA,0\n"
+     "440,0.25,10,NA,0\n"
+     "500,NA,0,1,30\n"),
+    ("combined", "wv_rows",
+     "wavelength,a mean,a pixels,b mean,b pixels\n"
+     "438.5,0.5±0.02,20,NA,0\n"
+     "440,0.25±0.01,10,NA,0\n"
+     "500,NA,0,1±0.1,30\n"),
+])
+def test_tabular_provider_settings(provider_settings, format, orientation, expected):
+    """Each value format works with wavelengths as columns or as rows, and CSV output follows the settings"""
+    provider_settings(format, orientation)
+    ss = awkward_spectra()
+    assert ss.tabularProvider().csvString() == expected
+    # the old-style table follows the settings too
+    assert str(ss.table()).replace('\r\n', '\n') == expected
+
+
+def test_tabular_provider_settings_change_existing_provider(provider_settings):
+    """A provider that is already being displayed changes when the settings do"""
+    t = awkward_spectra().tabularProvider()
+    assert t.getHeaders()[0] == "name"
+    provider_settings("separate", "wv_rows")
+    assert t.getHeaders()[0] == "wavelength"
+    assert [r["wavelength"] for r in t] == ["438.5", "440", "500"]
+
