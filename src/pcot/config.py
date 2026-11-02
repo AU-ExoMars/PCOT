@@ -33,7 +33,6 @@ CONFIG_DICT_TYPE = TaggedDictType(
     multifile_pattern=("Default regex for getting filter data from filenames in multifile loader", str, r".*[LR](?P<pos>[0-9][0-9]).*"),
     default_camera=("Default camera",str, "PANCAM"),
     defaultbayerpattern=("Default Bayer pattern (see OpenCV docs)", str, "RGGB", VALID_BAYER_PATTERNS),
-
     locations=("Locations", TaggedDictType(
         images=("Source image default location", Path, os.path.expanduser("~/Pictures"), True),
         mplplots=("Matplotlib outputs default location", Path, Path.home(), True),
@@ -50,7 +49,9 @@ CONFIG_DICT_TYPE = TaggedDictType(
     nativefiledialog=("Use the native file dialog (best not)", bool, False),
     # "auto" forces XWayland on GNOME/Wayland to work around a dialog decoration bug there;
     # "native" always uses Qt's own platform choice; "xcb" always forces XWayland.
-    qt_platform=("Qt platform plugin selection on Linux", str, "auto", ["auto", "native", "xcb"]),
+    qt_platform=("Qt platform plugin selection on Linux", str, "auto",
+                 ["auto", "native", "xcb"],
+                 ["allow PCOT to select","use Qt's own choice","Always use XWayland"]),
 
 ).setOrdered()
 
@@ -115,6 +116,7 @@ class ConfigSectionHandler(ABC):
     def save(self) -> Any:
         """Serialises config data (typically a TaggedDict) into a JSON-serialisable
         structure and returns it"""
+    @abstractmethod
     def create(self):
         """creates new data associated with this config section; called instead
         of load() when the section isn't in the config file"""

@@ -172,6 +172,11 @@ class Tag:
     # For a number, it's a (min,max) range tuple or None.
     # For a Path, it's None or False for any file, True for a dir, or a getOpenFileName filter string.
     valid_choices: Union[List[str],Tuple[Number,Number],None,bool] = None
+    # option descriptions - for List[str] options in valid_choices (i.e. a list of valid strings so that
+    # a combo box appears in the editor) this will contain a List[str] of descriptions of the options. If
+    # not None, these options will appear as "actual choice (description)" in the combo box editor.
+    # Otherwise it has no effect.
+    string_choice_descriptions: Optional[List[str]] = None
 
     def assert_valid(self):
         """Check the tag is valid"""
@@ -179,12 +184,22 @@ class Tag:
         # type has to be a JSON-serialisable type, Number or a TaggedAggregateType.
 
         def check_type(t):
+            if t is str:
+                # if the type is a str, and there are valid_choices and string descriptions...
+                if self.valid_choices and self.string_choice_descriptions:
+                    # check they are the same length!
+                    if len(self.string_choice_descriptions) != len(self.valid_choices):
+                        raise ValueError(f"Tag '{self.description}' has {len(self.valid_choices)} choices "
+                                         f"{self.valid_choices} but {len(self.string_choice_descriptions)} "
+                                         f"descriptions {self.string_choice_descriptions}")
+                return
+
             # check a single type is json-serialisable, TaggedAggregate or Number
-            if t in (int, float, str, bool, list, dict, tuple, np.ndarray):
+            if t in (int, float, bool, list, dict, tuple, np.ndarray, type(None)):
                 return
             if isinstance(t, TaggedAggregateType):
                 return
-            if t is Number or t is type(None):
+            if t is Number:
                 return
             if t is Path:       # paths are permissible!
                 return
@@ -239,7 +254,11 @@ class Tag:
         deflt = self.deflt
         if tp == str:
             if self.valid_choices is not None:
-                s = f"string ({', '.join(self.valid_choices)})"
+                if self.string_choice_descriptions:
+                    choices = [f"{c} ({d})" for c, d in zip(self.valid_choices, self.string_choice_descriptions)]
+                else:
+                    choices = self.valid_choices
+                s = f"string ({', '.join(choices)})"
             else:
                 s = "string"
             deflt = f"'{deflt}'" if deflt is not None else "None"

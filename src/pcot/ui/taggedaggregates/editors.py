@@ -99,16 +99,27 @@ class ComboEditor(Editor):
     def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, handler):
         super().__init__(tag, container, key_or_index, handler)
         self.widget = QtWidgets.QComboBox()
-        for x in tag.valid_choices:
-            self.widget.addItem(x)
+        for idx,x in enumerate(tag.valid_choices):
+            # for tags with string choice descriptions, the item text must show this too.
+            # The actual choice is stored in the item data.
+            #
+            if tag.string_choice_descriptions:
+                itemText = f"{x} ({tag.string_choice_descriptions[idx]})"
+            else:
+                itemText = x
+            self.widget.addItem(itemText, x)
         if container[key_or_index] is not None:
-            self.widget.setCurrentText(container[key_or_index])
+            # find by item data, because the item text may have a description appended
+            idx = self.widget.findData(container[key_or_index])
+            if idx >= 0:
+                self.widget.setCurrentIndex(idx)
         # can't connect to the method directly, because the class is not a QObject
-        self.widget.currentTextChanged.connect(lambda t: self.changed(t))
+        self.widget.currentIndexChanged.connect(lambda t: self.changed(t))
 
-    def changed(self, t):
+    def changed(self, idx):
         self.notifyBefore()
-        self.aggregate[self.key_or_index] = t
+        # the item data holds the "undecorated" original string value, without the description.
+        self.aggregate[self.key_or_index] = self.widget.itemData(idx)
         self.notifyAfter()
 
 
