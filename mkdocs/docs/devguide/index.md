@@ -12,6 +12,7 @@ examples and reading the source code!
 * [Important classes](classes.md) - probably read this first.
 * [Using PCOT as a library](library.md)
 * [Writing PCOT plugins](plugins.md)
+* [The configuration system](config.md)
 * [Node serialisation](nodeser.md)
 * [GUPPY: Guide to Uncertainty in PCOT Python](guppy.md)
 

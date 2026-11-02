@@ -194,6 +194,14 @@ def addMenus(w):
 pcot.config.addMainWindowHook(addMenus)
 ```
 
+## Adding configuration settings
+
+Plugins can store their own settings in PCOT's configuration file by
+registering a *section handler* with `pcot.config.addConfigSection()`.
+The section is loaded as soon as it is registered and saved along with
+the rest of the configuration. See [The configuration system](config.md)
+for details and an example.
+
 ## Adding new node types
 
 Node types are represented by singletons of subclasses of ```XFormType```

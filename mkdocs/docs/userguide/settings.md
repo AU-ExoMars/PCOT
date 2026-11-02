@@ -7,7 +7,8 @@ are common to all documents.
 ![!The settings dialog](settings.png)
 
 These are saved in a file called `pcot_config.yaml` in the user's
-home directory.
+home directory. Developers can find out how this file is organised in
+[The configuration system](../devguide/config.md).
 
 ## Sections, and types of value
 
