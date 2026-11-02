@@ -50,17 +50,52 @@ class TabularDataModel(QAbstractTableModel):
         return str(section)
 
 
-class TabularDataWidget(QtWidgets.QTableView):
-    """Shows the data from a TabularProvider in a read-only table"""
+class TabularDataWidget(QtWidgets.QWidget):
+    """Shows the data from a TabularProvider in a read-only table. If the provider has parameters,
+    there is also a button to open an editor for them."""
+
+    provider: Optional[TabularProvider]
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.provider = None
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        row = QtWidgets.QHBoxLayout()
+        row.addStretch()
+        self.settingsButton = QtWidgets.QPushButton("Table settings...")
+        self.settingsButton.setToolTip("Change how this kind of data is shown as a table")
+        self.settingsButton.clicked.connect(self.settingsClicked)
+        self.settingsButton.setVisible(False)
+        row.addWidget(self.settingsButton)
+        layout.addLayout(row)
+
+        self.view = QtWidgets.QTableView(self)
         self.tableModel = TabularDataModel(self)
-        self.setModel(self.tableModel)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.view.setModel(self.tableModel)
+        self.view.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         # row numbers aren't meaningful for most providers, so don't show them
-        self.verticalHeader().setVisible(False)
+        self.view.verticalHeader().setVisible(False)
+        layout.addWidget(self.view)
 
     def display(self, provider: Optional[TabularProvider]):
+        self.provider = provider
         self.tableModel.setProvider(provider)
-        self.resizeColumnsToContents()
+        self.view.resizeColumnsToContents()
+        # only show the settings button for providers which have settings
+        self.settingsButton.setVisible(provider is not None and provider.getParams() is not None)
+
+    def settingsClicked(self):
+        if self.provider is None or self.provider.getParams() is None:
+            return
+        # imported here to avoid a circular import
+        from pcot.ui.taggedaggregates import AggregateEditorDialog
+        dialog = AggregateEditorDialog(self.provider.getParams(), parent=self)
+        dialog.setWindowTitle("Table settings")
+        dialog.exec()   # it's modal
+        if dialog.data():  # None if the user cancelled
+            self.provider.setParams(dialog.data())
+            # redisplay, because the settings may change the table
+            self.display(self.provider)

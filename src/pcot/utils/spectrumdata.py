@@ -335,7 +335,12 @@ class SpectrumSet(SourcesObtainable):
             return SpectrumSet.Provider.RowIterator(self)
 
         def getParams(self) -> Optional[TaggedDict]:
-            return None  # not parameterisable yet - TODO
+            # these are global settings, stored in the "tabular-provider" config section
+            return SpectrumSet.Provider.config
+
+        def setParams(self, params: TaggedDict):
+            SpectrumSet.Provider.config = params
+            config.save()   # this is the pcot.config module, not Provider.config
 
         class RowIterator(TabularIterator):
             """Iterator object for this tabular provider, generating row

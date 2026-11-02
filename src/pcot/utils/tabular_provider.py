@@ -41,6 +41,11 @@ class TabularProvider(ABC):
         modification, or None for no parameters (the provider is not configurable)"""
         pass
 
+    def setParams(self, params: TaggedDict):
+        """Replace the parameters for this provider with an edited copy of those returned by getParams
+        (editors work on copies). Must be implemented by providers whose getParams doesn't return None."""
+        raise NotImplementedError(f"{type(self).__name__} has no parameters to set")
+
     @abstractmethod
     def getHeaders(self) -> List[str]:
         """Return the column headers for the table"""
