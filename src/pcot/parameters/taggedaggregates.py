@@ -187,6 +187,8 @@ class Tag:
             if t is str:
                 # if the type is a str, and there are valid_choices and string descriptions...
                 if self.valid_choices and self.string_choice_descriptions:
+                    if not isinstance(self.string_choice_descriptions, list):
+                        raise ValueError(f"In Tag '{self.description}', string_choice_descriptions must be a list")
                     # check they are the same length!
                     if len(self.string_choice_descriptions) != len(self.valid_choices):
                         raise ValueError(f"Tag '{self.description}' has {len(self.valid_choices)} choices "

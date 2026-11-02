@@ -5,9 +5,11 @@ so that datumtypes can import it without a circular import.
 """
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple, List, Iterator, TYPE_CHECKING
+from typing import Dict, Optional, Tuple, List, Iterator, TYPE_CHECKING, Any
 
-from pcot.parameters.taggedaggregates import TaggedDict
+from pcot import config
+from pcot.config import ConfigSectionHandler
+from pcot.parameters.taggedaggregates import TaggedDict, TaggedDictType
 from pcot.utils.table import printable
 from pcot.utils.tabular_provider import TabularProvider, TabularIterator, naturalSortKey
 from pcot.value import Value
@@ -191,8 +193,23 @@ class SpectrumSetData:
         spectra: Dict[str, SpectrumSetData._Spectrum]
         wavelengths: List[float]
 
+        config = None
+
+        PROVIDER_PARAMS = TaggedDictType(
+            format=("Format for values",str,"separate",
+                    ["separate","mean","combined"],
+                    ["mean and SD are in separate columns",
+                     "only the mean is shown",
+                     "mean±sd in single column"]
+                    ),
+            orientation=("Orientation",str, "wv_cols",
+                         ["wv_cols","wv_rows"],
+                         ["wavelengths as columns", "wavelengths as rows"]),
+        )
+
         def __init__(self, ssd: SpectrumSetData):
             self.spectra = ssd.spectra
+
             # find all wavelengths in all spectra
             wavelengths = set()
             for roiname, spectrum in self.spectra.items():
@@ -287,3 +304,22 @@ class SpectrumSetData:
 
     def __str__(self):
         return self.tabularProvider().csvString()
+
+
+class TabularConfigHandler(ConfigSectionHandler):
+    """This class handles the persistence of the tabular provider configuration by
+    hooking into the config serialisation/deserialisation system"""
+    def __init__(self):
+        super().__init__("tabular-provider")
+
+    def load(self, conf):
+        SpectrumSetData.Provider.config = SpectrumSetData.Provider.PROVIDER_PARAMS.deserialise(conf)
+
+    def save(self) -> Any:
+        return SpectrumSetData.Provider.config.serialise(forceUnordered=True)
+
+    def create(self):
+        SpectrumSetData.Provider.config = SpectrumSetData.Provider.PROVIDER_PARAMS.create()
+
+
+config.addConfigSection(TabularConfigHandler())
