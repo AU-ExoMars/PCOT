@@ -41,7 +41,7 @@ takes its sources from its `ImageCube`, and creating one with different sources 
 * Fixed a bug where a painted ROI in a `roiexpr` node was loaded with a corrupted bounding box, so
 that saving the document again failed and **destroyed the file**. Documents affected by this but not
 yet re-saved will now load correctly.
-* Saving a document or writing a new PARC file no longer destroys the existing file if an error
+* Saving a document, writing a new PARC file or saving the configuration no longer destroys the existing file if an error
 occurs during the save: the new file is written separately and only replaces the old one once it
 is complete. Appending to a PARC file is still done in place, so an error part way through an
 append can leave partial data in the file.
@@ -96,6 +96,10 @@ data, rather than as CSV text.
 * Numbers in tables are now given to the number of significant figures set in the configuration
 (`sigfigs`), as they are elsewhere in PCOT. Previously they were rounded to five decimal places, so
 very small values were written as 0. Large values keep all the digits before the decimal point.
+* For plugin authors: plugins can now store their own settings in PCOT's configuration file, by
+registering a section handler with `pcot.config.addConfigSection()`. Settings belonging to a plugin
+which isn't loaded are kept when the configuration is saved. See
+[The configuration system](devguide/config.md).
 
 Site
 
