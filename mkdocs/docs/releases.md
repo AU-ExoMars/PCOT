@@ -82,6 +82,11 @@ argument to `Document.setInputENVI()` in Python scripts. This is off by default,
 many files have already had them applied. They are stored as `gain` and `offset` ancillary data either
 way, and the new `ancillary()` function gets any numeric ancillary data from an image, such as
 `ancillary("gain", a)`.
+* In `pcotbatch` parameter files, an RGB input's Bayer pattern (`rgb.debayer_pattern`) and a multifile
+input's camera (`multifile.camera`) are now left unchanged if not given. Previously, setting an RGB
+input's filename also reset its Bayer pattern to the default in the configuration, overriding the
+pattern saved in the document; and a multifile camera which happened to be the configuration's default
+camera was ignored, so it couldn't override a preset.
 * The *spectrum* node now outputs a new `spectra` type instead of a table. Spectra keep each
 value's uncertainty and DQ, and can be saved in PARC files. **This changes the output of existing
 documents:** rows are now sorted by ROI name (with numbers in numerical order, so "2" comes before

@@ -425,3 +425,47 @@ def test_pds4():
 
     # test the output
     direct.test_image_load_pds4.check_data(img, 0)
+
+
+def test_rgb_pattern_unchanged_if_not_given(globaldatadir):
+    """If a parameter file doesn't give a Bayer pattern, the input's pattern is left alone rather
+    than being reset to the configuration default"""
+    from pcot.inputs.rgb import RGBInputMethod
+    pcot.setup()
+    doc = Document()
+    method = next(m for m in doc.inputMgr.getInput(0).methods if isinstance(m, RGBInputMethod))
+    method.debayer_pattern = "GBRG"
+
+    f = ParameterFile().parse(f"inputs.0.rgb.filename = {globaldatadir/'basn2c16.png'}")
+    processParameterFileForInputsTest(doc, f)
+    assert method.debayer_pattern == "GBRG"
+
+    f = ParameterFile().parse(f"""
+    inputs.0.rgb.filename = {globaldatadir/'basn2c16.png'}
+    .debayer_pattern = bggr
+    """)
+    processParameterFileForInputsTest(doc, f)
+    assert method.debayer_pattern == "BGGR"
+
+
+def test_multifile_camera_unchanged_if_not_given(globaldatadir):
+    """If a parameter file doesn't give a camera, the multifile input's camera is left alone. If it does,
+    it's used even if it's the same as the configuration's default camera."""
+    from pcot.inputs.multifile import MultifileInputMethod
+    pcot.setup()
+    doc = Document()
+    method = next(m for m in doc.inputMgr.getInput(0).methods if isinstance(m, MultifileInputMethod))
+    method.camera = "AUPE_LEFT_NOCALIB"
+
+    test = f"""
+    inputs.0.multifile.directory = {globaldatadir}/multi
+    .filenames.+ = FilterL02.png
+    ..filter_pattern = *Filter(?P<lens>L|R)(?P<n>[0-9][0-9]).*
+    """
+    processParameterFileForInputsTest(doc, ParameterFile().parse(test))
+    assert method.camera == "AUPE_LEFT_NOCALIB"
+
+    default = pcot.config.data.default_camera
+    assert default != "AUPE_LEFT_NOCALIB"   # or this test can't tell the difference
+    processParameterFileForInputsTest(doc, ParameterFile().parse(test + f"    .camera = {default}\n"))
+    assert method.camera == default

@@ -1,7 +1,6 @@
 """
 Handling how parameter files can modify inputs.
 """
-import pcot.config
 from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS, Input
 from pcot.parameters.parameterfile import ParameterFile
@@ -28,8 +27,9 @@ rgbDictType = TaggedDictType(
     filename=("filename", Maybe(str), None),
     debayer_algo=("Demosaic algorithm (or None if we're not demosaicing)", Maybe(str), None,
                   case_insensitive(DEBAYER_ALGOS)),
-    debayer_pattern=("Bayer pattern (e.g. RGGB)", Maybe(str),
-                     pcot.config.data.defaultbayerpattern,
+    # None means "not set", leaving the setting in the document unchanged (new RGB inputs get theirs
+    # from the configuration when they are created, so we don't need to read it here)
+    debayer_pattern=("Bayer pattern (e.g. RGGB) (default: unchanged)", Maybe(str), None,
                      case_insensitive(VALID_BAYER_PATTERNS)),
     neg_method=("How to process negatives in e.g. MHC demosaicing", Maybe(str),
                 "Leave",case_insensitive(NEGATIVE_PROCESSING_METHODS)),
@@ -53,7 +53,8 @@ multifileDictType = TaggedDictType(
     filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
                TaggedListType(str, [], '')),
     filter_pattern=("pattern for filter identification", Maybe(str), None),
-    camera=("name of camera to use", Maybe(str), pcot.config.data.default_camera),
+    # None means "not set", leaving the setting in the document (or from a preset) unchanged
+    camera=("name of camera to use (default: unchanged)", Maybe(str), None),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
     left_justified=("whether the significant bits (given by bit_depth) occupy the top of their container, "
                     "rather than the bottom", bool, True),
