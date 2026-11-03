@@ -589,3 +589,77 @@ def test_jinja2_functions(globaldatadir):
 
         txt = open(out).read()
         assert txt == "basn2c16 -> output 0.43473±0.30135u\n"
+
+
+def run_spectrum_with_settings(globaldatadir, settings):
+    """Run test2.pcot's spectrum node, writing it as CSV, with some extra lines in the parameter file.
+    Returns the CSV text."""
+    r = Runner(globaldatadir / "runner/test2.pcot")
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, "output.txt")
+        text = f"""
+            inputs.0.parc.filename = {globaldatadir / 'parc/multi.parc'}
+            .itemname = image0
+            outputs.+.file = {out}
+            .clobber = y
+            .node = spectrum
+            {settings}
+        """
+        r.run(None, param_file_text=text)
+        return open(out).read().strip()
+
+
+def test_config_sections_in_parameter_files(globaldatadir):
+    """Config sections can be changed in parameter files using their section names, and are
+    restored after the run"""
+    from pcot.utils.spectrumdata import SpectrumSet
+    pcot.setup()
+    txt = run_spectrum_with_settings(globaldatadir, """
+            configuration.sigfigs = 2
+            tabular-provider.orientation = wv_rows
+            .sample_count = n
+            """)
+    assert txt.splitlines()[:2] == ["wavelength,0 mean,0 sd,1 mean,1 sd,2 mean,2 sd,3 mean,3 sd,4 mean,4 sd",
+                                    "440,0.24,0.034,0.31,0.058,0.25,0.041,0.24,0.044,0.28,0.045"]
+    # the settings are back to what they were
+    assert pcot.config.data.sigfigs == 5
+    assert SpectrumSet.Provider.config.orientation == "wv_cols"
+    assert SpectrumSet.Provider.config.sample_count
+
+
+def test_config_sections_restored_after_failed_run(globaldatadir):
+    """Config changes are undone even if the run fails"""
+    pcot.setup()
+    with pytest.raises(Exception):
+        run_spectrum_with_settings(globaldatadir, """
+            configuration.sigfigs = 2
+            inputs.1.parc.filename = /no/such/file.parc
+            """)
+    assert pcot.config.data.sigfigs == 5
+
+
+def test_config_sections_reset(globaldatadir):
+    """The reset command works on config sections"""
+    pcot.setup()
+    txt = run_spectrum_with_settings(globaldatadir, """
+            configuration.sigfigs = 2
+            reset configuration.sigfigs
+            """)
+    assert txt.splitlines()[1] == "0,0.23643,0.033949,29,0.42077,0.059979,29,0.64584,0.074259,29"
+
+
+def test_node_name_clashes_with_config_section(globaldatadir):
+    """A node with the same name as a config section (or inputs/outputs) is an error, rather
+    than one of them silently becoming unreachable"""
+    from pathlib import Path
+    from pcot.document import Document
+    pcot.setup()
+    for name in ("configuration", "tabular-provider", "inputs"):
+        with tempfile.TemporaryDirectory() as td:
+            doc = Document()
+            node = doc.graph.create("constant")
+            node.displayName = name
+            path = Path(td) / "clash.pcot"
+            doc.save(path)
+            with pytest.raises(ValueError, match=f"node '{name}' has the same name"):
+                Runner(path)

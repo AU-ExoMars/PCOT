@@ -13,7 +13,7 @@ from typing import Optional, List, Any
 import yaml
 from PySide6 import QtWidgets
 
-from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedDict, TaggedListType
+from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedDict, TaggedListType, TaggedAggregate
 from pcot.utils.demosaicing import VALID_BAYER_PATTERNS
 
 logger = logging.getLogger(__name__)
@@ -121,6 +121,12 @@ class ConfigSectionHandler(ABC):
         """creates new data associated with this config section; called instead
         of load() when the section isn't in the config file"""
 
+    def getParams(self) -> Optional[TaggedAggregate]:
+        """Return the section's data as a TaggedAggregate if it can be changed from batch parameter
+        files (where it is found under the section's name), or None if it can't. This must be the live
+        object which is actually used, so that changes to it take effect."""
+        return None
+
 # This is a list of config sections
 _config_sections = []
 
@@ -140,6 +146,11 @@ def _initSection(section: ConfigSectionHandler):
         section.load(_raw_config[section.secname])
     else:
         section.create()
+
+
+def getConfigSections() -> List[ConfigSectionHandler]:
+    """Return all the registered config section handlers"""
+    return list(_config_sections)
 
 
 def addConfigSection(section:ConfigSectionHandler):
@@ -169,6 +180,9 @@ class MainConfigHandler(ConfigSectionHandler):
     def save(self):
         # serialise as a full dict so we can edit it!
         return data.serialise(forceUnordered=True)
+
+    def getParams(self):
+        return data
 
     def create(self):
         """Creates the main config section's data"""

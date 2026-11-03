@@ -445,6 +445,9 @@ class TabularConfigHandler(ConfigSectionHandler):
     def save(self) -> Any:
         return SpectrumSet.Provider.config.serialise(forceUnordered=True)
 
+    def getParams(self):
+        return SpectrumSet.Provider.config
+
     def create(self):
         SpectrumSet.Provider.config = SpectrumSet.Provider.PROVIDER_PARAMS.create()
 

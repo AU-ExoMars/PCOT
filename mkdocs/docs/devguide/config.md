@@ -55,6 +55,11 @@ has been added since the file was last saved. It should create default data.
 Exactly one of `load()` and `create()` will be called before `save()`, so `save()`
 can always assume the data exists.
 
+A handler can also override `getParams(self)` to return its data as a `TaggedAggregate`. If it
+does, the section can be changed from [batch parameter files](../userguide/batch/params.md#configuration-settings)
+under its section name. It must return the live object that the rest of the code reads, so that
+changes take effect. The default returns `None`, so the section can't be changed from batch files.
+
 Handlers are registered with `pcot.config.addConfigSection(handler)`. The
 handler object usually also holds the section's data, so that other code can
 get to it through the handler.
@@ -147,6 +152,10 @@ class EdgeConfigHandler(ConfigSectionHandler):
     def create(self):
         self.data = EDGE_CONFIG_TYPE.create()
 
+    def getParams(self):
+        # lets batch parameter files change these settings, e.g. "edgedetect.threshold = 0.6"
+        return self.data
+
 
 edgeConfig = EdgeConfigHandler()
 addConfigSection(edgeConfig)    # loads or creates the data immediately
@@ -170,7 +179,10 @@ file which are no longer in the type are silently dropped.
 Section names share one namespace, and nothing checks for clashes: if two
 handlers use the same name, both are given the same data when it is loaded,
 and whichever saves last wins. Use a name based on your plugin's name, and
-don't use `configuration` or `recents`.
+don't use `configuration`, `recents`, `tabular-provider`, `inputs` or `outputs`. If your handler
+has a `getParams()`, the name also appears in batch parameter files alongside node names, and
+a document with a node of the same name can't be run in batch mode, so avoid names which are
+likely to be node names.
 
 ### Errors
 

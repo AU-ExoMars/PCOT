@@ -87,6 +87,11 @@ input's camera (`multifile.camera`) are now left unchanged if not given. Previou
 input's filename also reset its Bayer pattern to the default in the configuration, overriding the
 pattern saved in the document; and a multifile camera which happened to be the configuration's default
 camera was ignored, so it couldn't override a preset.
+* `pcotbatch` parameter files can change configuration settings, using the section names from the
+configuration file: for example `configuration.sigfigs = 3`, or `tabular-provider.orientation = wv_rows`
+for the layout of spectra CSV files. The changes only last for the run and are never saved. Because
+of this, a document with a node called `inputs`, `outputs`, `configuration` or `tabular-provider` can
+no longer be run in batch mode until the node is renamed.
 * The *spectrum* node now outputs a new `spectra` type instead of a table. Spectra keep each
 value's uncertainty and DQ, and can be saved in PARC files. **This changes the output of existing
 documents:** rows are now sorted by ROI name (with numbers in numerical order, so "2" comes before

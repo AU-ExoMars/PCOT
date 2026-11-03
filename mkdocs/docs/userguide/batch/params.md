@@ -308,6 +308,33 @@ outputs.0.filename = output{{i}}.png        # and change the output filename
 {{ endfor }}
 ```
 
+## Configuration settings
+
+PCOT's [settings](../settings.md) can also be changed in a parameter file. They are in sections
+named after the sections of the configuration file, `pcot_config.yaml`:
+
+* `configuration` - the main settings, as shown in the settings dialog
+* `tabular-provider` - how spectra are laid out in tables and CSV files (the *Table settings...* button
+in table views)
+
+Plugins may add more sections. For example:
+
+```txt
+configuration.sigfigs = 3                   # three significant figures in output
+tabular-provider.orientation = wv_rows      # one row per wavelength in spectra CSV files
+.sample_count = n                           # without the sample counts
+```
+
+These changes only last for the run: the settings go back to how they were afterwards, even if the
+run fails, and they are never saved to the configuration file. The `reset` command works on them too.
+
+A few settings are only used when PCOT starts, so changing them here has no effect:
+`locations.pluginpath`, `qt_platform` and `loadfile`.
+
+A node can't be called `inputs`, `outputs` or the name of a configuration section, because the
+parameter file couldn't tell them apart - running a document with such a node gives an error, and
+you'll need to rename the node.
+
 ## A more complex example
 
 [This page](complex.md) describes a much more complex example which uses Jinja2 to read a list

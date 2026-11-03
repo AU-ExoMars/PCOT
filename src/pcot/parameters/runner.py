@@ -32,6 +32,7 @@ from typing import Optional, Any, Dict
 
 from jinja2 import Environment
 
+import pcot.config
 from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS
 from pcot.parameters.inputs import inputsDictType, modifyInput
@@ -140,13 +141,32 @@ class Runner:
         self.paramdict = {'inputs': inputsDictType.create(),
                           'outputs': outputListType.create()}
 
+        # the configuration sections which can be changed, by section name (e.g. "configuration"
+        # for the main settings). These are the live settings, which are global, so they are
+        # restored to their original values after each run (see run()).
+        self.configParams = {}
+        for section in pcot.config.getConfigSections():
+            p = section.getParams()
+            if p is not None:
+                if section.secname in self.paramdict:
+                    raise ValueError(f"config section '{section.secname}' has a reserved name")
+                self.configParams[section.secname] = p
+
         # now one for each node. Here, we're referencing dicts that exist inside
         # the nodes themselves.
         # You might get problems here if you have multiple
         # nodes with the same display name - later nodes will overwrite earlier ones.
         for node in self.doc.graph.nodes:
+            name = node.getDisplayName()
+            # a node with the same name as inputs, outputs or a config section would silently
+            # hide it (or be hidden by it), so that's an error
+            if name in ('inputs', 'outputs') or name in self.configParams:
+                raise ValueError(f"node '{name}' has the same name as a batch parameter section - "
+                                 f"please rename the node")
             # we even do this if the node has no parameters so we can check for that.
-            self.paramdict[node.getDisplayName()] = node.params
+            self.paramdict[name] = node.params
+
+        self.paramdict.update(self.configParams)
 
         # create the 'originals' which will be used to reset the parameters with
         # the "reset" commands
@@ -246,6 +266,10 @@ class Runner:
             # throws an exception - we definitely want to restore!
             logger.debug("Restoring document to original state")
             self.doc.loadFromMemoryArchive(self.archive)
+            # the config settings are global rather than part of the document, so they need
+            # restoring separately - this is done in place, so other references to them stay valid.
+            for p in self.configParams.values():
+                p.restore_to_original()
             logger.debug("rebuilding param dict")
             self._build_param_dict()
             logger.debug("rebuild done")
