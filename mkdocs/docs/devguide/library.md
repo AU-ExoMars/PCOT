@@ -72,7 +72,7 @@ Consider the graph
 
 This could be built and run for a particular file with the following code:
 
-```
+```python
 #!/usr/bin/env python
 
 import pcot
@@ -126,7 +126,7 @@ Often it is much simpler to just use the underlying PCOT data types without a gr
 The operation described in the previous section is an example of this. We could
 use the `dataformats.load` package to load the data directly and manipulate it:
 
-```
+```python
 #!/usr/bin/env python
 
 import pcot
@@ -171,7 +171,7 @@ when PCOT is imported. A script can change them for itself by setting them direc
 settings are in `pcot.config.data`, and the layout of spectra tables (and the CSV made from them)
 is in `SpectrumSet.Provider.config`:
 
-```
+```python
 import pcot
 from pcot.utils.spectrumdata import SpectrumSet
 
