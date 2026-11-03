@@ -80,8 +80,8 @@ class XFormSpectrum(XFormType):
     * name - the name of the ROI or input
     * m*wavelength* - the mean intensity for the given wavelength band
     * s*wavelength* - the population standard deviation of the mean intensity for the given wavelength band
-    * p*wavelength* - the number of pixels in the given wavelength band (usually the same as the number of pixels in
-    the ROI, but may be fewer if the ROI has "bad" pixels in that band)
+    * n*wavelength* - the number of samples (pixels) in the given wavelength band
+        (usually the same as the number of pixels in the ROI, but may be fewer if the ROI has "bad" pixels in that band)
 
     The last two columns are repeated for each wavelength band.
     """
@@ -282,7 +282,7 @@ class TabSpectrum(ui.tabs.Tab):
             values = [x[filt] for filt in filters]
             means = [a.v.n for a in values]
             sds = [a.v.u for a in values]
-            pixcounts = [a.pixels for a in values]
+            counts = [a.samples for a in values]
 
             # spectra which didn't come from images (e.g. from a spectrometer) may not have a colour
             if self.node.params.colourmode == 'fromROIs' and unfiltered.colour is not None:
@@ -316,7 +316,7 @@ class TabSpectrum(ui.tabs.Tab):
 
             if self.node.params.errorbarmode != 'none':
                 # calculate standard errors from standard deviations
-                stderrs = [std / math.sqrt(pixels) for std, pixels in zip(sds, pixcounts)]
+                stderrs = [std / math.sqrt(count) for std, count in zip(sds, counts)]
                 ax.errorbar(wavelengths, means,
                             stderrs if self.node.params.errorbarmode == 'stderror' else sds,
                             # only show the x error bar if we are in the correct bandwidth mode

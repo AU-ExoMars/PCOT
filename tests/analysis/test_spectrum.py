@@ -221,10 +221,10 @@ def test_spectrum():
     assert s.get(100).v == Value(0, 0, 0)
     assert s.get(200).v == Value(0.5, 0, 0)
     assert s.get(300).v == Value(0, 0, 0)
-    # test pixel counts work
-    assert s.get(100).pixels == 29
-    assert s.get(200).pixels == 29
-    assert s.get(300).pixels == 29
+    # test sample/pixel counts work
+    assert s.get(100).samples == 29
+    assert s.get(200).samples == 29
+    assert s.get(300).samples == 29
 
     # and now one that straddes a boundary between regions
     # in a filter, but with there is zero variance within the pixels
@@ -241,7 +241,7 @@ def test_spectrum():
     assert s.get(100).v == Value(0, 0, 0)
     assert s.get(200).v == Value(0.15384615384615385, 0.23076923076923078, 0)
     assert s.get(300).v == Value(1, 1, 0)
-    assert s.get(100).pixels == 13  # test the pixel count works!
+    assert s.get(100).samples == 13  # test the pixel count works!
 
     # check we can get by filter name (the gen node names filters after their wavelengths)
     assert s.get("100").v == Value(0, 0, 0)
@@ -413,7 +413,7 @@ def test_spectrum_data():
         assert s.get(300).v.approxeq(Value(0.475, 0.8511, 0))
         # all filters were measured over the same coalesced ROI
         for f in s.filters():
-            assert s.values[f].pixels == 2000
+            assert s.values[f].samples == 2000
 
     check(s)
 
@@ -442,7 +442,7 @@ def test_tabular_provider():
     t = ss.tabularProvider()
     # can we get the headers and are they correct?
     hdrs = t.getHeaders()
-    assert hdrs == ['name', 'm100', 's100', 'p100', 'm200', 's200', 'p200', 'm300', 's300', 'p300']
+    assert hdrs == ['name', 'm100', 's100', 'n100', 'm200', 's200', 'n200', 'm300', 's300', 'n300']
     # can we iterate over the data?
     for x in t:
         # are the right keys - and only those - there?
@@ -472,20 +472,20 @@ def test_tabular_provider_awkward_spectra():
     t = SpectrumSet({'a': a, 'b': b}).tabularProvider()
 
     # 440.0 loses its ".0", but 438.5 isn't merged with anything
-    assert t.getHeaders() == ['name', 'm438.5', 's438.5', 'p438.5',
-                              'm440', 's440', 'p440',
-                              'm500', 's500', 'p500']
+    assert t.getHeaders() == ['name', 'm438.5', 's438.5', 'n438.5',
+                              'm440', 's440', 'n440',
+                              'm500', 's500', 'n500']
 
     rows = list(t)
     assert rows == [
         {'name': 'a',
-         'm438.5': '0.5', 's438.5': '0.02', 'p438.5': '20',
-         'm440': '0.25', 's440': '0.01', 'p440': '10',
-         'm500': 'NA', 's500': 'NA', 'p500': '0'},
+         'm438.5': '0.5', 's438.5': '0.02', 'n438.5': '20',
+         'm440': '0.25', 's440': '0.01', 'n440': '10',
+         'm500': 'NA', 's500': 'NA', 'n500': '0'},
         {'name': 'b',
-         'm438.5': 'NA', 's438.5': 'NA', 'p438.5': '0',
-         'm440': 'NA', 's440': 'NA', 'p440': '0',
-         'm500': '1', 's500': '0.1', 'p500': '30'},
+         'm438.5': 'NA', 's438.5': 'NA', 'n438.5': '0',
+         'm440': 'NA', 's440': 'NA', 'n440': '0',
+         'm500': '1', 's500': '0.1', 'n500': '30'},
     ]
 
 
@@ -546,7 +546,7 @@ def test_spectra_indexing():
     # a single column has no uncertainty, as with tables
     assert run("a[0,m440]").approxeq(Value(0.25, 0, dq.NOUNCERTAINTY))
     assert run("a[0,s440]").approxeq(Value(0.01, 0, dq.NOUNCERTAINTY))
-    assert run("a[fish,p500]").approxeq(Value(40, 0, dq.NOUNCERTAINTY))
+    assert run("a[fish,n500]").approxeq(Value(40, 0, dq.NOUNCERTAINTY))
     # mixing wavelengths just pairs the two numbers up, with no DQ
     assert run("a[fish,m440,s500]").approxeq(Value(0.75, 0.04, dq.NONE))
 
@@ -604,10 +604,10 @@ def check_spectra_with_real_filter(ss):
     assert a.filters()[1].response.is_simulated
     # and the values, with their uncertainty, DQ and pixel counts
     assert a.get(440).v.approxeq(Value(0.25, 0.01, dq.SAT))
-    assert a.get(440).pixels == 10
+    assert a.get(440).samples == 10
     assert a.get("G02").v.approxeq(Value(0.5, 0.02, dq.NONE))
     assert b.get(440).v.approxeq(Value(0.75, 0.03, dq.NONE))
-    assert b.get(600).pixels == 40
+    assert b.get(600).samples == 40
 
 
 def test_spectrum_set_serialise_shares_filters():
@@ -732,29 +732,29 @@ def awkward_spectra():
 
 @pytest.mark.parametrize("format,orientation,expected", [
     ("separate", "wv_cols",
-     "name,m438.5,s438.5,p438.5,m440,s440,p440,m500,s500,p500\n"
+     "name,m438.5,s438.5,n438.5,m440,s440,n440,m500,s500,n500\n"
      "a,0.5,0.02,20,0.25,0.01,10,NA,NA,0\n"
      "b,NA,NA,0,NA,NA,0,1,0.1,30\n"),
     ("mean", "wv_cols",
-     "name,m438.5,p438.5,m440,p440,m500,p500\n"
+     "name,m438.5,n438.5,m440,n440,m500,n500\n"
      "a,0.5,20,0.25,10,NA,0\n"
      "b,NA,0,NA,0,1,30\n"),
     ("combined", "wv_cols",
-     "name,m438.5,p438.5,m440,p440,m500,p500\n"
+     "name,m438.5,n438.5,m440,n440,m500,n500\n"
      "a,0.5±0.02,20,0.25±0.01,10,NA,0\n"
      "b,NA,0,NA,0,1±0.1,30\n"),
     ("separate", "wv_rows",
-     "wavelength,a mean,a sd,a pixels,b mean,b sd,b pixels\n"
+     "wavelength,a mean,a sd,a samples,b mean,b sd,b samples\n"
      "438.5,0.5,0.02,20,NA,NA,0\n"
      "440,0.25,0.01,10,NA,NA,0\n"
      "500,NA,NA,0,1,0.1,30\n"),
     ("mean", "wv_rows",
-     "wavelength,a mean,a pixels,b mean,b pixels\n"
+     "wavelength,a mean,a samples,b mean,b samples\n"
      "438.5,0.5,20,NA,0\n"
      "440,0.25,10,NA,0\n"
      "500,NA,0,1,30\n"),
     ("combined", "wv_rows",
-     "wavelength,a mean,a pixels,b mean,b pixels\n"
+     "wavelength,a mean,a samples,b mean,b samples\n"
      "438.5,0.5±0.02,20,NA,0\n"
      "440,0.25±0.01,10,NA,0\n"
      "500,NA,0,1±0.1,30\n"),

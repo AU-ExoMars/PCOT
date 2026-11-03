@@ -287,7 +287,7 @@ def test_spectrum(globaldatadir):
               data_for_template={"out": out, "globaldatadir": globaldatadir})
         txt = open(out).read().strip() # remove trailing newline
         assert txt == inspect.cleandoc("""
-        name,m440,s440,p440,m540,s540,p540,m640,s640,p640
+        name,m440,s440,n440,m540,s540,n540,m640,s640,n640
         0,0.23643,0.033949,29,0.42077,0.059979,29,0.64584,0.074259,29
         1,0.31383,0.058334,29,0.5183,0.056277,29,0.79805,0.050374,29
         2,0.25298,0.040795,29,0.43359,0.061242,29,0.68998,0.08074,29
@@ -323,7 +323,7 @@ def test_add_circle_to_multidot_using_list(globaldatadir):
               data_for_template={"out": out, "globaldatadir": globaldatadir})
         txt = open(out).read().strip() # remove trailing newline
         assert txt == inspect.cleandoc("""
-        name,m440,s440,p440,m540,s540,p540,m640,s640,p640
+        name,m440,s440,n440,m540,s540,n540,m640,s640,n640
         0,0.23643,0.033949,29,0.42077,0.059979,29,0.64584,0.074259,29
         1,0.31383,0.058334,29,0.5183,0.056277,29,0.79805,0.050374,29
         2,0.25298,0.040795,29,0.43359,0.061242,29,0.68998,0.08074,29

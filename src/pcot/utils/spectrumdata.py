@@ -20,30 +20,30 @@ from pcot.value import Value
 
 
 class SpectrumValue:
-    """A single value in a spectrum and the number of pixels from which it was obtained.
+    """A single value in a spectrum and the number of samples (typically pixels) from which it was obtained.
     It can return JSON-serialisable data and be deserialised from such data.
 
-    TODO: the pixel count is used to calculate standard errors (sd/sqrt(pixels)), so a spectrum
+    TODO: the sample count is used to calculate standard errors (sd/sqrt(samples)), so a spectrum
     from a point spectrometer (e.g. Enfys) will need to decide what to put here."""
     v: Value
-    pixels: int  # the number of pixels from which the value was obtained
+    samples: int  # sample count - for an image-derived spectrum, the number of pixels from which the value was obtained
 
-    def __init__(self, v: Value, pixels: int):
+    def __init__(self, v: Value, samples: int):
         self.v = v
         # and this is why this isn't a dataclass. What gets passed in is typically
         # an int32, which isn't JSON-serialisable.
-        self.pixels = int(pixels)
+        self.samples = int(samples)
 
     def as_tuple(self):
-        return self.v, self.pixels
+        return self.v, self.samples
 
     def serialise(self):
-        return [self.v.serialise(), self.pixels]
+        return [self.v.serialise(), self.samples]
 
     @staticmethod
     def deserialise(d):
-        serv, serp = d
-        return SpectrumValue(Value.deserialise(serv), serp)
+        serv, sers = d
+        return SpectrumValue(Value.deserialise(serv), sers)
 
 
 class Spectrum:
@@ -64,7 +64,7 @@ class Spectrum:
         self.filters_by_wavelength = {f.cwl: f for f in values}
 
     def get(self, cwlOrName) -> Optional[SpectrumValue]:
-        """get the value and pixel count for a particular channel wavelength or filter name"""
+        """get the value and sample count for a particular channel wavelength or filter name"""
         for f, v in self.values.items():
             if f.cwl == cwlOrName or f.name == cwlOrName:
                 return v
@@ -215,7 +215,7 @@ class SpectrumSet(SourcesObtainable):
         """Given a list of Datum index objects, return a Datum for the value they indicate. The first index
         is the spectrum name (an integer like 0 is looked up as the name "0"). Then either:
             - a wavelength number, giving the spectrum's Value at that wavelength (with uncertainty and DQ)
-            - a column name as in the tabular output (m440, s440 or p440 for mean, SD and pixel count),
+            - a column name as in the tabular output (m440, s440 or n440 for mean, SD and sample count),
               optionally followed by a second column name which gives the uncertainty. This is how
               spectra were indexed when they were output as tables.
         Unknown spectra, columns and wavelengths are errors."""
@@ -249,19 +249,19 @@ class SpectrumSet(SourcesObtainable):
             return v
 
         def column(d):
-            """find the SpectrumValue and the part of it (m, s or p) named by a column index"""
+            """find the SpectrumValue and the part of it (m, s or n) named by a column index"""
             if d.tp != Datum.IDENT and d.tp != Datum.STRING:
                 raise ValueError(f"cannot use a {d.tp.name} as a spectrum column")
             col = d.val
-            if len(col) < 2 or col[0] not in "msp":
-                raise ValueError(f"bad spectrum column {col} - should be m, s or p followed by a wavelength")
+            if len(col) < 2 or col[0] not in "msn":
+                raise ValueError(f"bad spectrum column {col} - should be m, s or n followed by a wavelength")
             for w in spectrum.filters_by_wavelength:
                 if SpectrumSet.Provider.colname(col[0], w) == col:
                     return valueAtWavelength(w), col[0]
             raise ValueError(f"spectrum {name} has no column {col}")
 
         def part(v: SpectrumValue, p: str):
-            return {"m": v.v.n, "s": v.v.u, "p": v.pixels}[p]
+            return {"m": v.v.n, "s": v.v.u, "n": v.samples}[p]
 
         d = args[1]
         if d.tp == Datum.NUMBER:
@@ -306,11 +306,11 @@ class SpectrumSet(SourcesObtainable):
         )
 
         # For each format, the prefixes for the columns for each wavelength (with wavelengths as columns, e.g.
-        # m440,s440,p440) and the suffixes for the columns for each spectrum (with wavelengths as rows, e.g.
-        # "a mean","a sd","a pixels"). In the "combined" format the m/mean column holds mean±sd.
-        FORMAT_PREFIXES = {"separate": "msp", "mean": "mp", "combined": "mp"}
-        FORMAT_SUFFIXES = {"separate": ["mean", "sd", "pixels"], "mean": ["mean", "pixels"],
-                           "combined": ["mean", "pixels"]}
+        # m440,s440,n440) and the suffixes for the columns for each spectrum (with wavelengths as rows, e.g.
+        # "a mean","a sd","a samples"). In the "combined" format the m/mean column holds mean±sd.
+        FORMAT_PREFIXES = {"separate": "msn", "mean": "mn", "combined": "mn"}
+        FORMAT_SUFFIXES = {"separate": ["mean", "sd", "samples"], "mean": ["mean", "samples"],
+                           "combined": ["mean", "samples"]}
 
         def __init__(self, ss: SpectrumSet):
             self.spectra = ss.spectra
@@ -349,21 +349,21 @@ class SpectrumSet(SourcesObtainable):
             and FORMAT_SUFFIXES), or for a missing value if v is None"""
             fmt = self.format()
             if fmt == "separate":
-                return ["NA", "NA", "0"] if v is None else [printable(v.v.n), printable(v.v.u), str(v.pixels)]
+                return ["NA", "NA", "0"] if v is None else [printable(v.v.n), printable(v.v.u), str(v.samples)]
             elif fmt == "mean":
-                return ["NA", "0"] if v is None else [printable(v.v.n), str(v.pixels)]
+                return ["NA", "0"] if v is None else [printable(v.v.n), str(v.samples)]
             elif fmt == "combined":
-                return ["NA", "0"] if v is None else [f"{printable(v.v.n)}±{printable(v.v.u)}", str(v.pixels)]
+                return ["NA", "0"] if v is None else [f"{printable(v.v.n)}±{printable(v.v.u)}", str(v.samples)]
             raise ValueError(f"unknown spectrum table format {fmt}")
 
         def getHeaders(self) -> List[str]:
             if self.wavelengthsAsRows():
-                # "wavelength" and then the columns for each spectrum, e.g. "a mean","a sd","a pixels"...
+                # "wavelength" and then the columns for each spectrum, e.g. "a mean","a sd","a samples"...
                 cols = [f"{name} {suffix}" for name in self.names
                         for suffix in SpectrumSet.Provider.FORMAT_SUFFIXES[self.format()]]
                 cols = ["wavelength"] + cols
             else:
-                # "name" and then the columns for each wavelength, e.g. m440,s440,p440...
+                # "name" and then the columns for each wavelength, e.g. m440,s440,n440...
                 cols = [self.colname(prefix, w) for w in self.wavelengths
                         for prefix in SpectrumSet.Provider.FORMAT_PREFIXES[self.format()]]
                 cols = ["name"] + cols
