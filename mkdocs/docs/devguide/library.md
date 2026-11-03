@@ -113,10 +113,10 @@ doc.run()
 
 # get the output of the spectrum node, which will be a Datum,
 # and dereference the Datum, ensuring that the data is of the right type.
-# The result will be a Table object.
-output = specnode.getOutput(0, Datum.TABLE)
+# The result will be a SpectrumSet object.
+output = specnode.getOutput(0, Datum.SPECTRA)
 
-# print the table as CSV.
+# print the spectra as a CSV table.
 print(output)
 ```
 
@@ -163,3 +163,44 @@ for name, spectrum in ss.items():
     for f in spectrum.filters():
         print(name, f.name, f.cwl, spectrum.get(f.cwl).v)
 ```
+
+## Changing configuration settings
+
+PCOT's [settings](../userguide/settings.md) are loaded from the user's configuration file
+when PCOT is imported. A script can change them for itself by setting them directly. The main
+settings are in `pcot.config.data`, and the layout of spectra tables (and the CSV made from them)
+is in `SpectrumSet.Provider.config`:
+
+```
+import pcot
+from pcot.utils.spectrumdata import SpectrumSet
+
+pcot.setup()
+
+# numbers in tables and other output to three significant figures
+pcot.config.data.sigfigs = 3
+# where non-image data is saved by default
+pcot.config.data.locations.saveddata = "/tmp/output"
+
+# spectra tables with one row per wavelength, showing mean±sd, without sample counts
+SpectrumSet.Provider.config.orientation = "wv_rows"
+SpectrumSet.Provider.config.format = "combined"
+SpectrumSet.Provider.config.sample_count = False
+```
+
+The settings and their allowed values are the same as in the settings dialog and the *Table settings...*
+dialog; `pcot getconfig` lists the main settings and their current values.
+
+These changes only affect the script that makes them. They are not saved unless the script calls
+`pcot.config.save()` - and if it does, they will replace the user's own settings, including those
+they use in the PCOT application. For the same reason, don't change the table settings with a table
+provider's `setParams()` method, which saves them.
+
+Most settings are read when they are used, so changes take effect straight away. There are exceptions:
+
+* `locations.pluginpath` is used by `pcot.setup()` to load plugins, so it must be changed *before*
+`pcot.setup()` is called.
+* `qt_platform` and `loadfile` are only used by the PCOT application.
+
+Plugins may add their own settings. See [The configuration system](config.md) for how the
+configuration is organised, and for adding settings of your own.
