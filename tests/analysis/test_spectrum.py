@@ -711,10 +711,11 @@ def provider_settings():
     """Lets a test change the spectra table settings, restoring the defaults afterwards"""
     P = SpectrumSet.Provider
 
-    def setter(format, orientation):
+    def setter(format, orientation, sample_count=True):
         P.config = P.PROVIDER_PARAMS.create()
         P.config.format = format
         P.config.orientation = orientation
+        P.config.sample_count = sample_count
 
     yield setter
     P.config = P.PROVIDER_PARAMS.create()
@@ -766,6 +767,32 @@ def test_tabular_provider_settings(provider_settings, format, orientation, expec
     assert ss.tabularProvider().csvString() == expected
     # the old-style table follows the settings too
     assert str(ss.table()).replace('\r\n', '\n') == expected
+
+
+@pytest.mark.parametrize("format,orientation,expected", [
+    ("separate", "wv_cols",
+     "name,m438.5,s438.5,m440,s440,m500,s500\n"
+     "a,0.5,0.02,0.25,0.01,NA,NA\n"
+     "b,NA,NA,NA,NA,1,0.1\n"),
+    ("mean", "wv_cols",
+     "name,m438.5,m440,m500\n"
+     "a,0.5,0.25,NA\n"
+     "b,NA,NA,1\n"),
+    ("combined", "wv_rows",
+     "wavelength,a mean,b mean\n"
+     "438.5,0.5±0.02,NA\n"
+     "440,0.25±0.01,NA\n"
+     "500,NA,1±0.1\n"),
+])
+def test_tabular_provider_no_sample_count(provider_settings, format, orientation, expected):
+    """The sample count columns can be hidden in any format and orientation"""
+    provider_settings(format, orientation, sample_count=False)
+    ss = awkward_spectra()
+    assert ss.tabularProvider().csvString() == expected
+    # but the sample count can still be indexed in expressions
+    from pcot.expressions import ExpressionEvaluator
+    r = ExpressionEvaluator().run("x[a,n440]", {"x": Datum(Datum.SPECTRA, ss, sources=ss.getSources())})
+    assert r.val.n == 10
 
 
 def test_tabular_provider_settings_change_existing_provider(provider_settings):

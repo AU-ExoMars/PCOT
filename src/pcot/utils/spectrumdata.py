@@ -291,6 +291,7 @@ class SpectrumSet(SourcesObtainable):
         spectra: Dict[str, Spectrum]
         wavelengths: List[float]
 
+        # the settings - filled in by TabularConfigHandler when this module is imported
         config = None
 
         PROVIDER_PARAMS = TaggedDictType(
@@ -303,6 +304,7 @@ class SpectrumSet(SourcesObtainable):
             orientation=("Orientation",str, "wv_cols",
                          ["wv_cols","wv_rows"],
                          ["wavelengths as columns", "wavelengths as rows"]),
+            sample_count = ("Show sample count", bool, True),
         )
 
         # For each format, the prefixes for the columns for each wavelength (with wavelengths as columns, e.g.
@@ -337,36 +339,39 @@ class SpectrumSet(SourcesObtainable):
         # which is being displayed changes when the settings are changed.
 
         def format(self) -> str:
-            c = SpectrumSet.Provider.config
-            return c.format if c is not None else "separate"
+            return SpectrumSet.Provider.config.format
 
         def wavelengthsAsRows(self) -> bool:
-            c = SpectrumSet.Provider.config
-            return c is not None and c.orientation == "wv_rows"
+            return SpectrumSet.Provider.config.orientation == "wv_rows"
 
         def cells(self, v: Optional[SpectrumValue]) -> List[str]:
             """The cells for a single value in the current format (in the order of FORMAT_PREFIXES
             and FORMAT_SUFFIXES), or for a missing value if v is None"""
             fmt = self.format()
             if fmt == "separate":
-                return ["NA", "NA", "0"] if v is None else [printable(v.v.n), printable(v.v.u), str(v.samples)]
+                out = ["NA", "NA", "0"] if v is None else [printable(v.v.n), printable(v.v.u), str(v.samples)]
             elif fmt == "mean":
-                return ["NA", "0"] if v is None else [printable(v.v.n), str(v.samples)]
+                out = ["NA", "0"] if v is None else [printable(v.v.n), str(v.samples)]
             elif fmt == "combined":
-                return ["NA", "0"] if v is None else [f"{printable(v.v.n)}±{printable(v.v.u)}", str(v.samples)]
-            raise ValueError(f"unknown spectrum table format {fmt}")
+                out = ["NA", "0"] if v is None else [f"{printable(v.v.n)}±{printable(v.v.u)}", str(v.samples)]
+            else:
+                raise ValueError(f"unknown spectrum table format {fmt}")
+            # remove the last cell (always the sample count) if we're not showing the sample count
+            return out if SpectrumSet.Provider.config.sample_count else out[:-1]
 
         def getHeaders(self) -> List[str]:
             if self.wavelengthsAsRows():
                 # "wavelength" and then the columns for each spectrum, e.g. "a mean","a sd","a samples"...
-                cols = [f"{name} {suffix}" for name in self.names
-                        for suffix in SpectrumSet.Provider.FORMAT_SUFFIXES[self.format()]]
-                cols = ["wavelength"] + cols
+                suffixes = SpectrumSet.Provider.FORMAT_SUFFIXES[self.format()]
+                if not SpectrumSet.Provider.config.sample_count:
+                    suffixes = suffixes[:-1] # remove last item if not showing sample count
+                cols = ["wavelength"] + [f"{name} {suffix}" for name in self.names for suffix in suffixes]
             else:
                 # "name" and then the columns for each wavelength, e.g. m440,s440,n440...
-                cols = [self.colname(prefix, w) for w in self.wavelengths
-                        for prefix in SpectrumSet.Provider.FORMAT_PREFIXES[self.format()]]
-                cols = ["name"] + cols
+                prefixes = SpectrumSet.Provider.FORMAT_PREFIXES[self.format()]
+                if not SpectrumSet.Provider.config.sample_count:
+                    prefixes = prefixes[:-1]  # remove last item if not showing sample count
+                cols = ["name"] + [self.colname(prefix, w) for w in self.wavelengths for prefix in prefixes]
             return cols
 
         def __iter__(self) -> TabularIterator:

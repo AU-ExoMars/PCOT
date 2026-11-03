@@ -100,7 +100,7 @@ sample count was called "pixel count," but Enfys (and other possible spectral so
 * The layout of spectra tables can be changed with the new *Table settings...* button above the table:
 values can be shown as separate mean, SD and sample count columns, mean and sample count only, or
 mean±SD and sample count, and wavelengths can be columns (one row per spectrum, as before) or rows
-(one row per wavelength). The settings are saved in the configuration and apply to all spectra,
+(one row per wavelength). The sample count columns can also be hidden. The settings are saved in the configuration and apply to all spectra,
 **including CSV files** saved from the sink node or written by `pcotbatch`.
 * Numbers in tables are now given to the number of significant figures set in the configuration
 (`sigfigs`), as they are elsewhere in PCOT. Previously they were rounded to five decimal places, so
