@@ -23,7 +23,9 @@ from matplotlib.figure import Figure
 ## Matplotlib canvas class containing a single figure
 class MplCanvas(Canvas):
     def __init__(self):
-        self.fig = Figure(figsize=(4, 2))
+        # constrained layout sizes the margins to fit axis labels, tick labels and titles,
+        # and recalculates them whenever the canvas is resized.
+        self.fig = Figure(figsize=(4, 2), layout='constrained')
         self.create_default_subplot()
         Canvas.__init__(self, self.fig)
         Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
@@ -89,5 +91,4 @@ class MplWidget(QtWidgets.QWidget):
 
     ## force redraw
     def draw(self):
-        self.fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
         self.canvas.draw()

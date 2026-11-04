@@ -532,15 +532,19 @@ class TabReflectance(pcot.ui.tabs.Tab):
         ax.xaxis.tick_bottom()
 
     def replot_sep_plots(self):
-        plotct = 1
         # clear all figures
         self.w.mpl.fig.clf()
-        self.w.mpl.fig.subplots_adjust(hspace=0.2)
-        for filter in self.node.filters:
+        # work out the grid dimensions (i.e. how many rows and columns we have)
+        COLUMNS = 3
+        plotcount = len(self.node.filters)
+        rows = ((plotcount-1) // COLUMNS) + 1
+        cols = min(COLUMNS, plotcount)
+
+        for plotidx,filter in enumerate(self.node.filters):
             filter_name = filter.name
-            ax = self.w.mpl.fig.add_subplot(3, 4, plotct)
+            # add_subplot args: rows in entire plot, cols in plot, index of the plot we're making (1-based).
+            ax = self.w.mpl.fig.add_subplot(rows, cols, plotidx+1)
             self.set_axis_data(ax,sep_plots=True)
-            plotct += 1
 
             points = self.node.points_per_filter.get(filter_name, None)
             fit = self.node.fits.get(filter_name, None)
