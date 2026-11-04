@@ -35,6 +35,13 @@ bandwidthModes = ["none", "errorbar", "vertbar"]
 # short names for wavelength annotation modes used in the dialog
 annotateModes = ["none", "line", "linefwhm"]
 
+# wavelength units and scaling factors to convert to them from nm and the string for that annotation
+# in the "wavelength (string)" x-axis label
+wavelengthUnits = {
+    "nm": (1,"nm"),
+    "microns": (1e-3, "$\\mu$m"),
+}
+
 
 def fixSortList(node):
     # fix the sort list, making sure that only legends for the data we have are present,
@@ -102,7 +109,10 @@ class XFormSpectrum(XFormType):
             bandwidthmode=("Bandwidth mode", str, "none", bandwidthModes),
             ignorePixSD=("Ignore pixel standard deviation", bool, False),
             fixedYAxis=("Y axis fixed to [0,1]", bool, False),
-            annotate=("Wavelength annotation mode", str, "none", annotateModes)
+            annotate=("Wavelength annotation mode", str, "none", annotateModes),
+            # while spectra are always stored in nm, we can convert to microns in the plot
+            wavelength_units=("Wavelength units", str,"nm", list(wavelengthUnits.keys())),
+            y_label=("Y axis label", str, "reflectance"),
         )
 
         for i in range(NUMINPUTS):
@@ -214,9 +224,13 @@ class TabSpectrum(ui.tabs.Tab):
 
     def __init__(self, node, w):
         super().__init__(w, node, 'tabspectrum.ui')
+
+        self.w.wvUnitsCombo.addItems(wavelengthUnits.keys())
+
         self.w.errorbarmode.currentIndexChanged.connect(self.errorbarmodeChanged)
         self.w.bandwidthmode.currentIndexChanged.connect(self.bandwidthmodeChanged)
         self.w.colourmode.currentIndexChanged.connect(self.colourmodeChanged)
+        self.w.wvUnitsCombo.currentIndexChanged.connect(self.wvUnitsChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.reorderButton.clicked.connect(self.openReorder)
         self.w.stackSepSpin.valueChanged.connect(self.stackSepChanged)
@@ -229,6 +243,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.ignorePixSD.checkStateChanged.connect(self.ignorePixSDChanged)
         self.w.fixedYBox.checkStateChanged.connect(self.fixedYAxisChanged)
         self.w.annotateCombo.currentIndexChanged.connect(self.annotateModeChanged)
+        self.w.yAxisLabel.editingFinished.connect(self.yAxisLabelChanged)
         self.nodeChanged()
 
     def replot(self):
@@ -247,6 +262,10 @@ class TabSpectrum(ui.tabs.Tab):
         else:
             cols = matplotlib.colormaps['Dark2'].colors
 
+        # get the scale factor for the x-units we've chosen and the symbol to use
+        # on the axis label
+        unit_scale_factor,symbol = wavelengthUnits[self.node.params.wavelength_units]
+
         # the dict consists of a list of channel data tuples for each image/roi.
         colidx = 0
         stackSep = self.node.params.stackSep / 20
@@ -255,8 +274,8 @@ class TabSpectrum(ui.tabs.Tab):
             ax.set_yticklabels('')
 
         ax.tick_params(axis='both', labelsize=self.node.params.axisFontSize)
-        ax.set_xlabel('wavelength', fontsize=self.node.params.labelFontSize)
-        ax.set_ylabel('reflectance' if stackSep == 0 else 'stacked reflectance',
+        ax.set_xlabel(f"wavelength ({symbol})", fontsize=self.node.params.labelFontSize)
+        ax.set_ylabel(self.node.params.y_label if stackSep == 0 else f"{self.node.params.y_label} (stacked)",
                       fontsize=self.node.params.labelFontSize)
 
         stackpos = 0
@@ -291,10 +310,10 @@ class TabSpectrum(ui.tabs.Tab):
                 col = cols[colidx % len(cols)]
             means = [x + stackSep * stackpos for x in means]
 
-            wavelengths = [x.cwl for x in filters]
+            wavelengths = [x.cwl * unit_scale_factor for x in filters]
 
             ax.plot(wavelengths, means, c=col, label=legend)
-            ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths], s=0)
+            ax.scatter(wavelengths, means, c=[wav2RGB(x.cwl) for x in filters], s=0)
             if self.node.params.fixedYAxis:
                 ax.set_ylim(0,1)
 
@@ -304,14 +323,16 @@ class TabSpectrum(ui.tabs.Tab):
                 ax.vlines(wavelengths, 0, 1, transform=ax.get_xaxis_transform(),
                           colors='grey', linewidth=0.5, zorder=0)
                 for wl in wavelengths:
-                    ax.annotate(f"{int(round(wl))}nm", xy=(wl, 0),
+                    ax.annotate(f"{wl:g}", xy=(wl, 0),
                                 xycoords=('data', 'axes fraction'),
                                 xytext=(3, 3), textcoords='offset points',
                                 rotation=90, ha='left', va='bottom',
                                 fontsize=self.node.params.axisFontSize)
                 if self.node.params.annotate == 'linefwhm':
                     for f in filters:
-                        ax.axvspan(f.cwl - f.fwhm / 2, f.cwl + f.fwhm / 2,
+                        a = f.cwl - f.fwhm / 2
+                        b = f.cwl + f.fwhm / 2
+                        ax.axvspan(a*unit_scale_factor, b*unit_scale_factor,
                                    color='lightgrey', alpha=0.3, zorder=0)
 
             if self.node.params.errorbarmode != 'none':
@@ -320,7 +341,7 @@ class TabSpectrum(ui.tabs.Tab):
                 ax.errorbar(wavelengths, means,
                             stderrs if self.node.params.errorbarmode == 'stderror' else sds,
                             # only show the x error bar if we are in the correct bandwidth mode
-                            xerr=[x.fwhm / 2 for x in filters] if self.node.params.bandwidthmode == 'errorbar' else None,
+                            xerr=[x.fwhm / 2 * unit_scale_factor for x in filters] if self.node.params.bandwidthmode == 'errorbar' else None,
                             ls="None", capsize=4, c=col)
             colidx += 1
             # subtraction to make the plots stack the same way as the legend!
@@ -329,7 +350,8 @@ class TabSpectrum(ui.tabs.Tab):
             # now show the bandwidth as a vertical span if we are in the correct mode
             if self.node.params.bandwidthmode == 'vertbar':
                 for f in filters:
-                    ax.axvspan(f.cwl - f.fwhm / 2, f.cwl + f.fwhm / 2, color=col, alpha=0.1)
+                    ax.axvspan((f.cwl - f.fwhm / 2) * unit_scale_factor,
+                               (f.cwl + f.fwhm / 2) * unit_scale_factor, color=col, alpha=0.1)
 
         ax.legend(fontsize=self.node.params.legendFontSize)
         ymin, ymax = ax.get_ylim()
@@ -339,7 +361,7 @@ class TabSpectrum(ui.tabs.Tab):
             ymax += 0.01
         ax.set_ylim(ymin, ymax)
         xmin, xmax = ax.get_xlim()
-        ax.set_xlim(xmin, xmax + self.node.params.rightSpace * 100)
+        ax.set_xlim(xmin, xmax + self.node.params.rightSpace * 100 * unit_scale_factor)
 
         if self.node.params.stackSep == 0:  # only remove negative ticks if we're labelling the ticks.
             ax.set_yticks([x for x in ax.get_yticks() if x >= 0])
@@ -356,6 +378,11 @@ class TabSpectrum(ui.tabs.Tab):
             "Hide controls" if self.w.controls.isVisible() else "Show controls"
         )
 
+    def yAxisLabelChanged(self):
+        self.mark()
+        self.node.params.y_label = self.w.yAxisLabel.text()
+        self.changed()
+
     def ignorePixSDChanged(self, state):
         self.mark()
         self.node.params.ignorePixSD = (state == Qt.CheckState.Checked)
@@ -369,6 +396,11 @@ class TabSpectrum(ui.tabs.Tab):
     def annotateModeChanged(self, mode):
         self.mark()
         self.node.params.annotate = annotateModes[mode]
+        self.changed()
+
+    def wvUnitsChanged(self, _):
+        self.mark()
+        self.node.params.wavelength_units = self.w.wvUnitsCombo.currentText()
         self.changed()
 
     def errorbarmodeChanged(self, mode):
@@ -435,8 +467,8 @@ class TabSpectrum(ui.tabs.Tab):
         with SignalBlocker(self.w.errorbarmode, self.w.bandwidthmode, self.w.colourmode,
                            self.w.stackSepSpin, self.w.bottomSpaceSpin, self.w.rightSpaceSpin,
                            self.w.legendFontSpin, self.w.axisFontSpin, self.w.labelFontSpin,
-                           self.w.ignorePixSD, self.w.fixedYBox,
-                           self.w.annotateCombo):
+                           self.w.ignorePixSD, self.w.fixedYBox, self.w.wvUnitsCombo,
+                           self.w.annotateCombo,self.w.yAxisLabel):
             self.w.errorbarmode.setCurrentIndex(errorBarModes.index(self.node.params.errorbarmode))
             self.w.bandwidthmode.setCurrentIndex(bandwidthModes.index(self.node.params.bandwidthmode))
             self.w.colourmode.setCurrentIndex(colourModes.index(self.node.params.colourmode))
@@ -449,3 +481,5 @@ class TabSpectrum(ui.tabs.Tab):
             self.w.ignorePixSD.setChecked(self.node.params.ignorePixSD)
             self.w.fixedYBox.setChecked(self.node.params.fixedYAxis)
             self.w.annotateCombo.setCurrentIndex(annotateModes.index(self.node.params.annotate))
+            self.w.wvUnitsCombo.setCurrentText(self.node.params.wavelength_units)
+            self.w.yAxisLabel.setText(self.node.params.y_label)

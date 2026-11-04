@@ -115,6 +115,9 @@ mean±SD and sample count, and wavelengths can be columns (one row per spectrum,
 * Numbers in tables are now given to the number of significant figures set in the configuration
 (`sigfigs`), as they are elsewhere in PCOT. Previously they were rounded to five decimal places, so
 very small values were written as 0. Large values keep all the digits before the decimal point.
+* The *spectrum* node's plot can show wavelengths in nm or microns, and its y-axis label can be
+changed (it is "reflectance" by default). The wavelength annotations no longer include "nm", because
+the unit is now on the x-axis label. Axis labels in plots are no longer clipped at the edges of the plot.
 * For plugin authors: plugins can now store their own settings in PCOT's configuration file, by
 registering a section handler with `pcot.config.addConfigSection()`. Settings belonging to a plugin
 which isn't loaded are kept when the configuration is saved. See
