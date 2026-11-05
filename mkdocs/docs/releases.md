@@ -117,7 +117,8 @@ mean±SD and sample count, and wavelengths can be columns (one row per spectrum,
 very small values were written as 0. Large values keep all the digits before the decimal point.
 * The *spectrum* node's plot can show wavelengths in nm or microns, and its y-axis label can be
 changed (it is "reflectance" by default). The wavelength annotations no longer include "nm", because
-the unit is now on the x-axis label. Axis labels in plots are no longer clipped at the edges of the plot.
+the unit is now on the x-axis label. The *View as table* button shows the spectra as a table, which can
+be saved as a CSV or PARC file. Axis labels in plots are no longer clipped at the edges of the plot.
 * For plugin authors: plugins can now store their own settings in PCOT's configuration file, by
 registering a section handler with `pcot.config.addConfigSection()`. Settings belonging to a plugin
 which isn't loaded are kept when the configuration is saved. See
