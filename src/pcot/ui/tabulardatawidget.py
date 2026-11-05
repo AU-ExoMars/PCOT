@@ -52,25 +52,30 @@ class TabularDataModel(QAbstractTableModel):
 
 class TabularDataWidget(QtWidgets.QWidget):
     """Shows the data from a TabularProvider in a read-only table. If the provider has parameters,
-    there is also a button to open an editor for them."""
+    there is also a button to open an editor for them.
+
+    If button_row is false, the settings button isn't put into this widget's layout, so the owner can put
+    it somewhere else (such as alongside its own buttons). Its visibility is still set by display(),
+    but the owner should hide it when the table itself is hidden."""
 
     provider: Optional[TabularProvider]
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, button_row=True):
         super().__init__(parent)
         self.provider = None
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        row = QtWidgets.QHBoxLayout()
-        row.addStretch()
         self.settingsButton = QtWidgets.QPushButton("Table settings...")
         self.settingsButton.setToolTip("Change how this kind of data is shown as a table")
         self.settingsButton.clicked.connect(self.settingsClicked)
         self.settingsButton.setVisible(False)
-        row.addWidget(self.settingsButton)
-        layout.addLayout(row)
+        if button_row:
+            row = QtWidgets.QHBoxLayout()
+            row.addStretch()
+            row.addWidget(self.settingsButton)
+            layout.addLayout(row)
 
         self.view = QtWidgets.QTableView(self)
         self.tableModel = TabularDataModel(self)
@@ -85,7 +90,11 @@ class TabularDataWidget(QtWidgets.QWidget):
         self.tableModel.setProvider(provider)
         self.view.resizeColumnsToContents()
         # only show the settings button for providers which have settings
-        self.settingsButton.setVisible(provider is not None and provider.getParams() is not None)
+        self.settingsButton.setVisible(self.hasSettings())
+
+    def hasSettings(self) -> bool:
+        """True if the current provider has settings which can be edited"""
+        return self.provider is not None and self.provider.getParams() is not None
 
     def settingsClicked(self):
         if self.provider is None or self.provider.getParams() is None:

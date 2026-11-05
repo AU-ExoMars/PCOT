@@ -64,24 +64,28 @@ class DataWidget(QtWidgets.QWidget):
         if source_section:
             outer.addLayout(inner)
 
+        # if we have a save button, the table's settings button goes alongside it rather than
+        # on a line of its own above the table.
+        self.table = TabularDataWidget(self, button_row=not save_button)
+
         if save_button:
             self.saveButton = QtWidgets.QPushButton("Save...")
             self.saveButton.clicked.connect(self.saveButtonClicked)
             if source_section:
-                inner.addWidget(self.saveButton)
+                row = inner
             else:
                 # no source section to put it in, so give it a row of its own
                 row = QtWidgets.QHBoxLayout()
                 row.addStretch()
-                row.addWidget(self.saveButton)
                 outer.addLayout(row)
+            row.addWidget(self.table.settingsButton)
+            row.addWidget(self.saveButton)
         else:
             self.saveButton = None
 
         self.canvas = Canvas(self)
         self.text = QtWidgets.QTextEdit(self)
         self.text.setReadOnly(True)
-        self.table = TabularDataWidget(self)
 
         outer.addWidget(self.canvas)
         outer.addWidget(self.text)
@@ -96,6 +100,9 @@ class DataWidget(QtWidgets.QWidget):
         self.canvas.setVisible(self.dispType == self.DISP_IMAGE)
         self.text.setVisible(self.dispType == self.DISP_TEXT or self.dispType == self.DISP_SOURCES)
         self.table.setVisible(self.dispType == self.DISP_TABLE)
+        # the table's settings button may be in our layout rather than the table's, in which case
+        # hiding the table won't hide it.
+        self.table.settingsButton.setVisible(self.dispType == self.DISP_TABLE and self.table.hasSettings())
 
 
     # file formats data can be saved in: name filter -> extension

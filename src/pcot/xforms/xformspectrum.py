@@ -13,6 +13,7 @@ from pcot.cameras.filters import wav2RGB
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.ui import uiloader
 from pcot.ui import theme
+from pcot.ui.datadialog import DataDialog
 from pcot.ui.tabs import Tab
 from pcot.utils import SignalBlocker
 from pcot.utils.spectrum import spectraFromImages
@@ -244,6 +245,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.fixedYBox.checkStateChanged.connect(self.fixedYAxisChanged)
         self.w.annotateCombo.currentIndexChanged.connect(self.annotateModeChanged)
         self.w.yAxisLabel.editingFinished.connect(self.yAxisLabelChanged)
+        self.w.tableButton.clicked.connect(self.openTable)
         self.nodeChanged()
 
     def replot(self):
@@ -453,6 +455,10 @@ class TabSpectrum(ui.tabs.Tab):
         if reorderDialog.exec():
             self.node.params.sortlist.set(reorderDialog.getNewList())
             self.markReplotReady()
+
+    def openTable(self):
+        dw = DataDialog(self, self.node.getOutput(0, return_datum=True))
+        dw.exec()
 
     def markReplotReady(self):
         """make the replot button red"""
