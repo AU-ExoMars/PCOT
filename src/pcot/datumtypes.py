@@ -361,8 +361,31 @@ class SpectraDataType(Type):
     def copy(self,d):
         return d  # type is immutable
 
-    def getTabularProvider(self,d ):
+    def getTabularProvider(self,d):
         return d.val.tabularProvider()
+
+
+class CalibrationDataType(Type):
+    def __init__(self):
+        from pcot.calib.fit import CalibrationData
+        super().__init__("calibration",valid=[CalibrationData],connColour="#00ff80")
+
+    def serialise(self,d):
+        return self.name, (d.val.serialise(), d.getSources().serialise())
+
+    def deserialise(self,d):
+        from pcot.calib.fit import CalibrationData
+        v, s = d
+        c = CalibrationData.deserialise(v)
+        c.sources = pcot.sources.SourceSet.deserialise(s)
+        return pcot.datum.Datum(self, c, c.sources)
+
+    def copy(self, d):
+        return d # type is immutable
+
+    def getTabularProvider(self,d):
+        return d.val.tabularProvider()
+
 
 
 class TestResultType(Type):

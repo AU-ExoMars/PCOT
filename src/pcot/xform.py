@@ -1468,7 +1468,7 @@ class XFormGraph:
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
         d = self.disambiguate(d)
-        newnodes = []
+        newnodes:List[XForm] = []
         # first pass - build the nodes
         for nodename, ent in d.items():
             n = self.create(ent['type'])
@@ -1495,6 +1495,16 @@ class XFormGraph:
                         n.connect(i, other, output, False)  # don't automatically perform
         # and finally match output types
         for n in newnodes:
+            # it may be that some ninny has increased the number of outputs in a node since the file
+            # was last saved
+            if len(n.outputTypes) < len(n.type.outputConnectors):
+                # if so, we extend the outputTypes array with the appropriate
+                # number of None (since these are "overriding" types that don't yet override)
+                n.outputTypes.extend([None] * (len(n.type.outputConnectors)-len(n.outputTypes)))
+            # same trick with inputs
+            if len(n.inputTypes) < len(n.type.inputConnectors):
+                n.inputTypes.extend([None] * (len(n.type.inputConnectors)-len(n.inputTypes)))
+
             n.type.generateOutputTypes(n)
         return newnodes
 

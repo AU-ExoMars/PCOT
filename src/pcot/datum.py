@@ -176,6 +176,8 @@ class Datum(SourcesObtainable):
         TESTRESULT := pcot.datumtypes.TestResultType().setOKForConnectors(),
         # spectral data
         SPECTRA := pcot.datumtypes.SpectraDataType().setOKForConnectors(),
+        # reflectance calibration data
+        CALIBRATION := pcot.datumtypes.CalibrationDataType().setOKForConnectors(),
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
         IDENT := pcot.datumtypes.IdentType(),
