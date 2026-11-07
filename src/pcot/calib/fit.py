@@ -294,6 +294,3 @@ class CalibrationData:
                     "c stddev": f"{fit.sdc:g}",
                     "warning": fit.warning or ""
                 }
-
-
-

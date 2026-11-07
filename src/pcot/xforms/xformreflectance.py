@@ -1,33 +1,33 @@
 import builtins
-import logging
 import dataclasses
-from typing import List, Dict, Tuple
+import logging
+from typing import List, Dict
 
 import numpy as np
 from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 
+import pcot.calib
 import pcot.ui.tabs
 from pcot import cameras, ui
-import pcot.calib
 from pcot.assets import Icons
 from pcot.calib import SimpleValue
-from pcot.calib.fit import CalibrationData, ReflectancePoint
+from pcot.calib.fit import CalibrationData, ReflectancePoint, Fit
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
+from pcot.sources import SourceSet
+from pcot.ui import theme
 from pcot.ui.help import showHelpDialog
 from pcot.ui.tabledialog import TableDialog
-from pcot.ui import theme
 from pcot.utils import SignalBlocker, image
 from pcot.utils.maths import pooled_sd
 from pcot.utils.table import Table
-from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
 
 logger = logging.getLogger(__name__)
 
 
-def collectCameraData(node, img):
+def collectCameraData(data, img):
     """This first part of the code is called from perform(). It collects the data for the reflectance
     calculation and makes sure that the image is suitable (each band has one filter, all from the same
     camera, and that camera has reflectance data for the calibration target).
@@ -36,7 +36,8 @@ def collectCameraData(node, img):
     chicken/egg scenario - perform() needs to run so that we know what targets are present and can set
     up the UI, but the UI needs to be set up before we can run perform() effectively.
 
-    Collected data is stored in node.
+    The filter names, CWLs and camera name are stored in the CalibrationData provided. The image's own
+    Filter objects are returned, in band order, for working out the known reflectances.
     """
     # we need to get the filters from the image and make sure there's only one for each band
     filters = img.sources.getFiltersByBand()
@@ -58,9 +59,41 @@ def collectCameraData(node, img):
 
     # and try to get the actual camera data
     camera = cameras.getCamera(camera)
-    node.filters = filters
-    node.camera = camera
-    node.filter_index_by_name = {f.name: i for i, f in enumerate(filters)}
+
+    # record the canonical filter order - the order of the filters as they
+    # were in the input image
+    data.filters = [f.name for f in filters]
+
+    # and a dictionary to hold the cwls. Of course, we could put both the ordering
+    # and elements in an ordered dict, but that doesnt JSON-serialise well.
+    data.cwls = {f.name: f.cwl for f in filters}
+
+    data.camera = camera.params.params.name
+    return filters
+
+
+def fitPoints(points_per_filter: Dict[str, List[ReflectancePoint]],
+              zero_fudge: bool, simpler_data_fudge: bool) -> Dict[str, Fit]:
+    """Fit a line to the points for each filter, applying the fudges if required. Returns a dict of filter
+    name to Fit."""
+    fits = {}
+    for filter_name, points in points_per_filter.items():
+        measured_list = [x.measured for x in points]
+        known_list = [x.known for x in points]
+
+        # FUDGE = Set the SD to a very small value. Can't set to zero because the maths blows up.
+        if simpler_data_fudge:
+            measured_list = [SimpleValue(m.mean, np.float32(0.0001)) for m in measured_list]
+
+        # FUDGE = make sure it goes through zero.
+        if zero_fudge:
+            known_list.append(SimpleValue(np.float32(0.0), np.float32(0.0)))
+            measured_list.append(SimpleValue(np.float32(0.0), np.float32(0.0001)))  # zero measured value
+
+        f = pcot.calib.fit(known_list, measured_list)
+        fits[filter_name] = f
+        logger.debug(f"Filter {filter_name} has fit {f.m}±{f.sdm}x + {f.c}±{f.sdc}")
+    return fits
 
 
 @xformtype
@@ -89,13 +122,21 @@ class XFormReflectance(XFormType):
     The outputs are the gradient and intercept of the fit for each filter. All source
     data is removed, so it does not obscure image data in subsequent operations. The
     next operation should be an expr node performing out=(in-c)/m.
+
+    The *cal* output is the calibration data itself: the fit for each filter and the points it
+    was made from. This can be saved (for example to a PARC file from a *sink* node).
+
+    The input can also be calibration data rather than an image - for example, data loaded from a
+    PARC file. The fits are then redone from the points in that data, using this node's fudge
+    settings. The target and angles are ignored, because they were used when the points were
+    made, so their controls are disabled. The incoming data itself is not changed.
     """
 
     data: CalibrationData
 
     def __init__(self):
         super().__init__("reflectance", "calibration", "0.0.0")
-        self.addInputConnector("img", Datum.IMG)
+        self.addInputConnector("img/calib", Datum.ANY)
 
         # TODO during development I'm still outputting the old m,c vectors along with the new calibration datum
         self.addOutputConnector("m", Datum.NUMBER)
@@ -119,32 +160,20 @@ class XFormReflectance(XFormType):
     def init(self, node):
         # no serialisation needed for this data.
         node.filter_to_plot = None
-        node.filters = None # list of filter objects
+        # true if the input was calibration data rather than an image
+        node.input_is_calibration = False
         # most data is stored in a CalibrationData object which we initialise here
         node.data = CalibrationData()
 
     def createTab(self, xform, window):
         return TabReflectance(xform, window)
 
-    def perform(self, node):
-        # preset the outputs to a null (error)
-        node.setOutput(0, Datum.null)
-        node.setOutput(1, Datum.null)
-        node.setOutput(2, Datum.null)
-
-        # start with new, empty calibration data. It must be a new object rather than the old one
-        # cleared out, because the old one may have been output and still be in use elsewhere. It
-        # also means that if we fail part way, the tab won't show data left over from a previous run.
-        node.data = CalibrationData()
-
-        # read the image
-        img = node.getInput(0, Datum.IMG)
-        if img is None:
-            raise XFormException('DATA', 'no image data')
-
+    def _getFromImage(self, node, input: Datum) -> SourceSet:
+        """The input is an image, so calculate the calibration data from that image"""
         # collect reflectance data and check the image is valid (throws exception if not)
+        img = input.get(Datum.IMG)
         try:
-            collectCameraData(node, img)
+            filters = collectCameraData(node.data, img)
         except cameras.CameraNotFoundException as e:
             ui.error(str(e))
             raise XFormException('DATA', str(e))
@@ -196,15 +225,9 @@ class XFormReflectance(XFormType):
 
             # get the known reflectance for each filter along with the filter, and
             # then the measured reflectance for each band.
-            for filter in node.filters:
+            # The filters are in band order (one per band), so the index is the band index.
+            for band_index, filter in enumerate(filters):
                 filter_name = filter.name
-
-                # get the band index for this filter - we have Filter items in node.filters
-                band_index = node.filter_index_by_name.get(filter_name, None)
-                if band_index is None:
-                    # this filter is not in the image, so skip it
-                    logger.debug(f"Filter {filter_name} not in image, skipping")
-                    continue
 
                 if bad_bands[band_index]:
                     # this band is bad for this ROI, so skip it
@@ -232,7 +255,7 @@ class XFormReflectance(XFormType):
                     logger.debug(f"Band {band_index} has no variance, skipping")
                     continue
 
-                # get the known data
+                # get the known data, using the image's own filter
                 known_mean = reflectance.get_known_reflectance_for_filter(filter,patch,
                                                                           node.params.phi_target,
                                                                           node.params.theta_target,
@@ -260,54 +283,61 @@ class XFormReflectance(XFormType):
         # record the points per filter in the calibration data
         node.data.points_per_filter = points_per_filter
 
-        # record the canonical filter order - the order of the filters as they
-        # were in the input image
-        node.data.filters = [f.name for f in node.filters]
-        # and a dictionary to hold the cwls. Of course, we could put both the ordering
-        # and elements in an ordered dict, but that doesnt JSON-serialise well.
-        node.data.cwls = {f.name: f.cwl for f in node.filters}
-
-        # now we can do the fit on a per-filter basis.
-        fits = {}
-        for filter_name, points in points_per_filter.items():
-            measured_list = [x.measured for x in points]
-            known_list = [x.known for x in points]
-
-            # FUDGE = Set the SD to a very small value. Can't set to zero because the maths blows up.
-            if node.params.simpler_data_fudge:
-                measured_list = [SimpleValue(m.mean, np.float32(0.0001)) for m in measured_list]
-
-            # FUDGE = make sure it goes through zero.
-            if node.params.zero_fudge:
-                known_list.append(SimpleValue(np.float32(0.0), np.float32(0.0)))
-                measured_list.append(SimpleValue(np.float32(0.0), np.float32(0.0001)))  # zero measured value
-
-            f = pcot.calib.fit(known_list, measured_list)
-            fits[filter_name] = f  # store the fit data so we can use it in the UI
-            logger.debug(f"Filter {filter_name} has fit {f.m}±{f.sdm}x + {f.c}±{f.sdc}")
-
-        # record the fits in the calibration data
-        node.data.fits = fits
-
-        # record the fudge flags and other info
+        # now we can do the fit on a per-filter basis, and record the fits and the fudge flags
+        node.data.fits = fitPoints(points_per_filter, node.params.zero_fudge, node.params.simpler_data_fudge)
         node.data.zero_fudge = node.params.zero_fudge
         node.data.simpler_data_fudge = node.params.simpler_data_fudge
-        node.data.camera = node.camera.params.params.name
 
         # work out the sources, which are the sources from the image, modified
-        # as "secondary."
-        sources = img.sources.copy().visit(
+        # as "secondary," and return them.
+        return img.sources.copy().visit(
             lambda sourceSet: sourceSet.visit(
                 lambda source: source.setSecondaryName("reflectance target")
             ))
 
-        # TODO OUTPUT AS CALIB DATA
+
+    def perform(self, node):
+        # preset the outputs to a null (error)
+        node.setOutput(0, Datum.null)
+        node.setOutput(1, Datum.null)
+        node.setOutput(2, Datum.null)
+
+        # start with new, empty calibration data. It must be a new object rather than the old one
+        # cleared out, because the old one may have been output and still be in use elsewhere. It
+        # also means that if we fail part way, the tab won't show data left over from a previous run.
+        node.data = CalibrationData()
+
+        node.input_is_calibration = False
+
+        # read the input, which can be an image or calibration data. An unconnected input
+        # gives a Datum of type ANY with a None value, so check the value rather than the type.
+        input = node.getInput(0)
+        if input is None or input.isNone():
+            raise XFormException('DATA', 'no input provided')
+
+        if input.tp == Datum.IMG:
+            sources = self._getFromImage(node, input)
+        elif input.tp == Datum.CALIBRATION:
+            node.input_is_calibration = True
+            calib = input.get(Datum.CALIBRATION)
+            if not calib.points_per_filter:
+                raise XFormException('DATA', 'calibration data has no points to fit')
+            # Refit the points with this node's fudge settings. This makes a modified copy -
+            # the input's data must not be changed, because it may be used elsewhere.
+            node.data = dataclasses.replace(
+                calib,
+                fits=fitPoints(calib.points_per_filter, node.params.zero_fudge, node.params.simpler_data_fudge),
+                zero_fudge=node.params.zero_fudge,
+                simpler_data_fudge=node.params.simpler_data_fudge)
+            sources = input.sources
+        else:
+            raise XFormException('DATA', f'input must be an image or calibration data, not {input.tp.name}')
+
         missing = node.data.missingFits()
         if missing:
             # leave the outputs null, but the data is kept for the tab
             ui.log(f"Filters {', '.join(missing)} have no fit data! Are they correctly labelled in the source "
                    f"image and are they in the calibration data?")
-            return
 
         m, c = node.data.getGradientsAndIntercepts()
         if m is not None:
@@ -391,12 +421,14 @@ class TabReflectance(pcot.ui.tabs.Tab):
         m = self.node.getOutput(0, Datum.NUMBER)
         c = self.node.getOutput(1, Datum.NUMBER)
         # construct a Table and pass it to a TableDialog
-        if m is not None and c is not None:
+        data: CalibrationData = self.node.data
+        if m is not None and c is not None and data.filters:
+            cwls = data.cwls or {}
             table = Table()
-            for i, f in enumerate(self.node.filters):
-                table.newRow(f.name)
-                table.add("Filter", f.name)
-                table.add("CWL",int(f.cwl))
+            for i, f in enumerate(data.filters):
+                table.newRow(f)
+                table.add("Filter", f)
+                table.add("CWL", int(cwls.get(f, 0)))
                 table.add("Gradient", m[i])
                 table.add("Intercept", c[i])
 
@@ -457,18 +489,18 @@ class TabReflectance(pcot.ui.tabs.Tab):
             if self.node.params.target in cameras.getReflectanceNames():
                 self.w.targetCombo.setCurrentIndex(names.index(self.node.params.target))
         # populate the filter combo box with the filters from the image
-        filter_names = None
+        data: CalibrationData = self.node.data
+        cwls = data.cwls or {}      # may be None if perform() failed early
         with SignalBlocker(self.w.filterCombo):
             self.w.filterCombo.clear()
-            if self.node.filters:
-                filter_names = [f.name for f in self.node.filters]
+            if data.filters:
                 self.w.filterCombo.addItem("ALL", "ALL")
-                for f in self.node.filters:
-                    label = f"{f.name} ({int(round(f.cwl))}nm)" if f.cwl else f.name
-                    self.w.filterCombo.addItem(label, f.name)
+                for f in data.filters:
+                    label = f"{f} ({int(round(cwls[f]))}nm)" if f in cwls else f
+                    self.w.filterCombo.addItem(label, f)
                 try:
                     # +1 here because of the ALL value
-                    self.w.filterCombo.setCurrentIndex(filter_names.index(self.node.filter_to_plot) + 1)
+                    self.w.filterCombo.setCurrentIndex(data.filters.index(self.node.filter_to_plot) + 1)
                 except ValueError:
                     # this filter is not in the image?
                     ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
@@ -485,8 +517,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
         hdr.setSectionResizeMode(1,QtWidgets.QHeaderView.ResizeMode.Stretch)
 
         row=0
-        if self.node.data.fits and filter_names is not None:
-            for i,fname in enumerate(filter_names):
+        if data.fits and data.filters:
+            for i,fname in enumerate(data.filters):
                 fit = self.node.data.fits.get(fname)
                 if fit is not None and fit.warning is not None:
                     t.insertRow(row)
@@ -507,6 +539,15 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.phiSpin.setValue(self.node.params.phi_target)
         self.w.thetaSpin.setValue(self.node.params.theta_target)
         self.w.filterAngleSpin.setValue(self.node.params.filter_angle)
+
+        # the target and angles were used to make the points, so they can't be changed for
+        # calibration data which already has points.
+        fromCalib = self.node.input_is_calibration
+        tip = ("Not used: the input is calibration data, whose points were made with their own target and angles"
+               if fromCalib else "")
+        for w in (self.w.targetCombo, self.w.phiSpin, self.w.thetaSpin, self.w.filterAngleSpin):
+            w.setEnabled(not fromCalib)
+            w.setToolTip(tip)
 
     def markReplotReady(self):
         """make the replot button red"""
@@ -534,29 +575,32 @@ class TabReflectance(pcot.ui.tabs.Tab):
         ax.xaxis.tick_bottom()
 
     def replot_sep_plots(self):
+        data:CalibrationData = self.node.data   # for easy access
+
         # clear all figures
         self.w.mpl.fig.clf()
         # work out the grid dimensions (i.e. how many rows and columns we have)
         COLUMNS = 3
-        plotcount = len(self.node.filters)
+        filters = data.filters or []    # may be None if perform() failed early
+        cwls = data.cwls or {}
+        plotcount = len(filters)
         rows = ((plotcount-1) // COLUMNS) + 1
         cols = min(COLUMNS, plotcount)
 
-        for plotidx,filter in enumerate(self.node.filters):
-            filter_name = filter.name
+        for plotidx,filter in enumerate(filters):
             # add_subplot args: rows in entire plot, cols in plot, index of the plot we're making (1-based).
             ax = self.w.mpl.fig.add_subplot(rows, cols, plotidx+1)
             self.set_axis_data(ax,sep_plots=True)
 
             # these may be None if perform() failed before they were set
-            points = (self.node.data.points_per_filter or {}).get(filter_name, None)
-            fit = (self.node.data.fits or {}).get(filter_name, None)
+            points = (data.points_per_filter or {}).get(filter, None)
+            fit = (data.fits or {}).get(filter, None)
 
             if points is None:
-                ui.log(f"No points of data for filter {filter_name}")
+                ui.log(f"No points of data for filter {filter}")
                 continue
             if fit is None:
-                ui.log(f"No fit data for filter {filter_name}")
+                ui.log(f"No fit data for filter {filter}")
                 continue
 
             # separate out the data
@@ -572,11 +616,11 @@ class TabReflectance(pcot.ui.tabs.Tab):
             if fit:
                 ax.axline((0, fit.c), slope=fit.m)
             # ax.plot(known, measured, '+', color=colname, label=band)
-            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=filter_name, fmt='x')
+            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=filter, fmt='x')
 
             # point labelling: don't do this if we're plotting all bands or it's turned off
-            cwl = self.node.camera.getFilter(filter_name).cwl
-            ax.set_title(f"Fit for {filter_name} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}",fontsize=6)
+            cwl = cwls.get(filter,0)
+            ax.set_title(f"Fit for {filter} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}",fontsize=6)
             for i, patch in enumerate(patches):
                 # plot the patch name and the measured value at the point
                 ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f}",
@@ -597,8 +641,10 @@ class TabReflectance(pcot.ui.tabs.Tab):
         ax = self.w.mpl.ax
         self.set_axis_data(ax)
 
+        data: CalibrationData = self.node.data
+        cwls = data.cwls or {}      # may be None if perform() failed early
         if self.node.filter_to_plot is None or self.node.filter_to_plot == "ALL":
-            bands = [f.name for f in self.node.filters]
+            bands = data.filters or []
         else:
             bands = [self.node.filter_to_plot]
 
@@ -606,8 +652,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
         for band in bands:
             # this will be (known_mean, known_std, measured_mean, measured_std)
             # these may be None if perform() failed before they were set
-            points = (self.node.data.points_per_filter or {}).get(band, None)
-            fit = (self.node.data.fits or {}).get(band, None)
+            points = (data.points_per_filter or {}).get(band, None)
+            fit = (data.fits or {}).get(band, None)
 
             if points is None:
                 ui.log(f"No points of data for filter {band}")
@@ -630,7 +676,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
             if fit:
                 ax.axline((0, fit.c), slope=fit.m, color=colname)
             # ax.plot(known, measured, '+', color=colname, label=band)
-            cwl = self.node.camera.getFilter(band).cwl
+            cwl = cwls.get(band,0)
             ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std,
                         label=f"{band} {int(cwl)}nm", fmt='x',
                         color=colname)

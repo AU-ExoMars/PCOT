@@ -589,23 +589,29 @@ XFormColorCheckerClassic._cls.__doc__ += _ROI_CONTROLS_HELP
 @xformtype
 class XFormCalibrate(XFormType):
     """
-    Perform calibration of an image given the coefficients m,c from a reflectance
-    node (or possibly elsewhere). These are vectors of gradient and intercept for
-    each channel.
+    Perform calibration of an image given calibration data, either from a reflectance
+    node or loaded into an input.
     """
     def __init__(self):
         super().__init__("calibrate", "calibration","0.0.0")
         self.addInputConnector("img", Datum.IMG)
-        self.addInputConnector("m", Datum.NUMBER)
-        self.addInputConnector("c", Datum.NUMBER)
+        self.addInputConnector("calib", Datum.CALIBRATION)
         self.addOutputConnector("", Datum.IMG)
 
     def perform(self, node):
-        img = node.getInput(0, Datum.IMG, return_datum=True)
-        m = node.getInput(1, Datum.NUMBER, return_datum=True)
-        c = node.getInput(2, Datum.NUMBER, return_datum=True)
-        img = (img - c)/m
-        node.setOutput(0, img)
+        # get Datums so apply() can use datum arithmetic and combine sources
+        from pcot.calib.apply import apply
+        imgd: Datum = node.getInput(0, Datum.IMG, return_datum=True)
+        calibd: Datum = node.getInput(1, Datum.CALIBRATION, return_datum=True)
+        if node.error is not None:
+            # getInput has already set a type error, which is more useful than "no input"
+            return
+
+        res = apply(calibd, imgd)
+        if not res.is_ok():
+            raise XFormException('DATA', res.errmsg)
+        node.setOutput(0, res.ok())
+
 
     def init(self,node):
         pass

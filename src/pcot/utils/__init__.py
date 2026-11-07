@@ -1,5 +1,6 @@
 #
 import copy
+from typing import TypeVar, Generic, Optional
 
 
 def serialiseFields(obj, attrs, d=None):
@@ -67,3 +68,44 @@ class SignalBlocker:
     def __exit__(self, exctype, excval, tb):
         for o in self.objects:
             o.blockSignals(False)
+
+
+T = TypeVar('T')
+class Result(Generic[T]):
+    """A genericised Result container, rather like that used in Rust."""
+
+    result: Optional[T]   # if all is well, the result. Could be None.
+    errmsg: Optional[str]  # if non-None, an error message
+
+    def __init__(self, result:Optional[T]=None, errmsg:Optional[str]=None):
+        """Don't use directly - use error() or success()"""
+        self.result = result
+        self.errmsg = errmsg    # None if result is OK
+
+    @staticmethod
+    def error(err: str):
+        """Use this to create error results"""
+        return Result(errmsg=err)
+
+    @staticmethod
+    def success(result: T):
+        """And this to create success results"""
+        return Result(result=result)
+
+    def is_ok(self):
+        return self.errmsg is None
+
+    def ok(self):
+        if not self.is_ok():
+            raise self.DerefError()
+        return self.result
+
+    def __repr__(self):
+        if self.is_ok():
+            return f"<Result OK: {self.ok()}>"
+        else:
+            return f"<Result ERROR: {self.errmsg}>"
+
+    class DerefError(Exception):
+        """You tried to call ok() to get the value of a Result which is in error."""
+        pass
