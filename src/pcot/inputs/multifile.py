@@ -332,28 +332,33 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         super().onClose()
         self.canvas.onClose()
 
+    def settingControls(self):
+        return [self.bitdepth, self.leftJustified, self.cameraCombo]
+
     def applyPreset(self, preset):
         # see comments in presetPressed for why this is here and not in the input method:
         # applying a preset changes self.method's fields, but only the widget knows which
         # bits of UI (combo boxes, checkboxes, canvas, graph re-run) need refreshing
         # afterwards.
+        self.method.mark()
         self.method.applyPreset(preset)
-        self.onInputChanged()
+        self.settingChanged()
 
     def fetchPreset(self):
         # see comments in presetPressed for why this is here and not in the input method
         return self.method.fetchPreset()
 
     def cameraChanged(self, i):
+        self.method.mark()
         self.method.camera = self.cameraCombo.currentText()
-        self.onInputChanged()
+        self.settingChanged()
 
     def presetPressed(self):
         # here, the "owner" of the preset dialog is actually this dialog - not the input itself - because
         # we need to update the dialog when the preset is applied.
         w = PresetDialog(self, "Multifile presets", presetModel, self)
         w.exec()
-        self.onInputChanged()
+        self.settingChanged()
 
     def dirChanged(self):
         # directory text changed manually - if the dir exists, go there,
@@ -365,6 +370,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             self.dir.setText(str(self.method.dir))
 
     def loaderSettings(self):
+        self.method.mark()
         self.method.rawLoader.edit(self)
         # clear the cache, we'll need to reload those files!
         self.method.invalidate()
@@ -450,6 +456,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         """Called when the user explicitly picks a new directory (via the 'get directory'
         button) - dr becomes the new, real value of self.method.dir."""
         if self.method.dir != dr:  # if the directory has changed reset the selected file list
+            self.method.mark()
             self.method.files = []
             ## TODO self.method.type.clearImages(self.node)
         try:
@@ -469,24 +476,30 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.refreshMissingIndicator()
 
     def patChanged(self):
+        if self.filterpat.text() == self.method.filterpat:
+            return  # editingFinished fires on losing focus even if nothing has changed
+        self.method.mark()
         self.method.filterpat = self.filterpat.text()
-        self.onInputChanged()
+        self.settingChanged()
 
     def leftJustifiedChanged(self, checked):
+        self.method.mark()
         self.method.leftjustified = checked
-        self.onInputChanged()
+        self.settingChanged()
 
     def bitdepthChanged(self, s):
         try:
             # strings in the combobox are typically "10 bits" or "FulL"
             if s == "Full":
+                self.method.mark()
                 self.method.bitdepth = None
-                self.onInputChanged()
+                self.settingChanged()
             else:
                 ll = s.split()
                 if len(ll) > 0:
+                    self.method.mark()
                     self.method.bitdepth = int(ll[0])
-                    self.onInputChanged()
+                    self.settingChanged()
         except (ValueError, OverflowError):
             raise Exception("CTRL", "Bad bitdepth string in 'multifile': " + s)
 
@@ -553,6 +566,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
     def checkedChanged(self):
         # the checked items have changed, reset the list and regenerate
         # the files list
+        self.method.mark()
         self.method.files = []
         for i in range(self.model.rowCount()):
             item = self.model.item(i)

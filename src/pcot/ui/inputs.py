@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QFileSystemModel
 import pcot
 from pcot.ui import uiloader
 from pcot.ui import theme
+from pcot.utils import SignalBlocker
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,9 @@ class MethodSelectButton(QtWidgets.QPushButton):
         self.clicked.connect(self.onClick)
 
     def onClick(self):
-        """When clicked, make this method active"""
+        """When clicked, make this method active (as an undoable change)"""
+        if not self.method.isActive():
+            self.method.mark()
         self.window.input.selectMethod(self.method)
         self.window.showActiveMethod()
 
@@ -103,21 +106,28 @@ class InputWindow(QtWidgets.QMainWindow):
             b.showActive()
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        # the document refreshes this window after an undo/redo (see onUndoRedo)
         m = self.input.getActive()
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if event.key() == Qt.Key.Key_Z:
                 if m.canUndo():
                     m.undo()
-                    self.onUndoRedo()
             elif event.key() == Qt.Key.Key_Y:
                 if m.canRedo():
                     m.redo()
-                    self.onUndoRedo()
 
     def onUndoRedo(self):
+        """Called by the document after any undo/redo (from any window or a script), which restores each
+        method's settings and cached data. Show the active method's widget and redraw it from the method
+        without reloading anything; the others are marked as unsynced, so they redraw when shown."""
         for w in self.widgets:
-            if w.method.isActive():
-                w.onUndoRedo()
+            active = w.method.isActive()
+            w.setVisible(active)
+            if active:
+                w.refreshFromMethod()
+            else:
+                w._synced = False
+        self.showActiveMethod()
 
     def closeEvent(self, event):
         logger.debug("Closing input window")
@@ -154,10 +164,23 @@ class MethodWidget(QtWidgets.QWidget):
         """implemented in subclasses, can be called when data changed from outside (deserialise, undo, redo)"""
         pass
 
+    def settingControls(self) -> list:
+        """Override to return the controls which show the method's settings and whose signals change
+        them (marking an undo point and reloading). Their signals are blocked while the widget is
+        updated from the method, so that isn't mistaken for the user editing them."""
+        return []
+
+    def settingChanged(self):
+        """Call from a control's handler after it has marked an undo point and changed the method's
+        settings: updates the widget and reloads the data, without the controls' signals firing again."""
+        with SignalBlocker(*self.settingControls()):
+            self.onInputChanged()
+
     def _sync(self):
         """Actually perform a sync: run onInputChanged() (which may do disk I/O, pop dialogs,
         invalidate()+performGraph()) and remember that we've done so."""
-        self.onInputChanged()
+        with SignalBlocker(*self.settingControls()):
+            self.onInputChanged()
         self.refreshMissingIndicator()
         self._synced = True
 
@@ -222,19 +245,24 @@ class MethodWidget(QtWidgets.QWidget):
         if not self._synced:
             self._sync()
 
-    def onUndoRedo(self):
-        self._sync()
-        if self.method.input.window is not None:
-            self.method.input.window.methodChanged()
+    def refreshFromMethod(self):
+        """Redraw this widget from the method's current settings and cached data, without invalidating
+        the data or rerunning the graph - for use after undo/redo, which restores both. This uses the
+        openingWindow flag, which stops every widget's onInputChanged() from invalidating."""
+        old = self.method.openingWindow
+        self.method.openingWindow = True
+        try:
+            self._sync()
+        finally:
+            self.method.openingWindow = old
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        # the document refreshes the input window after an undo/redo (see InputWindow.onUndoRedo)
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if event.key() == Qt.Key.Key_Z:
                 self.method.undo()
-                self.onUndoRedo()
             elif event.key() == Qt.Key.Key_Y:
                 self.method.redo()
-                self.onUndoRedo()
 
     def invalidate(self):
         if self.method.isActive():
@@ -292,6 +320,13 @@ class TreeMethodWidget(MethodWidget):
     def onClose(self):
         super().onClose()
         self.canvas.onClose()
+
+    def refreshFromMethod(self):
+        # show the method's file (which may have been changed by undo/redo) in the tree
+        self.treeView.clearSelection()
+        if self.method.fname and Path(self.method.fname).exists():
+            self.goto(self.method.fname)
+        super().refreshFromMethod()
 
     def goto(self, filename):
         """Filename could be a file or directory - we should scroll to it, and select it if it's a file"""

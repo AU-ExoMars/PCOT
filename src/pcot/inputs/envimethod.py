@@ -89,13 +89,18 @@ class ENVIMethodWidget(TreeMethodWidget):
         self.gainsBox.checkStateChanged.connect(self.gainsChanged)
         self.syncIfActive()
 
+    def settingControls(self):
+        return [self.gainsBox]
+
     def gainsChanged(self):
+        self.method.mark()
         self.method.apply_gains_and_offsets = self.gainsBox.isChecked()
-        self.onInputChanged()
+        self.settingChanged()
 
     def onInputChanged(self):
         # ensure image is also using my mapping, if it's an image
         logger.debug("ENVI onInputChanged")
+        self.gainsBox.setChecked(self.method.apply_gains_and_offsets)
 
         if not self.method.openingWindow:
             self.invalidate()  # input has changed, invalidate so the cache is dirtied

@@ -143,6 +143,22 @@ class PARCMethodWidget(MethodWidget):
             self.method.input.performGraph()
         self.data.display(self.method.data)
 
+    def refreshFromMethod(self):
+        # The file may have been changed by undo/redo, so reread its manifest (which isn't saved
+        # in the method) if the file is there, and show the selected item.
+        if self.method.fname and os.path.isfile(self.method.fname):
+            try:
+                self.method.loadManifest()
+            except Exception as e:
+                logger.warning(f"Cannot read manifest of {self.method.fname}: {e}")
+        else:
+            self.method.manifest = {}
+        self.tableView.setModel(Model(self, self.method.manifest))
+        keys = sorted(self.method.manifest.keys())
+        if self.method.itemname in keys:
+            self.tableView.selectRow(keys.index(self.method.itemname))
+        super().refreshFromMethod()
+
     def openFile(self):
         # use an file dialog to select a file
         res = QtWidgets.QFileDialog.getOpenFileName(self,
@@ -151,6 +167,7 @@ class PARCMethodWidget(MethodWidget):
                                                     "PCOT datum archive files (*.parc)",
                                                     options=pcot.config.getFileDialogOptions())
         if res[0] != '':
+            self.method.mark()
             self.method.fname = res[0]
             self.method.loadManifest()
             self.tableView.setModel(Model(self, self.method.manifest))

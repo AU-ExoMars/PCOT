@@ -24,6 +24,7 @@ from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
 from pcot.ui.help import HelpWindow
 from pcot.ui.inputs import MethodWidget
+from pcot.utils import SignalBlocker
 from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
 
 logger = logging.getLogger(__name__)
@@ -258,6 +259,10 @@ class PDS4ImageMethodWidget(MethodWidget):
 
         # if we are updating the selected items this should be true so that we don't end up recursing.
         self.selectingItems = False
+        # Selecting products doesn't load anything until Read is clicked, so only the first selection
+        # change since the last read (or undo/redo) records an undo point. Undoing a read then goes
+        # back to the selection as it was just before the read, and undoing again to the previous one.
+        self.selectionMarked = False
 
         # set up the timeline and table
 
@@ -270,6 +275,26 @@ class PDS4ImageMethodWidget(MethodWidget):
     def onClose(self):
         super().onClose()
         self.canvas.onClose()
+
+    def settingControls(self):
+        return [self.multCombo, self.recurseBox, self.table, self.timeline]
+
+    def refreshFromMethod(self):
+        # undo/redo may have changed the directory, products and selection; the products are new
+        # objects, so the table and timeline must be rebuilt, not just reselected.
+        with SignalBlocker(*self.settingControls()):
+            self.fileEdit.setText(str(self.method.dir) if self.method.dir is not None else "")
+            self.recurseBox.setCheckState(Qt.CheckState.Checked if self.method.recurse else Qt.CheckState.Unchecked)
+            self.populateTableAndTimeline()
+            self.showSelectedItems()
+        self.selectionMarked = False
+        super().refreshFromMethod()
+
+    def markSelectionChange(self):
+        """Record an undo point for a selection change, if there hasn't been one since the last read"""
+        if not self.selectionMarked:
+            self.method.mark()
+            self.selectionMarked = True
 
     def getProducts(self):
         """get the list of products from the method's ProductList.
@@ -391,6 +416,8 @@ class PDS4ImageMethodWidget(MethodWidget):
             for i, x in enumerate(self.getProducts()):
                 if x in items:
                     sel.append(i)
+            if sel != self.method.selected:
+                self.markSelectionChange()
             self.method.selected = sel
             self.showSelectedItems(timelineOnly=True)
 
@@ -404,24 +431,30 @@ class PDS4ImageMethodWidget(MethodWidget):
             for i, x in enumerate(self.getProducts()):
                 if x in items:
                     sel.append(i)
+            if sel != self.method.selected:
+                self.markSelectionChange()
             self.method.selected = sel
             self.showSelectedItems(tableOnly=True)
 
     def multChanged(self, i):
+        self.method.mark()
         self.method.multValue = self.multCombo.currentData()
-        self.readClicked()
-        self.onInputChanged()
+        self.read()
 
     def recurseChanged(self, v):
         """recursion checkbox toggled"""
+        self.method.mark()
         self.method.recurse = (v == Qt.CheckState.Checked)
 
     def scanDir(self):
         """Scan the selected directory for PDS4 products and populate the model, refreshing the timeline and table"""
         try:
+            self.method.mark()
             self.method.loadLabelsFromDirectory(clear=False)
-            self.populateTableAndTimeline()
-            self.onInputChanged()
+            with SignalBlocker(self.table, self.timeline):
+                self.populateTableAndTimeline()
+            self.selectionMarked = False
+            self.settingChanged()
         except Exception as e:
             logger.exception("Error scanning directory", exc_info=e)
             estr = pcot.utils.deb.simpleExceptFormat(e)
@@ -437,9 +470,15 @@ class PDS4ImageMethodWidget(MethodWidget):
 
     def readClicked(self):
         """Read selected data, checking for validity, and generate output"""
+        self.method.mark()
+        self.read()
+
+    def read(self):
+        """Read the selected data (after an undo point has been marked)"""
+        self.selectionMarked = False
         try:
             self.method.loadData()  # load once here so any error is shown in a dialog
-            self.onInputChanged()   # this invalidates the cache and reruns the graph, reading the data
+            self.settingChanged()   # this invalidates the cache and reruns the graph, reading the data
         except Exception as e:
             QMessageBox.critical(self, 'Error', str(e))
             ui.log(str(e))
@@ -449,6 +488,7 @@ class PDS4ImageMethodWidget(MethodWidget):
                                                          os.path.expanduser(self.method.dir),
                                                          options=pcot.config.getFileDialogOptions())
         if res != '':
+            self.method.mark()
             self.fileEdit.setText(res)
             self.method.dir = res
             self.refreshMissingIndicator()

@@ -278,7 +278,9 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         self.scene.tickRenderers.append(axis)
 
     def setItems(self, items: List[LinearSetEntity]):
-        """Set the items we are going to render"""
+        """Set the items we are going to render. Any selection is cleared, because it refers to the
+        old items (whose scene items rebuild() would otherwise try to reselect after deleting them)."""
+        self.scene.clearSelection()
         self.items = items
 
     def rebuild(self):

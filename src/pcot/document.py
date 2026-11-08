@@ -309,6 +309,10 @@ class Document:
         self.deserialise(data, internal=True, closetabs=False)
         for w in MainUI.getWindowsForDocument(self):
             w.replaceDocumentForUndo(self)  # and this must repatch the tabs we didn't delete
+        # and update any open input windows to show the restored input settings and data
+        for inp in self.inputMgr.inputs:
+            if inp.window is not None:
+                inp.window.onUndoRedo()
         self.showUndoStatus()
 
     def nodeAdded(self, node):

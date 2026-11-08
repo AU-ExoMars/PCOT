@@ -138,6 +138,10 @@ for the input. Undo now restores the input's data too, without reading any files
 the original files are missing. **Undo now keeps old input data in memory:** after changing an input's
 data, up to 16 earlier versions (8 undo and 8 redo steps) may be kept until they drop off the undo
 history, which can use a lot of memory with large images.
+* All changes to inputs can now be undone - previously only choosing an ENVI or RGB file or a PARC item
+could be. This includes PDS4 inputs (reading, the multiplier, rescanning and product selection), RGB
+debayering and camera settings, the ENVI gains and offsets option, multifile settings, and switching
+between input methods. An open input window now updates after any undo or redo.
 
 Site
 

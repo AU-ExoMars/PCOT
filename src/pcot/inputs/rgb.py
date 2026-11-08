@@ -121,6 +121,9 @@ class RGBMethodWidget(TreeMethodWidget):
 
         self.syncIfActive()
 
+    def settingControls(self):
+        return [self.patternCombo, self.algoCombo, self.cameraCombo, self.negCombo]
+
     def onInputChanged(self):
         self.patternCombo.setCurrentText(self.method.debayer_pattern)
         self.algoCombo.setCurrentText(self.method.debayer_algo)
@@ -147,19 +150,23 @@ class RGBMethodWidget(TreeMethodWidget):
             self.dnRangeLabel.setText("DN range in file: (failed)")
 
     def patternChanged(self, i):
+        self.method.mark()
         self.method.debayer_pattern = self.patternCombo.currentText()
-        self.onInputChanged()
+        self.settingChanged()
 
     def algoChanged(self, i):
+        self.method.mark()
         self.method.debayer_algo = self.algoCombo.currentText()
-        self.onInputChanged()
+        self.settingChanged()
 
     def negChanged(self, i):
+        self.method.mark()
         self.method.neg_method = self.negCombo.currentText()
-        self.onInputChanged()
+        self.settingChanged()
 
     def cameraChanged(self, text):
         from pcot import ui
+        self.method.mark()
         self.method.camera = text
         ui.log(f"CAM {text}")
-        self.onInputChanged()
+        self.settingChanged()
