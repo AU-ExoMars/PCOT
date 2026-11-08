@@ -191,6 +191,7 @@ class Document:
             arc.writeJson("JSON", self.serialise(saveInputs=saveInputs))
             pcot.config.addRecent(fname)
             self.metadata = arc.metadata    # keep a ref to the metadata from the archive
+        self.fileName = fname   # only once the save has succeeded
 
     def load(self, fname: Path, add_to_recents=True):
         """Load data into this document - is used in ctor, can also be used on existing document.

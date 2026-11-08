@@ -69,10 +69,6 @@ class MainUI(ui.tabs.DockableTabWindow):
     # inherited from DockableTabWindow, dict of tabs by title
     tabs: OrderedDict[str, ui.tabs.Tab]
 
-    ## @var saveFileName
-    # if I have saved/loaded, the name of the file
-    saveFileName: Optional[str]
-
     ## @var palette
     # the node palette on the right
     palette: palette.Palette
@@ -142,12 +138,18 @@ class MainUI(ui.tabs.DockableTabWindow):
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout,initial=True)
 
     def setTitle(self):
+        """Set the window title from the document's filename ("New" if it hasn't been saved or loaded),
+        and the macro name if this window is showing a macro."""
+        fname = os.path.basename(self.doc.fileName) if self.doc.fileName else "New"
         if self.isMacro():
-            self.setWindowTitle(ui.app().applicationName() +
-                                ' ' + ui.app().applicationVersion() +
-                                " [MACRO {}]".format(self.graph.proto.name))
-        else:
-            self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
+            fname += f" [MACRO {self.graph.proto.name}]"
+        self.setWindowTitle(f"{fname} - {ui.app().applicationName()} {ui.app().applicationVersion()}")
+
+    @classmethod
+    def setTitlesForDocument(cls, doc):
+        """Update the titles of all the windows showing a document (e.g. after it is saved under a new name)"""
+        for w in cls.getWindowsForDocument(doc):
+            w.setTitle()
 
     def _init(self,
               doc,  # Document
@@ -253,7 +255,6 @@ class MainUI(ui.tabs.DockableTabWindow):
             ui.log("Grandalf not found - autolayout will be rubbish")
         MainUI.windows.append(self)
 
-        self.saveFileName = None
         MainUI.updateAutorun()
         self.graph.constructScene(doAutoLayout)
         self.view.setScene(self.graph.scene)
@@ -403,6 +404,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             ui.msg(f"File saved to {fname}")
             ui.log(f"File saved to {fname}")
             self.rebuildRecents()
+            MainUI.setTitlesForDocument(self.doc)
         except Exception as e:
             traceback.print_exc()
             ui.error("cannot save file {}: {}".format(fname, e))
@@ -422,7 +424,6 @@ class MainUI(ui.tabs.DockableTabWindow):
             self._init(doc=d, doAutoLayout=False)  # rerun window construction
             self.graph.changed()  # and rerun everything
             ui.msg("File loaded")
-            self.saveFileName = fname
             self.rebuildRecents()
         except Exception as e:
             traceback.print_exc()
@@ -447,7 +448,6 @@ class MainUI(ui.tabs.DockableTabWindow):
 
             logger.info(f"saving: {res[0]}")
             self.save(path, saveInputs=saveInputs)
-            self.saveFileName = path
             ui.log("Document written to " + path)
             pcot.config.setDefaultDir('pcotfiles', os.path.dirname(os.path.realpath(res[0])))
         else:
@@ -455,10 +455,11 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## the "save" menu handler
     def saveAction(self):
-        if self.saveFileName is None:
+        # the document knows its filename if it has been loaded or saved (in any of its windows)
+        if self.doc.fileName is None:
             self.saveAsAction(True)
         else:
-            self.save(self.saveFileName)
+            self.save(self.doc.fileName)
 
     ## the "open" menu handler
     def openAction(self):
