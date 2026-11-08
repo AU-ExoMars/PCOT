@@ -11,7 +11,6 @@ from PySide6.QtCore import Qt
 
 import pcot
 from pcot.dataformats import load
-from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
 from pcot.parameters.taggedaggregates import TaggedDict
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 class PARCInputMethod(InputMethod):
-    datum: Optional[Datum]
     fname: Optional[str]
     itemname: Optional[str]
     manifest: Dict[str, Tuple[str, str, str]]
@@ -35,7 +33,6 @@ class PARCInputMethod(InputMethod):
         super().__init__(inp)
         self.fname = None
         self.itemname = None
-        self.datum = None
         self.manifest = {}
         self.mapping = ChannelMapping()
 
@@ -53,8 +50,7 @@ class PARCInputMethod(InputMethod):
             self.manifest = {}
 
     def readData(self):
-        self.datum = load.parc(self.fname, self.itemname, self.input.idx)
-        return self.datum
+        return load.parc(self.fname, self.itemname, self.input.idx)
 
     def getName(self):
         return "PARC"
@@ -65,9 +61,9 @@ class PARCInputMethod(InputMethod):
         return None
 
     def serialise(self, internal):
+        # The data itself isn't stored here: it's cached in self.data, which survives undo/redo
+        # because input methods are deserialised into the existing objects.
         x = {'fname': self.fname, 'itemname': self.itemname}
-        if internal:
-            x['datum'] = self.datum.serialise() if self.datum is not None else None
         Canvas.serialise(self, x)
         return x
 
@@ -75,15 +71,10 @@ class PARCInputMethod(InputMethod):
         if data is not None:
             self.fname = data['fname']
             self.itemname = data['itemname']
-            if internal and data['datum'] is not None:
-                self.datum = Datum.deserialise(data['datum'])
-            else:
-                self.datum = None
             Canvas.deserialise(self, data)
         else:
             self.fname = None
             self.itemname = None
-            self.datum = None
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:
         if d.parc.filename is not None:
@@ -150,7 +141,7 @@ class PARCMethodWidget(MethodWidget):
         if not self.method.openingWindow:
             self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
-        self.data.display(self.method.datum)
+        self.data.display(self.method.data)
 
     def openFile(self):
         # use an file dialog to select a file
@@ -168,10 +159,9 @@ class PARCMethodWidget(MethodWidget):
 
     def itemSelected(self):
         self.method.mark()
-        self.method.datum = None
         model = self.tableView.model()
         keys = sorted(list(model.manifest.keys()))
         self.method.itemname = keys[self.tableView.currentIndex().row()]
-        self.method.get()
+        # _sync() invalidates the cached data and reruns the graph, which reads the new item
         pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
         self._sync()

@@ -51,7 +51,8 @@ def test_parc_load(globaldatadir):
 
 
 def test_parc_internal_roundtrip(globaldatadir):
-    """Internal (undo/redo) serialisation of a document with a PARC input should keep the cached datum"""
+    """Internal (undo/redo) serialisation of a document with a PARC input should keep the file and item,
+    and an undo should keep the input's cached data rather than rereading it"""
     pcot.setup()
     doc = Document()
     assert doc.setInputPARC(0, str(globaldatadir/"parc/testimage.parc")) is None
@@ -59,9 +60,21 @@ def test_parc_internal_roundtrip(globaldatadir):
     doc.run()
     orig = node.getOutput(0, Datum.IMG)
 
+    # round trip into a new document - this has no cached data, so it reads the same item again
     d = doc.serialise(internal=True)
     doc2 = Document()
     doc2.deserialise(d, internal=True)
-    datum = doc2.inputMgr.inputs[0].getActive().datum
-    assert datum is not None
-    assert np.array_equal(datum.val.img, orig.img)
+    method = doc2.inputMgr.inputs[0].getActive()
+    assert method.fname == str(globaldatadir/"parc/testimage.parc")
+    assert method.itemname == 'main'
+    assert np.array_equal(method.get().get(Datum.IMG).img, orig.img)
+
+    # undo in the same document - methods are deserialised into the existing objects,
+    # so the cached data survives
+    method = doc.inputMgr.inputs[0].getActive()
+    cached = method.data
+    doc.mark()
+    doc.graph.create("expr")
+    doc.undo()
+    assert doc.inputMgr.inputs[0].getActive() is method
+    assert method.data is cached

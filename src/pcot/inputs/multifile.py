@@ -411,7 +411,6 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
 
     def fileClickedAction(self, idx):
         if not self.dirModel.isDir(idx):
-            self.method.img = None
             self.method.fname = os.path.realpath(self.dirModel.filePath(idx))
             self.method.get()
             self.onInputChanged()

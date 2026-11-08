@@ -17,14 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class RGBInputMethod(InputMethod):
-    img: Optional[Datum]
     fname: Optional[str]
     mapping: ChannelMapping
 
     def __init__(self, inp):
         super().__init__(inp)
         self.fname = None
-        self.img = None         # we keep this around to speed up internal ser/deser
         self.mapping = ChannelMapping()
         self.debayer_algo = "NONE"
         self.debayer_pattern = pcot.config.data.defaultbayerpattern
@@ -40,15 +38,13 @@ class RGBInputMethod(InputMethod):
         self.dnRangeAttempted = True
         if self.debayer_pattern is None:
             print("no debayer pat")
-        if self.fname is not None:
-            self.img = load.rgb(self.fname,
-                                self.input.idx if self.input else None,
-                                self.mapping,
-                                self.debayer_algo, self.debayer_pattern, None if self.camera=="NONE" else self.camera,
-                                self.neg_method)
-        else:
-            self.img = Datum.null
-        return self.img
+        if self.fname is None:
+            return Datum.null
+        return load.rgb(self.fname,
+                        self.input.idx if self.input else None,
+                        self.mapping,
+                        self.debayer_algo, self.debayer_pattern, None if self.camera=="NONE" else self.camera,
+                        self.neg_method)
 
     def getName(self):
         return "RGB"
@@ -67,16 +63,14 @@ class RGBInputMethod(InputMethod):
             return f"File not found: {self.fname}{self._cachedDataSuffix()}"
         return None
 
-    # We actually serialise and deserialise the imagecube, not the containing datum.
-
     def serialise(self, internal):
+        # The image itself isn't stored here: it's cached in self.data, which survives undo/redo
+        # because input methods are deserialised into the existing objects.
         x = {'fname': self.fname,
              'debayer-algo': self.debayer_algo, 'debayer-pattern': self.debayer_pattern,
              'camera' : self.camera,
              "neg_method": self.neg_method
              }
-        if internal:
-            x['image'] = self.img.get(Datum.IMG) if self.img is not None else None
         Canvas.serialise(self, x)
         return x
 
@@ -86,11 +80,6 @@ class RGBInputMethod(InputMethod):
         self.debayer_pattern = data.get('debayer-pattern', 'GB')
         self.camera = data.get("camera", "NONE")
         self.neg_method = data.get('neg_method', NEGATIVE_PROCESSING_METHODS[0])
-        if internal:
-            x = data['image']
-            self.img = Datum(Datum.IMG, x) if x is not None else None
-        else:
-            self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:

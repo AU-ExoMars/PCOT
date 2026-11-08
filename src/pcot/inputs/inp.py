@@ -137,12 +137,12 @@ class Input:
     def serialise(self, internal, saveInputs=True):
         """Generate a serialisable data structure for this input (ie. primitives only).
         Done by producing a dict of lists of two elements: input type and input data.
-        If 'internal' is unset, images and cached images will also be stored - this is used
-        to speed up undo/redo operations; we don't want them reloading data."""
+        If 'internal' is set (for undo/redo), each method's cached data is stored by reference,
+        so undo/redo can restore it along with the settings without reading any files."""
 
         # if we are saving to a file, actually save the input data too. We don't want to do
         # this when we are doing an internal (undo) serialise because the data there is 'saved'
-        # internally as simple references to the objects; this is done in the methods. Note that
+        # internally as simple references to the objects (see 'cached' below). Note that
         # we only save the active method's data in the external (save to file) case.
         
         if saveInputs and not internal:
@@ -168,11 +168,18 @@ class Input:
                'methods': [[type(x).__name__, x.serialise(internal)] for x in self.methods],
                'activeData': activeData
                }
+        if internal:
+            # Store references (not copies) to each method's cached data, so that undo/redo restores the
+            # data which goes with the restored settings. Without this, undoing a change of file (say)
+            # would restore the old filename but keep the new file's data - and the old data may not be
+            # readable again, e.g. for a document opened without its original files. The undo stack is
+            # short, so this keeps at most a few old versions of the data alive.
+            out['cached'] = {type(x).__name__: (x.data, x.lastGoodData) for x in self.methods}
         return out
 
     def deserialise(self, d, internal):
         """Rebuild this input from the data structure produced by serialise(). Set 'internal' if
-        this is for undo/redo purposes (it will store image data too, to speed things up)."""
+        this is for undo/redo purposes (each method's cached data is then restored too)."""
 
         # This will deserialise the input methods into the existing method objects,
         # to avoid problems with undo/redo leaving stale objects with widgets linked to
@@ -194,6 +201,14 @@ class Input:
                 logger.warning(f"Input {self.idx}: ignoring saved data for unknown input method {name}")
             else:
                 m.deserialise(data, internal)
+
+        # for undo/redo, restore each method's cached data to match its restored settings
+        if internal and 'cached' in d:
+            for name, (data, lastGood) in d['cached'].items():
+                m = methodsByName.get(name)
+                if m is not None:
+                    m.data = data
+                    m.lastGoodData = lastGood
 
         # if this was an external save, there will be an actual Datum here we can use - until
         # a method changes!

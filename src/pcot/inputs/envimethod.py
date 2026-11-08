@@ -6,7 +6,7 @@ from typing import Optional
 from pcot.dataformats import load
 from pcot.datum import Datum
 from pcot.inputs.inputmethod import InputMethod
-from pcot.imagecube import ImageCube, ChannelMapping
+from pcot.imagecube import ChannelMapping
 from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class ENVIInputMethod(InputMethod):
-    img: Optional[Datum]
     fname: Optional[str]
     mapping: ChannelMapping
     apply_gains_and_offsets: bool
@@ -24,7 +23,6 @@ class ENVIInputMethod(InputMethod):
     def __init__(self, inp):
         super().__init__(inp)
         self.fname = None
-        self.img = None
         self.mapping = ChannelMapping()
         self.apply_gains_and_offsets = False
 
@@ -32,11 +30,9 @@ class ENVIInputMethod(InputMethod):
         # if the image is not loaded and the filename is set, then load it
         logger.debug(f"ENVI readData fname={self.fname}")
         if self.fname is None:
-            self.img = Datum.null
-        else:
-            self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping,
-                                 self.apply_gains_and_offsets)
-        return self.img
+            return Datum.null
+        return load.envi(self.fname, self.input.idx if self.input else None, self.mapping,
+                         self.apply_gains_and_offsets)
 
     def getName(self):
         return "ENVI"
@@ -60,18 +56,14 @@ class ENVIInputMethod(InputMethod):
             'fname': self.fname,
             'apply_gains_and_offsets': self.apply_gains_and_offsets
              }
-        if internal:
-            x['image'] = self.img.get(Datum.IMG) if self.img is not None else None
+        # The image itself isn't stored here: it's cached in self.data, which survives undo/redo
+        # because input methods are deserialised into the existing objects.
         Canvas.serialise(self, x)
         return x
 
     def deserialise(self, data, internal):
         self.fname = data['fname']
         self.apply_gains_and_offsets = data.get('apply_gains_and_offsets', False)
-        if internal:
-            self.img = ImageCube(data['image']) if data['image'] is not None else None
-        else:
-            self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:

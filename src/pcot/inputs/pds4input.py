@@ -66,7 +66,6 @@ class PDS4InputMethod(InputMethod):
 
     def __init__(self, inp):
         super().__init__(inp)
-        self.out = None
         self.products = None
         self.selected = []
         self.dir = None
@@ -119,25 +118,20 @@ class PDS4InputMethod(InputMethod):
         self.products = ProductList(products)
         return self
 
-    def loadData(self):
+    def loadData(self) -> Datum:
         """Actually load the data; or rather load the actual data from my PDS4.. objects and the proctools DataProduct
-        "label" objects. The magic now happens inside the ProductList.toDatum() method."""
-
-        self.out = self.products.toDatum(multValue=self.multValue, mapping=self.mapping,
-                                         selection=self.selected,
-                                         inpidx=self.input.idx)
-
-        # if we didn't get any data, set the output to null
-        if self.out is None:
-            self.out = Datum.null
-
-        # finally rerun the document's graph
-        self.input.performGraph()
+        "label" objects, returning it (or null if there is none). The magic now happens inside the
+        ProductList.toDatum() method."""
+        if self.products is None:
+            return Datum.null
+        out = self.products.toDatum(multValue=self.multValue, mapping=self.mapping,
+                                    selection=self.selected,
+                                    inpidx=self.input.idx)
+        return Datum.null if out is None else out
 
     def readData(self) -> Datum:
         logger.debug("readData")
-        self.loadData()
-        return self.out
+        return self.loadData()
 
     def getName(self):
         return "PDS4"
@@ -166,8 +160,7 @@ class PDS4InputMethod(InputMethod):
              'products': self.products.serialise() if self.products is not None else None,
              'dir': str(self.dir) if self.dir is not None else None,
              'mapping': self.mapping.serialise()}
-        if internal:
-            x['out'] = self.out
+        # the data itself is cached in self.data, which the Input saves for undo/redo
         Canvas.serialise(self, x)
         return x
 
@@ -179,10 +172,6 @@ class PDS4InputMethod(InputMethod):
             self.products = ProductList.deserialise(data['products']) if data['products'] is not None else None
             self.dir = Path(data['dir']) if data['dir'] is not None else None
             self.mapping = ChannelMapping.deserialise(data['mapping'])
-            if internal:
-                self.out = data['out']
-            else:
-                self.out = None  # ensure image is reloaded
             Canvas.deserialise(self, data)
         except KeyError as e:
             ui.error(f"can't read '{e}' from serialised PDS4 input data")
@@ -449,8 +438,8 @@ class PDS4ImageMethodWidget(MethodWidget):
     def readClicked(self):
         """Read selected data, checking for validity, and generate output"""
         try:
-            self.method.loadData()
-            self.onInputChanged()
+            self.method.loadData()  # load once here so any error is shown in a dialog
+            self.onInputChanged()   # this invalidates the cache and reruns the graph, reading the data
         except Exception as e:
             QMessageBox.critical(self, 'Error', str(e))
             ui.log(str(e))
@@ -468,15 +457,17 @@ class PDS4ImageMethodWidget(MethodWidget):
         HelpWindow(self, md=helpText, node=self)
 
     def updateDisplay(self):
-        """Change the display to show the 'out' of the method."""
-        if self.method.out is not None:
-            img = self.method.out.get(Datum.IMG)
-            self.canvas.display(img)
+        """Change the display to show the method's data (reading it if it isn't cached - e.g. if
+        no input node is using this input, so the graph hasn't read it)."""
+        d = self.method.get()
+        if not d.isNone():
+            self.canvas.display(d.get(Datum.IMG))
 
     def onInputChanged(self):
         # ensure image is also using my mapping.
-        if self.method.out is not None and self.method.out.tp == Datum.IMG:
-            self.method.out.val.setMapping(self.method.mapping)
+        d = self.method.data
+        if d is not None and d.tp == Datum.IMG:
+            d.val.setMapping(self.method.mapping)
 
         idx = self.multCombo.findData(self.method.multValue)
         if idx >= 0:
@@ -485,7 +476,7 @@ class PDS4ImageMethodWidget(MethodWidget):
             logger.error(
                 f"setting multiplier combo index to 0, because I don't know about multiplier {self.method.multValue}!")
 
-        logger.debug("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
+        logger.debug("Displaying data {}, mapping {}".format(self.method.data, self.method.mapping))
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.invalidate()  # input has changed, invalidate so the cache is dirtied

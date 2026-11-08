@@ -132,6 +132,12 @@ instead of separate *m* and *c* inputs, and matches each band of the image to th
 filter. **Documents using the old calibrate node need to be rewired:** connect the reflectance
 node's *calib* output to the calibrate node's *calib* input. There is also a `calibrate(img, calib)`
 function, so scripts can calibrate many images with the same calibration data.
+* Fixed a bug where undoing a change to an input (such as choosing a different file or PARC item) restored
+the old settings but kept the new data, so the graph - and the document, if saved - had the wrong data
+for the input. Undo now restores the input's data too, without reading any files, so it works even if
+the original files are missing. **Undo now keeps old input data in memory:** after changing an input's
+data, up to 16 earlier versions (8 undo and 8 redo steps) may be kept until they drop off the undo
+history, which can use a lot of memory with large images.
 
 Site
 
