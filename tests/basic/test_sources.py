@@ -317,3 +317,24 @@ def test_bandless_source_serialise_roundtrip():
     ss2 = SourceSet.deserialise(ss.serialise())
     assert ss2.long() == ss.long()
     assert all(s.band is None for s in ss2)
+
+
+def test_multiband_source_serialise_roundtrip():
+    """serialiseSources/deserialiseSources (used by non-image Datums such as vectors and calibration
+    data) should keep a MultiBandSource's per-band structure and secondary names, while a SourceSet -
+    and data saved in the old flattened format - still loads as a SourceSet."""
+    from pcot.sources import serialiseSources, deserialiseSources
+    ms = MultiBandSource([SourceSet([s1, calibSource1]), SourceSet([s2]), SourceSet([s3, s4])])
+    ms2 = deserialiseSources(serialiseSources(ms))
+    assert isinstance(ms2, MultiBandSource)
+    assert [x.long() for x in ms2] == [x.long() for x in ms]
+    assert {s.secondary_name for s in ms2[0]} == {None, "calib"}
+
+    ss2 = deserialiseSources(serialiseSources(sourceset1))
+    assert isinstance(ss2, SourceSet)
+    assert ss2.long() == sourceset1.long()
+
+    # old format: a MultiBandSource flattened into a SourceSet's list
+    old = deserialiseSources(ms.getSources().serialise())
+    assert isinstance(old, SourceSet)
+    assert old.long() == ms.getSources().long()

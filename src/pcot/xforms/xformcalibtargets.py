@@ -591,6 +591,11 @@ class XFormCalibrate(XFormType):
     """
     Perform calibration of an image given calibration data, either from a reflectance
     node or loaded into an input.
+
+    Each band is matched to the calibration data by its filter, so the image can have fewer bands than the
+    calibration data or have them in a different order, but every band must have a filter which is in the
+    calibration data. Unlike most nodes, the whole image is calibrated even if it has ROIs; the ROIs are
+    kept in the output. The same calibration is available in expressions as *calibrate(img, calib)*.
     """
     def __init__(self):
         super().__init__("calibrate", "calibration","0.0.0")

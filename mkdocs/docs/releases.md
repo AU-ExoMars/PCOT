@@ -123,14 +123,15 @@ be saved as a CSV or PARC file. Axis labels in plots are no longer clipped at th
 registering a section handler with `pcot.config.addConfigSection()`. Settings belonging to a plugin
 which isn't loaded are kept when the configuration is saved. See
 [The configuration system](devguide/config.md).
-* The *reflectance* node has a new *cal* output giving its calibration data (the fit for each
+* The *reflectance* node has a new *calib* output giving its calibration data (the fit for each
 filter and the points it was made from), which can be saved as a PARC file. Its input can also be
 calibration data instead of an image, such as data loaded from a PARC file: the fits are then redone
 using the node's fudge settings, and the target and angle controls are disabled.
 * The *calibrate* node now takes calibration data (from a *reflectance* node or loaded from a file)
 instead of separate *m* and *c* inputs, and matches each band of the image to the calibration by
 filter. **Documents using the old calibrate node need to be rewired:** connect the reflectance
-node's *cal* output to the calibrate node's *calib* input.
+node's *calib* output to the calibrate node's *calib* input. There is also a `calibrate(img, calib)`
+function, so scripts can calibrate many images with the same calibration data.
 
 Site
 

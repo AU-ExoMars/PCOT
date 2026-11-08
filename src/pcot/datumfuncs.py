@@ -1416,3 +1416,26 @@ def ancillary(name, img):
         raise XFormException('DATA', "ancillary(): data must be a list of numbers")
 
     return Datum(Datum.NUMBER, Value(data), sources=img.sources)
+
+
+@datumfunc
+def calibrate(img, calib):
+    """
+    Perform reflectance calibration on an image given some calibration data (ultimately from a reflectance
+    node, although it may also be loaded into an input).
+
+    Each band is matched to the calibration data by its filter, so the image can have fewer bands than the
+    calibration data or have them in a different order, but every band must have a filter which is in the
+    calibration data. Unlike most functions, the whole image is calibrated even if it has ROIs; the ROIs
+    are kept in the result.
+
+    @param img:img:the image
+    @param calib:calibration:the calibration data
+    """
+    from pcot.calib.apply import apply
+
+    res = apply(calib, img)
+    if res.is_ok():
+        return res.result
+    else:
+        raise XFormException('DATA', f"calibrate(): error {res.errmsg}")

@@ -571,3 +571,21 @@ class MultiBandSource(SourcesObtainable):
 
 nullSource = Source()
 nullSourceSet = SourceSet(nullSource)
+
+
+def serialiseSources(s: SourcesObtainable):
+    """Serialise the sources of a non-image Datum, keeping the per-band structure of a MultiBandSource
+    (e.g. a vector of per-band values). A MultiBandSource is stored as a dict {'bands': [...]} so it can be
+    told apart from a SourceSet's list; anything else is flattened into a SourceSet. Use deserialiseSources()
+    to read it back."""
+    if isinstance(s, MultiBandSource):
+        return {'bands': s.serialise()}
+    return s.getSources().serialise()
+
+
+def deserialiseSources(data) -> SourcesObtainable:
+    """Inverse of serialiseSources(): returns a MultiBandSource for a tagged dict, otherwise a SourceSet
+    (which is also how sources were stored before MultiBandSources were kept)."""
+    if isinstance(data, dict) and 'bands' in data:
+        return MultiBandSource.deserialise(data['bands'])
+    return SourceSet.deserialise(data)

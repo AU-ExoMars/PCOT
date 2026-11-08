@@ -277,8 +277,9 @@ def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Datum:
             return MultiBandSource([patchSource(ss) for ss in s])
         elif isinstance(s, Source):
             # for each root source, we create a new source with our new external (giving the name of the archive)
-            # and the input index. Keep the band data (which will be a filter or a band name).
-            return Source().setExternal(e).setBand(s.band).setInputIdx(inpidx)
+            # and the input index. Keep the band data (which will be a filter or a band name), and whether it
+            # is a secondary source - so secondary sources don't become main sources and get found by band searches.
+            return Source().setExternal(e).setBand(s.band).setInputIdx(inpidx).setSecondaryName(s.secondary_name)
         else:
             return s
 

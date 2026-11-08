@@ -20,7 +20,11 @@ def apply(calibd: Optional[Datum], imgd: Optional[Datum]) -> Result[Datum]:
     """
     Apply a CalibrationData to an image, returning a new image with appropriate sources:
     each band has the image's sources for that band plus the calibration data's sources
-    for that filter, marked as secondary. ROIs are preserved.
+    for that filter, marked as secondary.
+
+    Bands are matched to the calibration by filter name, so the image can have fewer bands than the
+    calibration data, or have them in a different order. Unlike most operations, the whole image is
+    calibrated even if it has ROIs - otherwise only the ROIs would be. The ROIs are kept in the result.
 
     Returns a Result which is either an error (with a message) or success with an image Datum.
     """
@@ -43,9 +47,12 @@ def apply(calibd: Optional[Datum], imgd: Optional[Datum]) -> Result[Datum]:
 
     # The calibration data's sources should have one set per filter, in the same order as calib.filters
     # (they are the sources of the bands in the image the calibration was made from).
-    if not isinstance(calibd.sources, MultiBandSource) or \
-            len(calibd.sources.sourceSets) != len(calib.filters):
-        return Result.error("Calibration data sources do not match its filters")
+
+    if not isinstance(calibd.sources, MultiBandSource):
+        return Result.error(f"Calibration data has no multi-band source data ({type(calibd.sources)})")
+    if len(calibd.sources.sourceSets) != len(calib.filters):
+        return Result.error(f"Calibration data has {len(calib.filters)} filters but "
+                            f"{len(calibd.sources.sourceSets)} source sets")
 
     # copy and mark calibration data sources as secondary.
     csources = calibd.sources.copy().visit(
@@ -82,10 +89,16 @@ def apply(calibd: Optional[Datum], imgd: Optional[Datum]) -> Result[Datum]:
     mval = Datum(Datum.NUMBER, Value(m, sdm), sources=nullSourceSet)
     cval = Datum(Datum.NUMBER, Value(c, sdc), sources=nullSourceSet)
 
-    res = (imgd - cval) / mval  # do the actual op. with datum maths
+    # Image arithmetic only operates inside an image's ROIs (if it has any), but we want to calibrate
+    # the whole image. So do the maths on a shallow copy with no ROIs (sharing the pixel data, which the
+    # arithmetic doesn't change), then put the ROIs back on the result.
+    noroi = img.shallowCopy()
+    noroi.rois = []
+    res = (Datum(Datum.IMG, noroi) - cval) / mval  # do the actual op. with datum maths
     cube = res.get(Datum.IMG)
+    cube.rois = img.rois.copy()
 
-    # The arithmetic gives us a new ImageCube (with the ROIs), so we can replace its sources directly.
+    # The arithmetic gives us a new ImageCube, so we can replace its sources directly.
     # Note that we set them on the cube, not the Datum - an image Datum doesn't own its sources, and
     # setting them there raises ImageDatumSourcesException.
     cube.sources = MultiBandSource(sources)

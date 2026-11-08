@@ -279,13 +279,14 @@ class NumberType(Type):
         return str(d.val)
 
     def serialise(self, d):
+        # keep per-band sources (e.g. for a vector of per-band values)
         return self.name, (d.val.serialise(),
-                           d.getSources().serialise())
+                           pcot.sources.serialiseSources(d.sources))
 
     def deserialise(self, d):
         n, s = d
         n = pcot.value.Value.deserialise(n)
-        s = pcot.sources.SourceSet.deserialise(s)
+        s = pcot.sources.deserialiseSources(s)
         return pcot.datum.Datum(self, n, s)
 
     def copy(self, d):
@@ -371,14 +372,14 @@ class CalibrationDataType(Type):
         super().__init__("calibration",valid=[CalibrationData],connColour="#00ff80")
 
     def serialise(self,d):
-        return self.name, (d.val.serialise(), d.getSources().serialise())
+        # the sources are per-band (one set per filter), so keep that structure
+        return self.name, (d.val.serialise(), pcot.sources.serialiseSources(d.sources))
 
     def deserialise(self,d):
         from pcot.calib.fit import CalibrationData
         v, s = d
         c = CalibrationData.deserialise(v)
-        c.sources = pcot.sources.SourceSet.deserialise(s)
-        return pcot.datum.Datum(self, c, c.sources)
+        return pcot.datum.Datum(self, c, pcot.sources.deserialiseSources(s))
 
     def copy(self, d):
         return d # type is immutable

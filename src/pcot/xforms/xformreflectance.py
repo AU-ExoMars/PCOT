@@ -123,7 +123,7 @@ class XFormReflectance(XFormType):
     data is removed, so it does not obscure image data in subsequent operations. The
     next operation should be an expr node performing out=(in-c)/m.
 
-    The *cal* output is the calibration data itself: the fit for each filter and the points it
+    The *calib* output is the calibration data itself: the fit for each filter and the points it
     was made from. This can be saved (for example to a PARC file from a *sink* node).
 
     The input can also be calibration data rather than an image - for example, data loaded from a
@@ -141,7 +141,7 @@ class XFormReflectance(XFormType):
         # TODO during development I'm still outputting the old m,c vectors along with the new calibration datum
         self.addOutputConnector("m", Datum.NUMBER)
         self.addOutputConnector("c", Datum.NUMBER)
-        self.addOutputConnector("cal", Datum.CALIBRATION)
+        self.addOutputConnector("calib", Datum.CALIBRATION)
 
         self.params = TaggedDictType(
             # there might not be a calibration target because it's not valid for this image (or there's no image)
