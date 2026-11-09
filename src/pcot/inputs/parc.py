@@ -8,6 +8,7 @@ from typing import Optional, Tuple, Dict
 
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QPushButton, QTableView, QPlainTextEdit
 
 import pcot
 from pcot.dataformats import load
@@ -16,6 +17,7 @@ from pcot.inputs.inputmethod import InputMethod
 from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
+from pcot.ui.datawidget import DataWidget
 from pcot.ui.inputs import MethodWidget
 from pcot.utils.archive import FileArchive
 from pcot.utils.datumstore import DatumStore, Metadata
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 class PARCInputMethod(InputMethod):
     fname: Optional[str]
     itemname: Optional[str]
-    manifest: Dict[str, Tuple[str, str, str]]
+    manifest: Dict[str, Metadata]
     mapping: ChannelMapping
 
     def __init__(self, inp):
@@ -34,11 +36,16 @@ class PARCInputMethod(InputMethod):
         self.fname = None
         self.itemname = None
         self.manifest = {}
+        self.itemdesc = ''
         self.mapping = ChannelMapping()
 
     def setFileAndItem(self, fname, itemname='main'):
+        """Used from scripts/library code and tests. Doesn't touch the file - the manifest (and
+        so the description) are loaded by readData()."""
         self.fname = fname
         self.itemname = itemname
+        self.manifest = {}
+        self.itemdesc = ''
         self.mapping = ChannelMapping()
         return self
 
@@ -49,7 +56,16 @@ class PARCInputMethod(InputMethod):
         else:
             self.manifest = {}
 
+    def updateItemDesc(self):
+        """Set the item description from the manifest, which must already be loaded"""
+        meta = self.manifest.get(self.itemname)
+        self.itemdesc = meta.description if meta is not None else ''
+
     def readData(self):
+        # the manifest is only loaded by the widget, so it may not be here (e.g. in batch mode)
+        if self.itemname not in self.manifest:
+            self.loadManifest()
+        self.updateItemDesc()
         return load.parc(self.fname, self.itemname, self.input.idx)
 
     def getName(self):
@@ -63,7 +79,7 @@ class PARCInputMethod(InputMethod):
     def serialise(self, internal):
         # The data itself isn't stored here: it's cached in self.data, which survives undo/redo
         # because input methods are deserialised into the existing objects.
-        x = {'fname': self.fname, 'itemname': self.itemname}
+        x = {'fname': self.fname, 'itemname': self.itemname, 'itemdesc': self.itemdesc}
         Canvas.serialise(self, x)
         return x
 
@@ -71,15 +87,18 @@ class PARCInputMethod(InputMethod):
         if data is not None:
             self.fname = data['fname']
             self.itemname = data['itemname']
+            self.itemdesc = data.get('itemdesc','')
             Canvas.deserialise(self, data)
         else:
             self.fname = None
             self.itemname = None
+            self.itemdesc = ''
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:
         if d.parc.filename is not None:
             self.fname = d.parc.filename
             self.itemname = d.parc.itemname   # this will be defaulted to 'main' by the PARCDictType
+            self.itemdesc = 'unknown'   # we can't get access to this without doing the load; messy.
             return True
         return False
 
@@ -115,6 +134,11 @@ class Model(QtCore.QAbstractTableModel):
 
 
 class PARCMethodWidget(MethodWidget):
+    openButton: QPushButton
+    tableView: QTableView
+    data: DataWidget
+    itemDescription: QPlainTextEdit
+
     def __init__(self, m):
         super().__init__(m)
         uiloader.loadUi("ui/inputs/inputparc.ui", self)
@@ -141,7 +165,11 @@ class PARCMethodWidget(MethodWidget):
         if not self.method.openingWindow:
             self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
-        self.data.display(self.method.data)
+        # get() rather than .data, so the data is read even if nothing in the graph reads this
+        # input (or autorun is off). It's done before showing the description, which readData() sets.
+        datum = self.method.get()
+        self.itemDescription.setPlainText(self.method.itemdesc)
+        self.data.display(datum)
 
     def refreshFromMethod(self):
         # The file may have been changed by undo/redo, so reread its manifest (which isn't saved
@@ -179,6 +207,9 @@ class PARCMethodWidget(MethodWidget):
         model = self.tableView.model()
         keys = sorted(list(model.manifest.keys()))
         self.method.itemname = keys[self.tableView.currentIndex().row()]
+        # set the description here rather than relying on readData(), which only runs if the graph
+        # is performed (autorun on) and something reads this input.
+        self.method.updateItemDesc()
         # _sync() invalidates the cached data and reruns the graph, which reads the new item
         pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
         self._sync()
