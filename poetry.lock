@@ -249,7 +249,7 @@ woff = ["brotli (>=1.0.1)", "brotlicffi (>=0.8.0)", "zopfli (>=0.1.4)"]
 name = "ghp-import"
 version = "2.1.0"
 description = "Copy your docs directly to the gh-pages branch."
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -784,7 +784,7 @@ python-dateutil = ">=2.7"
 name = "mergedeep"
 version = "1.3.4"
 description = "A deep merge function for 🐍."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -796,7 +796,7 @@ files = [
 name = "mkdocs"
 version = "1.6.1"
 description = "Project documentation with Markdown."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -827,7 +827,7 @@ min-versions = ["babel (==2.9.0)", "click (==7.0)", "colorama (==0.4)", "ghp-imp
 name = "mkdocs-get-deps"
 version = "0.2.2"
 description = "An extra command for MkDocs that infers required PyPI packages from `plugins` in mkdocs.yml"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.9"
 files = [
@@ -943,6 +943,7 @@ numpy = [
     {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
     {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
     {version = ">=1.23.5", markers = "python_version >= \"3.11\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.19.3", markers = "python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\" or python_version >= \"3.9\""},
     {version = ">=1.17.0", markers = "python_version >= \"3.7\""},
     {version = ">=1.17.3", markers = "python_version >= \"3.8\""},
@@ -982,7 +983,7 @@ pds4-tools = ["pds4_tools (>=1.2,<2.0)"]
 name = "pathspec"
 version = "0.12.1"
 description = "Utility library for gitignore style pattern matching of file paths."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1118,7 +1119,7 @@ xmp = ["defusedxml"]
 name = "platformdirs"
 version = "4.11.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.10"
 files = [
@@ -1182,7 +1183,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 name = "pymdown-extensions"
 version = "11.0.1"
 description = "Extension pack for Python Markdown."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.10"
 files = [
@@ -1455,7 +1456,7 @@ files = [
 name = "pyyaml-env-tag"
 version = "1.1"
 description = "A custom YAML tag for referencing environment variables in YAML files."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.9"
 files = [
@@ -1849,7 +1850,7 @@ files = [
 name = "watchdog"
 version = "6.0.0"
 description = "Filesystem events monitoring"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.9"
 files = [
@@ -1890,5 +1891,5 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.11,<3.12"
-content-hash = "0781061eed0816ed85f04ce8e2e0104c0c343549453909a9ad36aa5ceb528b79"
+python-versions = ">=3.11,<3.13"
+content-hash = "7295bf5be238b8b38e435965c5e0e25ca4ee61e2a4d03074dc4800ac93e62383"

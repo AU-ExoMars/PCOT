@@ -5,7 +5,9 @@ To make a new release, follow this checklist.
 1. Create a new version number and codeword. For the version number, use
    [semantic versioning](https://semver.org). This means:
     * Version number in MAJOR.MINOR.PATCH format
-    * append "-alpha" if we are still in alpha
+    * The number must be a [PEP 440](https://peps.python.org/pep-0440/) version, because it
+      is also the PyPI package version. For a pre-release, append the PEP 440 suffix directly
+      with no hyphen: "1.2.0a1", "1.2.0b1" or "1.2.0rc1" (not "1.2.0-alpha").
     * increment the MAJOR number if backward incompatible changes are introduced
     * increment the MINOR number if new, backward compatible changes are introduced
       OR if deprecating functionality.
@@ -16,8 +18,11 @@ To make a new release, follow this checklist.
       running through letters of the alphabet and roughly south to north,
       trying to stick with more memorable names.
 1. Edit **PCOT/src/pcot/VERSION.txt** to add the new version data, also
-   specifying the date (in ISO 8601, YYYY-MM-DD format).
-1. Edit **PCOT/pyproject.toml** to add the new version data.
+   specifying the codename and the date (in ISO 8601, YYYY-MM-DD format).
+1. Edit **PCOT/pyproject.toml** to add the new version data: exactly the same
+   number as in VERSION.txt, without the date or codename.
+1. Run **pytest tests/config/test_version_check.py** to check that the two version
+   numbers match and are valid PEP 440.
 1. Run **poetry install** on both Windows and Linux and check PCOT
    still runs (and that the title bar and About version data is correct)
 1. Run **generate_autodocs.py** in **mkdocs/docs** to get up-to-date

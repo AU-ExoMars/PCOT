@@ -4,9 +4,9 @@ from pcot.imagecube import ImageCube, ChannelMapping
 
 import os
 import pathlib
+import shutil
 
 import pytest
-from distutils import dir_util
 import numpy as np
 
 from pcot.sources import MultiBandSource, nullSource, Source
@@ -37,7 +37,7 @@ def datadir(tmp_path, request):
     test_dir, _ = os.path.splitext(filename)
     test_dir += "_data"
     if os.path.isdir(test_dir):
-        dir_util.copy_tree(test_dir, str(tmp_path))
+        shutil.copytree(test_dir, tmp_path, dirs_exist_ok=True)
     else:
         raise Exception(f"Test data directory {test_dir} does not exist")
 

@@ -99,7 +99,7 @@ class TableView(QTableView):
     """View to be used in association with the model; it handles a delete key and getting
     the selected item"""
     delete = Signal()
-    selChanged = Signal(int)
+    selChanged = Signal(object)     # index of the selected item, or None if nothing is selected
 
     def setModel(self, model):
         """so we keep a record of the model ourselves"""

@@ -14,8 +14,12 @@ import matplotlib
 
 
 def gethistogram(chan, weights, bincount, range):
-    r = np.histogram(chan, bincount, range=range, weights=weights)
-    return r  # split out for debugging
+    counts, _ = np.histogram(chan, bincount, range=range, weights=weights)
+    # We work out the bin edges ourselves, in float64 narrowed to float32, rather than using the ones
+    # np.histogram returns. numpy 2 calculates its edges directly in float32, which makes them differ
+    # in the last digit from numpy 1; these are the same on both (and are what numpy 1 returned).
+    edges = np.linspace(float(range[0]), float(range[1]), bincount + 1, dtype=np.float64).astype(np.float32)
+    return counts, edges
 
 
 @xformtype

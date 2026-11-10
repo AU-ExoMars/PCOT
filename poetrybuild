@@ -1,4 +1,4 @@
-* conda create -n pcot python=3.8 poetry
+* conda create -n pcot python=3.11 poetry
 * conda activate pcot
 * poetry install
 

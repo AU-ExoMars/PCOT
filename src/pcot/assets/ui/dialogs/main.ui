@@ -113,7 +113,7 @@
             <enum>Qt::ScrollBarAsNeeded</enum>
            </property>
            <property name="renderHints">
-            <set>QPainter::Antialiasing|QPainter::HighQualityAntialiasing|QPainter::TextAntialiasing</set>
+            <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
            </property>
            <property name="dragMode">
             <enum>QGraphicsView::RubberBandDrag</enum>

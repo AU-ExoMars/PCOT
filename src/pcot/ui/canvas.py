@@ -588,7 +588,7 @@ class InnerCanvas(QtWidgets.QWidget):
                     # stuff has happened)
                     # The line below is faster than the standard np.clip(data, 0, 1, out=data)
                     # https://janhendrikewers.uk/exploring_faster_np_clip.html
-                    np.core.umath.maximum(np.core.umath.minimum(data, 1), 0, out=data)
+                    np.maximum(np.minimum(data, 1), 0, out=data)
                     t.mark("clip")
                     img = data
         return img, txt

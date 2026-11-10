@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import re
 import traceback
 
 try:
@@ -106,8 +107,9 @@ if tmp is None:
     raise ValueError('cannot find VERSION.txt')
 
 # this string gets turned into pcot.__fullversion__, while pcot.__version__
-# is just the number part (0.0.0 in the example). We also strip any trailing "-alpha" etc. from the
-# end of the __version__.
+# is just the first word (0.0.0 in the example). That word must be a PEP 440 version
+# (e.g. 1.2.0, or 1.2.0b1 for a pre-release) identical to the version in pyproject.toml;
+# tests/config/test_version_check.py checks both of these.
 
 # There's a second line too, which is the oldest document version we can safely load.from
 
@@ -116,8 +118,6 @@ lines = tmp.splitlines()
 
 __fullversion__ = lines[0].strip()
 __version__ = __fullversion__.split(maxsplit=1)[0]
-if "-" in  __version__:
-    __version__ = __version__.split("-")[0]
 
 oldest_valid_version = lines[1].split(maxsplit=1)[0]
 
@@ -128,15 +128,13 @@ def compatible_version_check(version):
         # remove any trailing stuff from the document version
         version = version.split()[0]
 
-        doc_maj,doc_min,doc_patch = version.split(".")
-        app_maj, app_min, app_patch = oldest_valid_version.split(".")
+        def _parse(v):
+            # take the leading digits of each part, dropping any pre-release suffix: both
+            # the old "0.12.0-beta" style found in older documents and PEP 440 "1.1.0b1"
+            return tuple(int(re.match(r"\d+", part).group()) for part in v.split("."))
 
-        # and any "-beta" or similar from the patch
-        doc_patch = doc_patch.split("-")[0]
-        app_patch = app_patch.split("-")[0]
-
-        doc_maj, doc_min, doc_patch = int(doc_maj), int(doc_min), int(doc_patch)
-        app_maj, app_min, app_patch = int(app_maj), int(app_min), int(app_patch)
+        doc_maj, doc_min, doc_patch = _parse(version)
+        app_maj, app_min, app_patch = _parse(oldest_valid_version)
 
         if doc_maj > app_maj:
             return True
