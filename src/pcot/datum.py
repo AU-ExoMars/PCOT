@@ -502,6 +502,17 @@ class Datum(SourcesObtainable):
             ds.writeDatum(name, self, description)
 
 
+    def getTabularProvider(self):
+        """
+        Returns a TabularProvider object with a view into this Datum as a table. The actual object
+        provided has parameters which vary according to the type. Throws ValueError if
+        the Datum doesn't have a TabularProvider.
+        """
+        if not self.tp.canProvideTable():
+            raise ValueError(f"'{self.tp.name}' Datum objects cannot provide a tabular view")
+        return self.tp.getTabularProvider(self)
+
+
 # a handy null datum object
 Datum.null = Datum(Datum.NONE, None)
 
