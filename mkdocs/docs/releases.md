@@ -142,6 +142,12 @@ history, which can use a lot of memory with large images.
 could be. This includes PDS4 inputs (reading, the multiplier, rescanning and product selection), RGB
 debayering and camera settings, the ENVI gains and offsets option, multifile settings, and switching
 between input methods. An open input window now updates after any undo or redo.
+* PCOT now runs on Python 3.12 as well as 3.11, and no longer insists on exact versions of PySide6
+and OpenCV - any PySide6 from 6.9.3 and OpenCV from 4.10 can be used. This is preparation for
+releasing PCOT on PyPI so that it can be installed with `pip`; it is not on PyPI yet. Existing
+installations are unaffected: update with `git pull` and `poetry install` as usual, and the same
+package versions as before will be used. NumPy 2 is not yet supported. The newer versions have
+so far only been tested on Windows.
 
 Site
 
