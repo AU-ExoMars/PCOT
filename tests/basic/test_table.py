@@ -60,7 +60,7 @@ def test_table_text_mixed_types_and_titletext():
     assert "hello" in lines[3]
 
 
-def test_table_float_formatting(monkeypatch):
+def test_table_float_formatting():
     """Floats are written to the config's significant figures, so small values aren't lost, but large
     values never lose digits before the decimal point or go into scientific notation"""
     import pcot.config
@@ -71,5 +71,12 @@ def test_table_float_formatting(monkeypatch):
         t.add(k, v)
     assert str(t).splitlines()[1] == "1.2346e-05,1.2346e-07,2.0094,123457,99999.5,0,1.2346,7"
 
-    monkeypatch.setattr(pcot.config.data, "sigfigs", 3)
-    assert str(t).splitlines()[1] == "1.23e-05,1.23e-07,2.01,123457,99999.5,0,1.23,7"
+    # Don't use monkeypatch.setattr here: config.data is a TaggedDict, whose values live in _values
+    # rather than the instance __dict__. From pytest 9.2 monkeypatch restores via the instance __dict__,
+    # so its undo tries to delattr, fails, and leaves sigfigs at 3 for the rest of the session.
+    old = pcot.config.data.sigfigs
+    pcot.config.data.sigfigs = 3
+    try:
+        assert str(t).splitlines()[1] == "1.23e-05,1.23e-07,2.01,123457,99999.5,0,1.23,7"
+    finally:
+        pcot.config.data.sigfigs = old
