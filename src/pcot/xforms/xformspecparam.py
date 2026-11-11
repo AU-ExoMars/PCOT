@@ -93,7 +93,8 @@ class TabSpecParam(Tab):
 
     def onNodeChanged(self):
         self.w.canvas.setNode(self.node)
-        self.w.canvas.display(self.node.getOutput(0, Datum.IMG))
+        # pass the Datum itself; the canvas unwraps it and shows nothing if it isn't an image
+        self.w.canvas.display(self.node.getOutput(0, return_datum=True))
 
         # populate the group box and sync with current selection if possible
         with SignalBlocker(self.w.groupCombo, self.w.paramCombo):
