@@ -148,6 +148,13 @@ releasing PCOT on PyPI so that it can be installed with `pip`; it is not on PyPI
 installations are unaffected: update with `git pull` and `poetry install` as usual, and the same
 package versions as before will be used. NumPy 2 is not yet supported. The newer versions have
 so far only been tested on Windows.
+* You can now add your own spectral parameters for the *spectral parameter* node. Write a YAML file
+of parameter groups and add it to "locations of user spectral parameters" in the settings. The groups
+are loaded when PCOT next starts and appear in the node alongside the built-in ones. A group can't have
+the same name as a built-in group or a group in another of your files. If a file is missing or has an
+error in it, none of its groups are loaded and PCOT tells you why when it starts. Documents store only
+the names of the group and parameter, so anyone you send a document to will need your file too. See
+[Spectral parameter files](userguide/specparams.md) for the file format.
 
 Site
 

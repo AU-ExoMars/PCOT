@@ -61,14 +61,14 @@ def snark(s):
     logger.debug(f"LOG snark {s}")
 
 
-def error(s, tb=True):
+def error(s, traceback=True):
     """show error on status bar, and log in red; will dump traceback to stdout if requested."""
     if application is not None:
         m = f'<font color="red">Error: </font> {s}'
         for x in mainwindow.MainUI.windows:
             x.logText.append(m)
         application.beep()
-    logger.critical(f"ERROR {s}", exc_info=True, stack_info=True)
+    logger.critical(f"ERROR {s}", exc_info=True, stack_info=traceback)
     msg("ERROR: {}".format(s))
 
 

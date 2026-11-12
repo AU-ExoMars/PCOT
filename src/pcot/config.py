@@ -39,10 +39,14 @@ CONFIG_DICT_TYPE = TaggedDictType(
         savedimages=("Default location for saving images", Path, Path.home() / "Pictures", True),
         saveddata=("Default location for non-image data", Path, Path.home(), True),
         pcotfiles=("Default location for PCOT documents", Path, Path.home(), True),
-        pluginpath=("Locations for plugins", TaggedListType(Path, [Path.home() / "pcotplugins"], deflt_append=Path(), valid_choices=True)),
+        pluginpath=("Locations for plugins", TaggedListType(Path, [Path.home() / "pcotplugins"], deflt_append=Path(),
+                                                            valid_choices=True)), # valid_choices = True means directories
         cameras=("Location of camera files", Maybe(Path), None, True),        # will be initialised on load if not present
         reflectances=("Location of reflectance files", Maybe(Path), None, True), # will be initialised on load if not present
-        macrosandfaves=("List of macro and favourites archives", TaggedListType(Path,[], deflt_append=Path.home()/"archive.pcot", valid_choices=False)),
+        macrosandfaves=("List of macro and favourites archives", TaggedListType(Path,[], deflt_append=Path.home()/"archive.pcot",
+                                                                                valid_choices="PCOT files (*.pcot)")),
+        userspecparams=("locations of user spectral parameters", TaggedListType(Path,[], deflt_append=Path.home()/"params.yaml",
+                                                                                valid_choices="YAML files (*.yaml)")),
     ).setOrdered(), None),
 
     testpds4data=("Location of testpds4data files (testing only)",Maybe(Path),None, True),

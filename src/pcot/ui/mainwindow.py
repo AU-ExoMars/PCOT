@@ -261,6 +261,17 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.doc.clearUndo()
         self.checkCameraAndReflectanceDataPresent()
 
+        self.showSpecParamLoadingErrors()
+
+    def showSpecParamLoadingErrors(self):
+        from pcot.utils.spectralparameters import errors
+        for tp, text in errors:
+            if tp == "warn":
+                ui.warn(text)
+            else:
+                ui.error(text, traceback=False)
+        errors.clear()
+
     def _ensureDataPresent(self, getNamesFn, title, message, configKey, loadFn):
         """Generic helper to ensure a dataset exists, prompting the user if not."""
         while len(getNamesFn()) == 0:

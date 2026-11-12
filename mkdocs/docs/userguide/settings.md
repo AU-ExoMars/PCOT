@@ -72,4 +72,6 @@ In the Locations section:
 * **Locations for plugins** is a list of directories scanned for PCOT plugin files.
 * **List of macro and favourite archives** is a list of PCOT files which have all their [favourites and macros](favesandmacros/index.md)
 imported automatically when a new document is created.
+* **Locations of user spectral parameters** is a list of [spectral parameter files](specparams.md), which add
+your own parameters to the *spectral parameter* node. They are read when PCOT starts.
 

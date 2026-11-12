@@ -16,7 +16,7 @@ A note on types within a TaggedAggregate "tag":
     * str can take a "valid_choices" argument: a list of valid choices
     * int and float can also take a "valid_choices" argument: a tuple range (min,max)
     * Path is weird, it can also take a "valid_choices" argument, which is True if only directories are allowed,
-      or a string like "Figures (*.png *.jpg) if only some types are allowed (i.e. a filter string, see 
+      or a string like "Figures (*.png *.jpg)" if only some types are allowed (i.e. a filter string, see 
       https://doc.qt.io/qt-6/qfiledialog.html#getOpenFileName 
       None or False permits any file.
       This is only used in the graphical UI config.

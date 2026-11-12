@@ -109,9 +109,3 @@ class TabSpecParam(Tab):
 
         # set the expression
         self.w.exprEdit.setText(self.node.expr)
-
-
-            
-
-
-        # select the

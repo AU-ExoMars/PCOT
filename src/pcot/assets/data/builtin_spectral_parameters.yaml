@@ -1,5 +1,18 @@
+# This is the built-in set of spectral parameters PCOT knows about. You can add more parameters
+# by creating files with the same structure as this one, and then adding them to the "locations of user
+# spectral parameters" in the settings.
+#
+# You cannot have two groups with the same name.
+#
+# IF YOU CHANGE THIS FILE, UPDATE THE DOCUMENTATION: the file format, and a table of the groups in
+# this file, are in the user guide page mkdocs/docs/userguide/specparams.md ("Spectral parameter files").
+# That page needs amending if the format changes or if groups are added, removed or renamed here.
 
-# Each parameter has:
+# Each group of parameters has:
+#   date - date of authorship
+#   desc - a full description of the group preferably with a reference
+
+# Within each group, each parameter has:
 #   name - the name and a short description. This might have some characters in it that YAML
 #     doesn't like in keys such as colons. if so, put quotes round the name.
 #   expr - the PCOT expr node expression, using "a" as the input image variable, e.g. "a$540" to

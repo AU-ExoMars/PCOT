@@ -21,6 +21,7 @@ to install and run PCOT and give you a tutorial covering the basics.
 * [Updating PCOT](update.md)
 * [Using the multifile input to read multispectral data from BMP, PNG etc.](multifile.md)
 * [Using the *expr* node to perform mathematical operations](expr.md)
+* [Spectral parameter files](specparams.md) - adding your own parameters to the *spectral parameter* node
 * [Batch mode](batch/index.md) - controlling PCOT with parameter files for batch operations
 * [Camera and reflectance target data](cameradata.md) - how to get and
 create data files containing camera filter specifications, calibration
