@@ -1,3 +1,4 @@
+import shutil
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
@@ -78,3 +79,39 @@ def test_parc_internal_roundtrip(globaldatadir):
     doc.undo()
     assert doc.inputMgr.inputs[0].getActive() is method
     assert method.data is cached
+
+
+def test_parc_saved_item_metadata(globaldatadir, tmp_path):
+    """The current item's manifest entry (including its description) is saved in the document, so it can
+    still be shown when the document is reloaded without its PARC file"""
+    pcot.setup()
+    fname = tmp_path / "copy.parc"
+    shutil.copy(globaldatadir / "parc/testimage.parc", fname)
+    doc = Document()
+    assert doc.setInputPARC(0, str(fname)) is None
+    doc.save(str(tmp_path / "doc.pcot"))
+    fname.unlink()
+
+    doc2 = Document(tmp_path / "doc.pcot")
+    method = doc2.inputMgr.inputs[0].getActive()
+    assert method.itemdesc == 'test image'
+    assert method.itemmeta.description == 'test image'
+    assert method.itemmeta.created is not None
+    assert method.manifest == {}        # the whole manifest isn't saved, only the current item's entry
+    assert not method.data.isNone()     # the data itself comes from the document's cache
+
+
+def test_parc_old_itemdesc_compat(globaldatadir):
+    """Documents which only saved the item description still load it, and can be saved again"""
+    pcot.setup()
+    doc = Document()
+    assert doc.setInputPARC(0, str(globaldatadir/"parc/testimage.parc")) is None
+    method = doc.inputMgr.inputs[0].getActive()
+    old = method.serialise(False)
+    del old['itemmeta']
+    old['itemdesc'] = 'old description'
+    method.deserialise(old, False)
+    assert method.itemdesc == 'old description'
+    assert method.itemmeta.created is None
+    method.deserialise(method.serialise(False), False)    # round trip with no creation date
+    assert method.itemdesc == 'old description'

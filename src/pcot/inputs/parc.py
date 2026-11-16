@@ -4,11 +4,11 @@ mechanism). These should have a MANIFEST file.
 """
 import logging
 import os
-from typing import Optional, Tuple, Dict
+from typing import Optional, Dict, List
 
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QPushButton, QTableView, QPlainTextEdit
+from PySide6.QtWidgets import QPushButton, QTableView, QPlainTextEdit, QLabel
 
 import pcot
 from pcot.dataformats import load
@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 class PARCInputMethod(InputMethod):
     fname: Optional[str]
     itemname: Optional[str]
-    manifest: Dict[str, Metadata]
+    manifest: Dict[str, Metadata]       # the file's manifest - only loaded from the file, never saved
+    itemmeta: Optional[Metadata]        # manifest entry for the current item - saved, so we can show it without the file
     mapping: ChannelMapping
 
     def __init__(self, inp):
@@ -36,16 +37,20 @@ class PARCInputMethod(InputMethod):
         self.fname = None
         self.itemname = None
         self.manifest = {}
-        self.itemdesc = ''
+        self.itemmeta = None
         self.mapping = ChannelMapping()
+
+    @property
+    def itemdesc(self) -> str:
+        return self.itemmeta.description if self.itemmeta is not None else ''
 
     def setFileAndItem(self, fname, itemname='main'):
         """Used from scripts/library code and tests. Doesn't touch the file - the manifest (and
-        so the description) are loaded by readData()."""
+        so the item's metadata) are loaded by readData()."""
         self.fname = fname
         self.itemname = itemname
         self.manifest = {}
-        self.itemdesc = ''
+        self.itemmeta = None
         self.mapping = ChannelMapping()
         return self
 
@@ -56,16 +61,15 @@ class PARCInputMethod(InputMethod):
         else:
             self.manifest = {}
 
-    def updateItemDesc(self):
-        """Set the item description from the manifest, which must already be loaded"""
-        meta = self.manifest.get(self.itemname)
-        self.itemdesc = meta.description if meta is not None else ''
+    def updateItemMeta(self):
+        """Set the current item's metadata from the manifest, which must already be loaded"""
+        self.itemmeta = self.manifest.get(self.itemname)
 
     def readData(self):
         # the manifest is only loaded by the widget, so it may not be here (e.g. in batch mode)
         if self.itemname not in self.manifest:
             self.loadManifest()
-        self.updateItemDesc()
+        self.updateItemMeta()
         return load.parc(self.fname, self.itemname, self.input.idx)
 
     def getName(self):
@@ -79,7 +83,8 @@ class PARCInputMethod(InputMethod):
     def serialise(self, internal):
         # The data itself isn't stored here: it's cached in self.data, which survives undo/redo
         # because input methods are deserialised into the existing objects.
-        x = {'fname': self.fname, 'itemname': self.itemname, 'itemdesc': self.itemdesc}
+        x = {'fname': self.fname, 'itemname': self.itemname,
+             'itemmeta': self.itemmeta.serialise() if self.itemmeta is not None else None}
         Canvas.serialise(self, x)
         return x
 
@@ -87,18 +92,24 @@ class PARCInputMethod(InputMethod):
         if data is not None:
             self.fname = data['fname']
             self.itemname = data['itemname']
-            self.itemdesc = data.get('itemdesc','')
+            if data.get('itemmeta') is not None:
+                self.itemmeta = Metadata.deserialise(data['itemmeta'])
+            elif data.get('itemdesc'):
+                # older documents only saved the description
+                self.itemmeta = Metadata('', data['itemdesc'], '', None)
+            else:
+                self.itemmeta = None
             Canvas.deserialise(self, data)
         else:
             self.fname = None
             self.itemname = None
-            self.itemdesc = ''
+            self.itemmeta = None
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:
         if d.parc.filename is not None:
             self.fname = d.parc.filename
             self.itemname = d.parc.itemname   # this will be defaulted to 'main' by the PARCDictType
-            self.itemdesc = 'unknown'   # we can't get access to this without doing the load; messy.
+            self.itemmeta = None    # set by readData() when the item is loaded
             return True
         return False
 
@@ -106,35 +117,53 @@ class PARCInputMethod(InputMethod):
         return PARCMethodWidget(self)
 
 
+class Row:
+    """A row in the item table"""
+    def __init__(self, key: str, label: str, meta: Optional[Metadata], enabled: bool):
+        self.key = key              # item name in the archive
+        self.label = label          # what we show for it
+        self.meta = meta            # may be None if we don't know anything about the item
+        self.enabled = enabled      # can it be double-clicked to load it?
+
+
 class Model(QtCore.QAbstractTableModel):
-    def __init__(self, parent, manifest):
+    def __init__(self, parent, rows: List[Row]):
         super().__init__(parent)
-        self.manifest = manifest
+        self.rows = rows
 
     def rowCount(self, parent):
-        return len(self.manifest)
+        return len(self.rows)
 
     def columnCount(self, parent):
         return 4
+
+    def flags(self, index):
+        if index.isValid() and self.rows[index.row()].enabled:
+            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        return Qt.ItemFlag.NoItemFlags      # shown greyed out, and can't be selected
 
     def data(self, index, role):
         if not index.isValid():
             return None
         if role == Qt.ItemDataRole.DisplayRole:
-            # get a sorted list of the manifest keys
-            keys = sorted(list(self.manifest.keys()))
-            # and return the appropriate item
-            item: Metadata = self.manifest[keys[index.row()]]
-
+            row = self.rows[index.row()]
             if index.column() == 0:
-                return keys[index.row()]            # column zero is the key
+                return row.label
+            meta = row.meta
+            if meta is None:
+                return ''
+            if index.column() == 1:
+                return meta.description
+            elif index.column() == 2:
+                return meta.datumtype
             else:
-                tmp = [item.description, item.datumtype, item.created.strftime('%Y-%m-%d %H:%M:%S')]
-                return tmp[index.column()-1]         # columns 1, 2, 3 are the size, type, date
+                return meta.created.strftime('%Y-%m-%d %H:%M:%S') if meta.created is not None else ''
+        return None
 
 
 class PARCMethodWidget(MethodWidget):
     openButton: QPushButton
+    status: QLabel
     tableView: QTableView
     data: DataWidget
     itemDescription: QPlainTextEdit
@@ -142,9 +171,10 @@ class PARCMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
         uiloader.loadUi("ui/inputs/inputparc.ui", self)
+        self.manifestError = None   # error message if the manifest couldn't be read
         self.openButton.clicked.connect(self.openFile)
         self.tableView.doubleClicked.connect(self.itemSelected)
-        self.tableView.setModel(Model(self, m.manifest))
+        self.showManifest()
         self.tableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
 
         # the canvas gets its "caption display" setting from the graph, so
@@ -170,22 +200,75 @@ class PARCMethodWidget(MethodWidget):
         datum = self.method.get()
         self.itemDescription.setPlainText(self.method.itemdesc)
         self.data.display(datum)
+        # the file or item may have changed (e.g. by undo/redo), or the item may have turned out
+        # not to be in the file, so redo the table and status
+        self.showManifest()
 
-    def refreshFromMethod(self):
-        # The file may have been changed by undo/redo, so reread its manifest (which isn't saved
-        # in the method) if the file is there, and show the selected item.
-        if self.method.fname and os.path.isfile(self.method.fname):
+    def _fileExists(self):
+        return self.method.fname is not None and os.path.isfile(self.method.fname)
+
+    def _hasData(self):
+        d = self.method.data
+        return d is not None and not d.isNone()
+
+    def _rows(self) -> List[Row]:
+        """If the file is there, all its items can be loaded. Otherwise we can only show the current
+        item, using the metadata saved in the document, and it can't be changed."""
+        m = self.method
+        if self._fileExists():
+            rows = [Row(k, k, m.manifest[k], True) for k in sorted(m.manifest)]
+            if m.itemname is not None and m.itemname not in m.manifest and self._hasData():
+                # the data we have is for an item which isn't in the file (any more)
+                rows.append(Row(m.itemname, f"{m.itemname} (not in file)", m.itemmeta, False))
+            return rows
+        elif m.itemname is not None:
+            return [Row(m.itemname, m.itemname, m.itemmeta, False)]
+        return []
+
+    def showManifest(self):
+        """Show the item table and status. The manifest is reread from the file if it's there, in case
+        the file has changed."""
+        self.manifestError = None
+        if self._fileExists():
             try:
                 self.method.loadManifest()
             except Exception as e:
                 logger.warning(f"Cannot read manifest of {self.method.fname}: {e}")
+                self.manifestError = str(e)
+                self.method.manifest = {}
         else:
             self.method.manifest = {}
-        self.tableView.setModel(Model(self, self.method.manifest))
-        keys = sorted(self.method.manifest.keys())
-        if self.method.itemname in keys:
-            self.tableView.selectRow(keys.index(self.method.itemname))
-        super().refreshFromMethod()
+        rows = self._rows()
+        self.tableView.setModel(Model(self, rows))
+        for i, r in enumerate(rows):
+            if r.enabled and r.key == self.method.itemname:
+                self.tableView.selectRow(i)
+        self.status.setText(self.statusText())
+
+    def statusText(self) -> str:
+        m = self.method
+        if m.fname is None:
+            return "No file selected. Use Open File to choose a PARC file."
+        name = os.path.basename(m.fname)
+        item = f"'{m.itemname}'"
+        if not self._fileExists():
+            if self._hasData():
+                return (f"{name} was not found. Showing item {item} from the previously loaded data; "
+                        f"other items can't be loaded until the file is available again.")
+            return f"{name} was not found, and there is no previously loaded data."
+        if self.manifestError is not None:
+            return f"Cannot read {name}: {self.manifestError}"
+        if m.itemname is None:
+            return f"Double-click an item in {name} to load it."
+        if m.itemname not in m.manifest:
+            if self._hasData():
+                return (f"Item {item} is not in {name}. Showing the previously loaded data; "
+                        f"double-click an item to load a different one.")
+            return f"Item {item} is not in {name}. Double-click an item to load it."
+        if self._hasData():
+            return f"Showing item {item} from {name}."
+        err = m.input.exception
+        return f"Item {item} could not be loaded from {name}" + (f": {err}" if err else ".")
 
     def openFile(self):
         # use an file dialog to select a file
@@ -197,19 +280,20 @@ class PARCMethodWidget(MethodWidget):
         if res[0] != '':
             self.method.mark()
             self.method.fname = res[0]
-            self.method.loadManifest()
-            self.tableView.setModel(Model(self, self.method.manifest))
+            self.showManifest()
             pcot.config.setDefaultDir('images', os.path.dirname(res[0]))
             self.refreshMissingIndicator()
 
     def itemSelected(self):
+        rows = self.tableView.model().rows
+        row = rows[self.tableView.currentIndex().row()]
+        if not row.enabled:     # shouldn't happen, as disabled rows can't be selected
+            return
         self.method.mark()
-        model = self.tableView.model()
-        keys = sorted(list(model.manifest.keys()))
-        self.method.itemname = keys[self.tableView.currentIndex().row()]
-        # set the description here rather than relying on readData(), which only runs if the graph
+        self.method.itemname = row.key
+        # set the metadata here rather than relying on readData(), which only runs if the graph
         # is performed (autorun on) and something reads this input.
-        self.method.updateItemDesc()
+        self.method.updateItemMeta()
         # _sync() invalidates the cached data and reruns the graph, which reads the new item
         pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
         self._sync()

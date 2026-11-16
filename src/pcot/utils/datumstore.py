@@ -18,14 +18,14 @@ class Metadata:
     datumtype: str  # the type of the datum (as a string)
     description: str  # a description of the datum - could be empty
     repr: str  # the string representation of the datum
-    created: datetime  # the time when created in ISO 8601 format
+    created: Optional[datetime]  # the time when created in ISO 8601 format (None if unknown)
 
     def serialise(self):
         return {
             "datumtype": self.datumtype,
             "description": self.description,
             "repr": self.repr,
-            "created": self.created.isoformat()
+            "created": self.created.isoformat() if self.created is not None else None
         }
 
     @staticmethod
@@ -34,7 +34,7 @@ class Metadata:
             d["datumtype"],
             d["description"],
             d["repr"],
-            datetime.fromisoformat(d["created"])
+            datetime.fromisoformat(d["created"]) if d.get("created") is not None else None
         )
 
 
