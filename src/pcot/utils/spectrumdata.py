@@ -154,6 +154,13 @@ class SpectrumSet(SourcesObtainable):
     def keys(self):
         return self.spectra.keys()
 
+    def _repr_png_(self):
+        """Jupyter notebooks and IPython call this to display the spectra when they are the value of a
+        cell: they are plotted with the spectrum node's default settings. Use pcot.plotting.spectrum
+        for other settings."""
+        from pcot.plotting import spectrumPNG
+        return spectrumPNG(self)
+
     def items(self):
         return self.spectra.items()
 

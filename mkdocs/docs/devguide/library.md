@@ -207,34 +207,9 @@ configuration is organised, and for adding settings of your own.
 
 ## Using PCOT in Jupyter notebooks
 
-PCOT can be installed with `pip install pcot` into the same environment as Jupyter, and used
-from a notebook just as from any other Python program. Images display themselves: if an
-`ImageCube`, or a `Datum` holding an image, is the value of a cell, the notebook shows it with
-its RGB channel mapping, ROIs and annotations, as in an annotated export. Small images are scaled
-up so that their annotations can be read.
-
-```python
-import pcot
-from pcot.document import Document
-from pcot.datum import Datum
-
-pcot.setup()
-doc = Document("example.pcot")
-doc.run()
-img = doc.getNodeByName("sink").data.get(Datum.IMG)
-img     # shows the image
-```
-
-Other data can be turned into a pandas DataFrame through its tabular view, if it has one
-(spectra and tables do):
-
-```python
-import io
-import pandas as pd
-
-datum = doc.getNodeByName("spectrum").getOutputDatum(0)
-pd.read_csv(io.StringIO(datum.getTabularProvider().csvString()))
-```
+PCOT can be used from Jupyter notebooks, where images and spectra display themselves and spectra
+can be plotted with the spectrum node's settings. See
+[Using PCOT in Jupyter notebooks](../userguide/jupyter.md).
 
 ## Logging
 

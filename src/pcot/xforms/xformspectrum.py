@@ -1,7 +1,4 @@
-import math
 
-import matplotlib
-import numpy as np
 from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
@@ -9,7 +6,6 @@ from PySide6.QtWidgets import QDialog
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
-from pcot.cameras.filters import wav2RGB
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.ui import uiloader
 from pcot.ui import theme
@@ -24,24 +20,10 @@ from pcot.xform import XFormType, xformtype, XFormException
 # number of inputs on the node
 NUMINPUTS = 8
 
-# short names for error bar modes used in the dialog, in the same order as they appear there
-errorBarModes = ["none", "stderror", "stddev"]
-
-# short names for colour modes used in the dialog
-colourModes = ["fromROIs", "scheme1", "scheme2"]
-
-# short names for bandwidth modes used in the dialog
-bandwidthModes = ["none", "errorbar", "vertbar"]
-
-# short names for wavelength annotation modes used in the dialog
-annotateModes = ["none", "line", "linefwhm"]
-
-# wavelength units and scaling factors to convert to them from nm and the string for that annotation
-# in the "wavelength (string)" x-axis label
-wavelengthUnits = {
-    "nm": (1,"nm"),
-    "microns": (1e-3, "$\\mu$m"),
-}
+# the settings choices and the drawing code are in pcot.plotting.spectrumplot, so that the plot can
+# be drawn without the GUI. The names are imported here because the node's settings and tab use them.
+from pcot.plotting.spectrumplot import (errorBarModes, colourModes, bandwidthModes, annotateModes,
+                                        wavelengthUnits, orderLegends, plotSpectrum)
 
 
 def fixSortList(node):
@@ -49,13 +31,7 @@ def fixSortList(node):
     # and that all of them are present. This list is used to "stack" items in the plot,
     # and nowhere else (it doesn't order items in the tabular output, for example).
     if node.data is not None:
-        sl = node.params.sortlist.get()
-        legends = node.data.keys()
-        # filter out items that aren't in the data
-        sl = [x for x in sl if x in legends]
-        # add new items
-        sl.extend([x for x in legends if x not in sl])
-        node.params.sortlist.set(sl)
+        node.params.sortlist.set(orderLegends(node.params.sortlist.get(), node.data.keys()))
 
 
 @xformtype
@@ -249,125 +225,10 @@ class TabSpectrum(ui.tabs.Tab):
         self.nodeChanged()
 
     def replot(self):
-        ax = self.w.mpl.ax
-        # set up the plot
-        # self.w.mpl.fig.suptitle("TODO")  # TODO? Do we need a title?
-        ax.cla()  # clear any previous plot
-
         # make sure the legend list is correct
         fixSortList(self.node)
-
-        # pick a colour scheme for multiple plots if we're not getting the colour
-        # from the ROIs
-        if self.node.params.colourmode == "scheme2":
-            cols = matplotlib.colormaps['tab10'].colors
-        else:
-            cols = matplotlib.colormaps['Dark2'].colors
-
-        # get the scale factor for the x-units we've chosen and the symbol to use
-        # on the axis label
-        unit_scale_factor,symbol = wavelengthUnits[self.node.params.wavelength_units]
-
-        # the dict consists of a list of channel data tuples for each image/roi.
-        colidx = 0
-        stackSep = self.node.params.stackSep / 20
-
-        if stackSep != 0:  # turn off tick labels if we are stacking; the Y values would be deceptive.
-            ax.set_yticklabels('')
-
-        ax.tick_params(axis='both', labelsize=self.node.params.axisFontSize)
-        ax.set_xlabel(f"wavelength ({symbol})", fontsize=self.node.params.labelFontSize)
-        ax.set_ylabel(self.node.params.y_label if stackSep == 0 else f"{self.node.params.y_label} (stacked)",
-                      fontsize=self.node.params.labelFontSize)
-
-        stackpos = 0
-        for legend in self.node.params.sortlist:
-            unfiltered = self.node.data[legend]
-
-            # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
-            # These also seem to show up as None sometimes, so we have to check for that too.
-
-            x = {filt: spec for filt, spec in unfiltered.values.items() if spec.v is not None and
-                 spec.v.n is not np.ma.masked}
-
-            if len(x) == 0:
-                ui.error(f"No points have good data for point {legend}", False)
-                continue
-            if len(x) != len(unfiltered.values):
-                ui.error(f"Some points have bad data for point {legend}", False)
-
-            # get a list of the filters (the dict keys) sorted by filter cwl
-            filters = sorted(x.keys(), key=lambda ff: ff.cwl)
-
-            # extract data from the dictionary
-            values = [x[filt] for filt in filters]
-            means = [a.v.n for a in values]
-            sds = [a.v.u for a in values]
-            counts = [a.samples for a in values]
-
-            # spectra which didn't come from images (e.g. from a spectrometer) may not have a colour
-            if self.node.params.colourmode == 'fromROIs' and unfiltered.colour is not None:
-                col = unfiltered.colour
-            else:
-                col = cols[colidx % len(cols)]
-            means = [x + stackSep * stackpos for x in means]
-
-            wavelengths = [x.cwl * unit_scale_factor for x in filters]
-
-            ax.plot(wavelengths, means, c=col, label=legend)
-            ax.scatter(wavelengths, means, c=[wav2RGB(x.cwl) for x in filters], s=0)
-            if self.node.params.fixedYAxis:
-                ax.set_ylim(0,1)
-
-            if self.node.params.annotate != 'none':
-                # full height of the plot, regardless of the y-axis limits - so we use the
-                # x-axis transform, which keeps x in data coordinates but y in axes fraction (0-1).
-                ax.vlines(wavelengths, 0, 1, transform=ax.get_xaxis_transform(),
-                          colors='grey', linewidth=0.5, zorder=0)
-                for wl in wavelengths:
-                    ax.annotate(f"{wl:g}", xy=(wl, 0),
-                                xycoords=('data', 'axes fraction'),
-                                xytext=(3, 3), textcoords='offset points',
-                                rotation=90, ha='left', va='bottom',
-                                fontsize=self.node.params.axisFontSize)
-                if self.node.params.annotate == 'linefwhm':
-                    for f in filters:
-                        a = f.cwl - f.fwhm / 2
-                        b = f.cwl + f.fwhm / 2
-                        ax.axvspan(a*unit_scale_factor, b*unit_scale_factor,
-                                   color='lightgrey', alpha=0.3, zorder=0)
-
-            if self.node.params.errorbarmode != 'none':
-                # calculate standard errors from standard deviations
-                stderrs = [std / math.sqrt(count) for std, count in zip(sds, counts)]
-                ax.errorbar(wavelengths, means,
-                            stderrs if self.node.params.errorbarmode == 'stderror' else sds,
-                            # only show the x error bar if we are in the correct bandwidth mode
-                            xerr=[x.fwhm / 2 * unit_scale_factor for x in filters] if self.node.params.bandwidthmode == 'errorbar' else None,
-                            ls="None", capsize=4, c=col)
-            colidx += 1
-            # subtraction to make the plots stack the same way as the legend!
-            stackpos -= self.node.params.stackSep
-
-            # now show the bandwidth as a vertical span if we are in the correct mode
-            if self.node.params.bandwidthmode == 'vertbar':
-                for f in filters:
-                    ax.axvspan((f.cwl - f.fwhm / 2) * unit_scale_factor,
-                               (f.cwl + f.fwhm / 2) * unit_scale_factor, color=col, alpha=0.1)
-
-        ax.legend(fontsize=self.node.params.legendFontSize)
-        ymin, ymax = ax.get_ylim()
-        ymin = ymin - self.node.params.bottomSpace / 10
-        if ymax - ymin < 0.01:  # if the y range is too small, expand it
-            ymin -= 0.01
-            ymax += 0.01
-        ax.set_ylim(ymin, ymax)
-        xmin, xmax = ax.get_xlim()
-        ax.set_xlim(xmin, xmax + self.node.params.rightSpace * 100 * unit_scale_factor)
-
-        if self.node.params.stackSep == 0:  # only remove negative ticks if we're labelling the ticks.
-            ax.set_yticks([x for x in ax.get_yticks() if x >= 0])
-
+        plotSpectrum(self.w.mpl.ax, self.node.data, self.node.params, self.node.params.sortlist.get(),
+                     onError=lambda msg: ui.error(msg, False))
         self.w.mpl.draw()
         theme.setStaleStyle(self.w.replot, False)
 

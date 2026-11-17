@@ -151,8 +151,10 @@ usual; the install will download these new versions. Results should be unchanged
 use NumPy directly may need changes for NumPy 2 - see the
 [NumPy 2 migration guide](https://numpy.org/devdocs/numpy_2_0_migration_guide.html).
 * In Jupyter notebooks, images now display themselves: if an image (or a `Datum` holding one) is the
-value of a cell, it is shown with its ROIs and annotations. See "Using PCOT in Jupyter notebooks" in
-the [library guide](devguide/library.md).
+value of a cell, it is shown with its ROIs and annotations. Sets of spectra display as a spectrum plot,
+and the new `pcot.plotting.spectrum` function draws spectrum plots with any of the spectrum node's
+settings, in notebooks or scripts. See
+[Using PCOT in Jupyter notebooks](userguide/jupyter.md).
 * When PCOT is used as a library, it no longer changes the program's logging setup, and by default
 shows only its warnings and errors rather than its informational messages. Scripts which relied on
 seeing those messages can turn them back on - see "Logging" in the [library guide](devguide/library.md).

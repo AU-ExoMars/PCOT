@@ -504,10 +504,10 @@ class Datum(SourcesObtainable):
 
     def _repr_png_(self):
         """Jupyter notebooks and IPython call this to display a Datum which is the value of a cell.
-        Image Datums are shown as the image; for other types this returns None, so the text form is shown."""
-        if self.tp == Datum.IMG and self.val is not None:
-            return self.val._repr_png_()
-        return None
+        Datums whose values can draw themselves (images, spectra) are shown as their value would be;
+        for other types this returns None, so the text form is shown."""
+        reprPNG = getattr(self.val, "_repr_png_", None)
+        return reprPNG() if reprPNG is not None else None
 
     def getTabularProvider(self):
         """

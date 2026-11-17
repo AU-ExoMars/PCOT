@@ -1,5 +1,30 @@
 # Installing and running PCOT
 
+There are two ways to install PCOT: with pip, which is simplest, or from the repository with
+Anaconda and Poetry, which you need if you want to change PCOT or follow the latest development
+version.
+
+## Installing with pip
+
+PCOT can be installed from [PyPI](https://pypi.org/project/pcot/) into any Python 3.11 or
+3.12 environment (a fresh virtual environment or Conda environment is best):
+
+```shell
+pip install pcot
+```
+
+You can then run **pcot** to start the application, or `import pcot` to use it as a library - for
+example from a [Jupyter notebook](../userguide/jupyter.md). To get updates, run
+**pip install --upgrade pcot**.
+
+A pip install doesn't include the camera data files, which describe each camera's filters, or
+the reflectance target data used for calibration. Download them from
+[pcot.aber.ac.uk](https://pcot.aber.ac.uk) and put them somewhere convenient. The first time
+PCOT starts it will say it has no camera data and offer to let you choose a directory: choose
+the one holding the camera files. It will offer the same for the reflectance target data.
+
+## Installing from the repository
+
 PCOT is a Python program (and library) with a number of dependencies,
 notably numpy and PySide6 (the official Python interface to Qt).
 We find the best way to manage these is to use
