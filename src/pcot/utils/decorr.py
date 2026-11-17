@@ -46,8 +46,12 @@ def decorrelation_stretch(A, mask, stretch_factor=1, clip_percent=5):
     # (the variance of each band) square rooted (i.e. stddev).
     stddevs = np.sqrt(cov.diagonal()) # we return these
     sigma = np.diag(stddevs)
-    # eigen decomposition of covariance matrix - get the eigenvalues and eigenvectors
+    # eigen decomposition of covariance matrix - get the eigenvalues and eigenvectors.
+    # The covariance matrix is symmetric, so these are real, but from numpy 2.5 eig always returns
+    # complex arrays; take the real parts. (eigh would give real results directly, but in a different
+    # order, and the sigma reordering below depends on that order.)
     eigval, V = np.linalg.eig(cov)
+    eigval, V = eigval.real, V.real
     # sort vecs and vals by descending eigenvalue (i.e. amount of variance)
     idx = np.argsort(eigval)[::-1]
     eigval = eigval[idx]

@@ -58,9 +58,11 @@ class PDS4Product:
     def __init__(self, p: Optional[DataProduct] = None):
         super().__init__()
         if p is not None:
-            self.lid = p.meta.lid
+            # proctools 0.3 returns the LID and start time as passthrough objects rather than
+            # strings; str() gives the same string as earlier versions, which we store and save.
+            self.lid = str(p.meta.lid)
             self.sol_id = int(p.meta.sol_id)  # a sol ID
-            self.start = parser.isoparse(p.meta.start)
+            self.start = parser.isoparse(str(p.meta.start))
             self.p = p  # and store the original data product
             # record the full file path
             self.path = str(p.path)
