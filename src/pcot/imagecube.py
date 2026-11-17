@@ -1225,6 +1225,18 @@ class ImageCube(SourcesObtainable):
                 return r
         return None
 
+    # smallest width, in pixels, at which images are shown in Jupyter notebooks; smaller images are
+    # scaled up so their ROIs and annotations are legible
+    NOTEBOOK_MIN_WIDTH = 800
+
+    def _repr_png_(self):
+        """Jupyter notebooks and IPython call this to display the image when it is the value of a cell.
+        It is drawn as an annotated export would be: RGB channel mapping, ROIs and annotations."""
+        from pcot import imageexport
+        from pcot.app import checkApp
+        checkApp()  # drawing needs a Qt application, which pcot.setup() normally creates
+        return imageexport.exportPNGBytes(self, max(self.w, ImageCube.NOTEBOOK_MIN_WIDTH))
+
     def save(self, filename, annotations=False, format: str = None,
              name: str = None, description: str = "", append: bool = False,
              pixelWidth=None,gamma=1.0):

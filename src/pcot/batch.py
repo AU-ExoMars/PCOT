@@ -23,6 +23,7 @@ parser.add_argument('vars', nargs='*', help='variables to set in the batch file 
 
 def main():
     args = parser.parse_args()
+    pcot.setupLogging()
     logging.getLogger("pcot").setLevel(args.log.upper())
 
     logger.critical("Deprecated - please use the 'pcot batch' subcommand in future, although this will work for now.")

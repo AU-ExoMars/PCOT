@@ -90,9 +90,14 @@ def setup():
     checkApp()
 
 
-logging.basicConfig(format='%(levelname)s %(asctime)s %(name)s: %(message)s', force=True)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+
+
+def setupLogging():
+    """Send log messages to stderr in PCOT's own format. The pcot and pcotbatch commands call this.
+    It isn't done on import, so that a program or notebook using PCOT as a library keeps its own
+    logging setup, and only sees PCOT's warnings and errors unless it asks for more."""
+    logging.basicConfig(format='%(levelname)s %(asctime)s %(name)s: %(message)s', force=True)
 
 # matplotlib spews a lot of debugging data - turn it off
 logging.getLogger('matplotlib.font_manager').disabled = True

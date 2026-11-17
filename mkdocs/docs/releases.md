@@ -150,6 +150,13 @@ and `passthrough` packages used to read PDS4 data. Update with `git pull` and `p
 usual; the install will download these new versions. Results should be unchanged. Plugins which
 use NumPy directly may need changes for NumPy 2 - see the
 [NumPy 2 migration guide](https://numpy.org/devdocs/numpy_2_0_migration_guide.html).
+* In Jupyter notebooks, images now display themselves: if an image (or a `Datum` holding one) is the
+value of a cell, it is shown with its ROIs and annotations. See "Using PCOT in Jupyter notebooks" in
+the [library guide](devguide/library.md).
+* When PCOT is used as a library, it no longer changes the program's logging setup, and by default
+shows only its warnings and errors rather than its informational messages. Scripts which relied on
+seeing those messages can turn them back on - see "Logging" in the [library guide](devguide/library.md).
+The `pcot` and `pcotbatch` commands are unaffected.
 * You can now add your own spectral parameters for the *spectral parameter* node. Write a YAML file
 of parameter groups and add it to "locations of user spectral parameters" in the settings. The groups
 are loaded when PCOT next starts and appear in the node alongside the built-in ones. A group can't have

@@ -57,7 +57,7 @@ for file in ("1",):
     outNode = doc.getNodeByName("sink")
     
     # get its output
-    img = outNode.out.get(Datum.IMG)
+    img = outNode.data.get(Datum.IMG)
  
     # write to new ENVI, e.g. 1b.hdr
     write(file+"b",img)
@@ -204,3 +204,48 @@ Most settings are read when they are used, so changes take effect straight away.
 
 Plugins may add their own settings. See [The configuration system](config.md) for how the
 configuration is organised, and for adding settings of your own.
+
+## Using PCOT in Jupyter notebooks
+
+PCOT can be installed with `pip install pcot` into the same environment as Jupyter, and used
+from a notebook just as from any other Python program. Images display themselves: if an
+`ImageCube`, or a `Datum` holding an image, is the value of a cell, the notebook shows it with
+its RGB channel mapping, ROIs and annotations, as in an annotated export. Small images are scaled
+up so that their annotations can be read.
+
+```python
+import pcot
+from pcot.document import Document
+from pcot.datum import Datum
+
+pcot.setup()
+doc = Document("example.pcot")
+doc.run()
+img = doc.getNodeByName("sink").data.get(Datum.IMG)
+img     # shows the image
+```
+
+Other data can be turned into a pandas DataFrame through its tabular view, if it has one
+(spectra and tables do):
+
+```python
+import io
+import pandas as pd
+
+datum = doc.getNodeByName("spectrum").getOutputDatum(0)
+pd.read_csv(io.StringIO(datum.getTabularProvider().csvString()))
+```
+
+## Logging
+
+When PCOT is used as a library, it leaves logging set up however your program has it, and only
+its warnings and errors are shown by default. To see PCOT's informational messages too:
+
+```python
+import logging
+logging.basicConfig()
+logging.getLogger("pcot").setLevel(logging.INFO)
+```
+
+The `pcot` and `pcotbatch` commands set up their own logging, controlled by their command line
+options.

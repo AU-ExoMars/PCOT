@@ -63,6 +63,8 @@ def cli(ctx, debug, verbose, loglevel_name, show_imports, ignore_version):
         level = logging.INFO
     else:
         level = logging.WARNING
+    import pcot
+    pcot.setupLogging()
     logging.getLogger("pcot").setLevel(level)
 
     import pcot.config

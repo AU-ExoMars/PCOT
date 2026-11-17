@@ -1,7 +1,7 @@
 from math import ceil
 
 import numpy as np
-from PySide6.QtCore import QSizeF, QMarginsF, Qt, QSize, QRect, QRectF
+from PySide6.QtCore import QSizeF, QMarginsF, Qt, QSize, QRect, QRectF, QBuffer, QIODevice
 from PySide6.QtGui import QImage, QPainter, QPdfWriter, QColor, QPageSize
 from PySide6.QtSvg import QSvgGenerator
 
@@ -116,6 +116,20 @@ def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotat
         path: the filename, extension must be a supported type
         pixelWidth: the width in pixels
         transparentbackground: in the case of PNGs, will use an alpha=0 rather than white background"""
+    renderRaster(imgcube, pixelWidth, transparentBackground, annotations, gamma).save(path)
+
+
+def exportPNGBytes(imgcube, pixelWidth, annotations=True, gamma=1.0) -> bytes:
+    """Render an image as exportRaster does, and return it as PNG data rather than writing a file."""
+    buf = QBuffer()
+    buf.open(QIODevice.OpenModeFlag.WriteOnly)
+    renderRaster(imgcube, pixelWidth, False, annotations, gamma).save(buf, "PNG")
+    return bytes(buf.data())
+
+
+def renderRaster(imgcube, pixelWidth, transparentBackground=False, annotations=True, gamma=1.0) -> QImage:
+    """Draw an image, with its annotations if required, onto a new QImage pixelWidth pixels wide
+    (or the image's own width if pixelWidth is None or negative), and return the QImage."""
 
     outputImage = None   # see note on exportPDF; we need to declare this so it doesn't die when pepfunc writes it.
 
@@ -140,9 +154,8 @@ def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotat
 
     export(imgcube, prepfunc, annotations, margin=0, gamma=gamma)
 
-    # and save the image. Ignore the error here; outputImage is a reference to
-    # None but that changes in the callback.
-    outputImage.save(path)
+    # outputImage was None until the callback set it.
+    return outputImage
 
 
 def exportSVG(imgcube, path, annotations=True,gamma=1.0):

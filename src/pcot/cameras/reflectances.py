@@ -161,7 +161,7 @@ class Reflectance:
             interps = {}
             with archive.FileArchive(self.path) as a:
                 metadata = a.metadata
-                logging.debug(f"Loading {metadata.name} from {self.path}")
+                logger.debug(f"Loading {metadata.name} from {self.path}")
                 # the format of the data can be found in the serialiser here and in genrefl code.
                 json = a.readJson("data") # "data" is the name of the file
                 for k, d in json["data"]["refls"].items():  # which contains a dict called "data", containing refls and dims.
@@ -469,7 +469,7 @@ def load(file: Path):
 
     with archive.FileArchive(file,"r") as a:
         metadata = a.metadata
-        logging.debug(f"Loading {metadata.name} from {file}")
+        logger.debug(f"Loading {metadata.name} from {file}")
         json = a.readJson("data",load_arrays=False)
 
     # given the number of dimensions, create and return the appropriate reflectance object

@@ -502,6 +502,13 @@ class Datum(SourcesObtainable):
             ds.writeDatum(name, self, description)
 
 
+    def _repr_png_(self):
+        """Jupyter notebooks and IPython call this to display a Datum which is the value of a cell.
+        Image Datums are shown as the image; for other types this returns None, so the text form is shown."""
+        if self.tp == Datum.IMG and self.val is not None:
+            return self.val._repr_png_()
+        return None
+
     def getTabularProvider(self):
         """
         Returns a TabularProvider object with a view into this Datum as a table. The actual object
