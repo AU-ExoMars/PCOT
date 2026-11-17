@@ -144,10 +144,12 @@ debayering and camera settings, the ENVI gains and offsets option, multifile set
 between input methods. An open input window now updates after any undo or redo.
 * PCOT now runs on Python 3.12 as well as 3.11, and no longer insists on exact versions of PySide6
 and OpenCV - any PySide6 from 6.9.3 and OpenCV from 4.10 can be used. This is preparation for
-releasing PCOT on PyPI so that it can be installed with `pip`; it is not on PyPI yet. Existing
-installations are unaffected: update with `git pull` and `poetry install` as usual, and the same
-package versions as before will be used. NumPy 2 is not yet supported. The newer versions have
-so far only been tested on Windows.
+releasing PCOT on PyPI so that it can be installed with `pip`; it is not on PyPI yet.
+* PCOT now uses NumPy 2, along with newer versions of scikit-image (0.26) and of the `proctools`
+and `passthrough` packages used to read PDS4 data. Update with `git pull` and `poetry install` as
+usual; the install will download these new versions. Results should be unchanged. Plugins which
+use NumPy directly may need changes for NumPy 2 - see the
+[NumPy 2 migration guide](https://numpy.org/devdocs/numpy_2_0_migration_guide.html).
 * You can now add your own spectral parameters for the *spectral parameter* node. Write a YAML file
 of parameter groups and add it to "locations of user spectral parameters" in the settings. The groups
 are loaded when PCOT next starts and appear in the node alongside the built-in ones. A group can't have
