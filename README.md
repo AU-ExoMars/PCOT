@@ -1,6 +1,6 @@
 # PCOT
 
-<img src="https://github.com/AU-ExoMars/PCOT/blob/72e6f0a5920d82fcf7c3beb8faf26cc43ca96b2f/docs/pcotlogo.png" width="100px"/>
+<img src="https://raw.githubusercontent.com/AU-ExoMars/PCOT/72e6f0a5920d82fcf7c3beb8faf26cc43ca96b2f/docs/pcotlogo.png" alt="PCOT logo" width="100"/>
 
 **More documentation can be found [here](https://au-exomars.github.io/PCOT/)**
 
