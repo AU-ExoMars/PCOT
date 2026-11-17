@@ -42,6 +42,10 @@ To make a new release, follow this checklist.
 1. Commit with "version bump for release (VERSION NAME)" in the text
 1. Make sure the dev branch is merged into the master branch.
 1. Make a release tag in the repository.
+1. Upload the release to PyPI: from the release commit with a clean **dist** directory, run
+   **poetry build**, **twine check dist/\***, and **twine upload dist/\*** (needs a PyPI token
+   in `~/.pypirc`). Versions can never be reused, so try uncertain releases as a pre-release
+   (e.g. "1.2.0rc1") first. See the published release procedure for details.
 
 
 ## Making a MacOS build

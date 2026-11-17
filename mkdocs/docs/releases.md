@@ -143,8 +143,8 @@ could be. This includes PDS4 inputs (reading, the multiplier, rescanning and pro
 debayering and camera settings, the ENVI gains and offsets option, multifile settings, and switching
 between input methods. An open input window now updates after any undo or redo.
 * PCOT now runs on Python 3.12 as well as 3.11, and no longer insists on exact versions of PySide6
-and OpenCV - any PySide6 from 6.9.3 and OpenCV from 4.10 can be used. This is preparation for
-releasing PCOT on PyPI so that it can be installed with `pip`; it is not on PyPI yet.
+and OpenCV - any PySide6 from 6.9.3 and OpenCV from 4.10 can be used. PCOT can now also be
+installed from PyPI with `pip install pcot` - see the installation instructions.
 * PCOT now uses NumPy 2, along with newer versions of scikit-image (0.26) and of the `proctools`
 and `passthrough` packages used to read PDS4 data. Update with `git pull` and `poetry install` as
 usual; the install will download these new versions. Results should be unchanged. Plugins which

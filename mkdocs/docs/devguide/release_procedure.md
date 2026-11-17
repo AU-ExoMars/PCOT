@@ -35,6 +35,14 @@ To make a new release, follow this checklist.
 	6. Copy the markdown description of the new release from releases.md into the release notes
 	7. Set (or not) the pre-release flag
 	8. Push the button!
+14. Upload the release to [PyPI](https://pypi.org/project/pcot/). This needs a PyPI API token for an
+    owner of the project, in a `[pypi]` section of `~/.pypirc`.
+	1. Check out the release commit with a clean working tree, and delete any old files in **dist**
+	2. Run **poetry build**, which creates a wheel and a source archive in **dist**
+	3. Run **twine check dist/\*** to check the package metadata
+	4. Run **twine upload dist/\***
+	5. Check https://pypi.org/project/pcot/ shows the new version, and test it with **pip install pcot** in a fresh environment
+	6. A version can never be uploaded twice, even if it's deleted from PyPI. If anything is wrong, fix it and release a new version. To try a release first, upload a pre-release version (e.g. "1.2.0rc1"), which pip only installs if asked with **pip install --pre pcot**.
 	
 
 

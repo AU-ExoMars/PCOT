@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pcot"
-version = "1.1.0"    # must match the number in src/pcot/VERSION.txt (checked by tests/config/test_version_check.py)
+version = "1.1.0rc1"    # must match the number in src/pcot/VERSION.txt (checked by tests/config/test_version_check.py)
 description = "PanCam Operations Toolkit"
 authors = ["Jim Finnis <jcf12@aber.ac.uk>"]
 license = "MIT"
