@@ -2,6 +2,7 @@
 Data widget that shows a text view, a canvas view or a table view of the data.
 """
 import os
+import traceback
 from pathlib import Path
 from typing import Optional
 
@@ -202,6 +203,7 @@ class DataWidget(QtWidgets.QWidget):
                     self.setDispType(self.DISP_TABLE)
                 except Exception as e:
                     # e.g. data the provider can't lay out as a table; show why rather than a stale table
+                    print(traceback.format_exc())
                     self.table.display(None)
                     self.setDispType(self.DISP_TEXT)
                     self.text.setText(f"Cannot show as a table: {e}")

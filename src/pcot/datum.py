@@ -179,6 +179,8 @@ class Datum(SourcesObtainable):
         # reflectance calibration data
         CALIBRATION := pcot.datumtypes.CalibrationDataType().setOKForConnectors(),
 
+        HISTOGRAM := pcot.datumtypes.HistogramDataType().setOKForConnectors(),
+
         # these types are not generally used for connections, but for values on the expression evaluation stack
         IDENT := pcot.datumtypes.IdentType(),
         STRING := pcot.datumtypes.StringType(),

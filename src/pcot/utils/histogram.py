@@ -111,13 +111,15 @@ class Histogram(SourcesObtainable):
 
     def plot(self, ax=None):
         """Plot the histograms onto matplotlib axes, or a new figure if none are given; returns the axes"""
-        import pcot.plotting
-        return pcot.plotting.histogram(self, ax)
+        # SNARK import pcot.plotting
+        # return pcot.plotting.histogram(self, ax)
+        return None
 
     def _repr_png_(self):
         """Jupyter display: the histograms as a plot"""
-        import pcot.plotting
-        return pcot.plotting.histogramPNG(self)
+        # SNARK import pcot.plotting
+        # return pcot.plotting.histogramPNG(self)
+        return None
 
     # table provider gubbins
 
@@ -139,6 +141,7 @@ class Histogram(SourcesObtainable):
             def __init__(self, provider: Histogram.Provider):
                 self.h = provider.h
                 self.headers = provider.getHeaders()
+                print(self.headers)
                 # we're going to iterate over the indices,
                 # so we can index into the edge and count arrays
                 # with the index.
@@ -163,4 +166,12 @@ class Histogram(SourcesObtainable):
                 for idx,label in enumerate(self.h.labels):
                     out[label] = data[idx]
 
+                print(out)
                 return out
+
+    def tabularProvider(self):
+        """Return a tabular provider object for this spectrum set"""
+        return Histogram.Provider(self)
+
+    def __str__(self):
+        return self.tabularProvider().csvString()

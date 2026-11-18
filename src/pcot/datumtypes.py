@@ -389,6 +389,26 @@ class CalibrationDataType(Type):
 
 
 
+class HistogramDataType(Type):
+    def __init__(self):
+        from pcot.utils.histogram import Histogram
+        super().__init__("histogram",valid=[Histogram],connColour="#20b2aa")
+
+    def serialise(self,d):
+        # SNARK - NO SERIALISATION YET
+        return self.name, []
+
+    def deserialise(self,d):
+        return pcot.datum.Datum.null
+
+    def copy(self, d):
+        return d # type is immutable
+
+    def getTabularProvider(self,d):
+        return d.val.tabularProvider()
+
+
+
 class TestResultType(Type):
     def __init__(self):
         super().__init__('testresult', valid=[list], connColour='#808000')

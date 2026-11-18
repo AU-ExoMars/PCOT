@@ -1,7 +1,7 @@
 from pcot import ui
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
-from pcot.plotting.histogramplot import plotHistogram
+# from pcot.plotting.histogramplot import plotHistogram
 from pcot.sources import SourceSet
 from pcot.ui.tabs import Tab
 from pcot.ui import theme
@@ -29,7 +29,7 @@ class XFormHistogram(XFormType):
             bincount = ("Number of bins in the histogram", int, 16)
         )
         self.addInputConnector("", Datum.IMG)
-        self.addOutputConnector("data", Datum.TABLE, "a CSV output (use 'dump' or 'sink' to read it)")
+        self.addOutputConnector("data", Datum.HISTOGRAM, "a histogram (use 'dump' or 'sink' to read it)")
 
     def createTab(self, n, w):
         ui.msg("creating a tab with a plot widget takes time...")
@@ -43,7 +43,7 @@ class XFormHistogram(XFormType):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
             node.hist = Histogram.fromImage(img, node.params.bincount, node.graph.doc.settings.captionType)
-            node.setOutput(0, Datum(Datum.TABLE, node.hist.table(), sources=SourceSet(img.sources.getSources())))
+            node.setOutput(0, Datum(Datum.HISTOGRAM, node.hist, sources=SourceSet(img.sources.getSources())))
         else:
             node.hist = None
             node.setOutput(0, None)
@@ -60,7 +60,7 @@ class TabHistogram(Tab):
         # set up the plot
         self.w.bins.setValue(self.node.params.bincount)
         if self.node.hist is not None:
-            plotHistogram(self.w.mpl.ax, self.node.hist)
+            # SNARK plotHistogram(self.w.mpl.ax, self.node.hist)
             self.w.mpl.draw()
         theme.setStaleStyle(self.w.replot, False)
 
