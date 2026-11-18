@@ -1,8 +1,7 @@
 from pcot import ui
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
-# from pcot.plotting.histogramplot import plotHistogram
-from pcot.sources import SourceSet
+from pcot.plotting.histogramplot import plotHistogram
 from pcot.ui.tabs import Tab
 from pcot.ui import theme
 from pcot.utils.histogram import Histogram
@@ -16,9 +15,11 @@ class XFormHistogram(XFormType):
     will be very messy if used on a multispectral image.
 
     Will only be performed on ROIs if there are active ROIs. BAD pixels
-    in bands will be discounted.
+    in bands will be discounted. All bands share the same bins, which span
+    the range of the pixels counted.
 
-    The output carries a table - columns are frequencies, rows are bands.
+    The output is histogram data, which can be viewed as a table (a row for
+    each bin, a column for each band) or saved as CSV.
 
     **Uncertainty is ignored.**
     """
@@ -42,8 +43,8 @@ class XFormHistogram(XFormType):
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
-            node.hist = Histogram.fromImage(img, node.params.bincount, node.graph.doc.settings.captionType)
-            node.setOutput(0, Datum(Datum.HISTOGRAM, node.hist, sources=SourceSet(img.sources.getSources())))
+            node.hist = Histogram.fromImage(img, node.params.bincount)
+            node.setOutput(0, Datum(Datum.HISTOGRAM, node.hist, node.hist.getSources()))
         else:
             node.hist = None
             node.setOutput(0, None)
@@ -60,7 +61,7 @@ class TabHistogram(Tab):
         # set up the plot
         self.w.bins.setValue(self.node.params.bincount)
         if self.node.hist is not None:
-            # SNARK plotHistogram(self.w.mpl.ax, self.node.hist)
+            plotHistogram(self.w.mpl.ax, self.node.hist)
             self.w.mpl.draw()
         theme.setStaleStyle(self.w.replot, False)
 

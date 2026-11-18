@@ -90,17 +90,17 @@ class Type:
         return type(self).serialise is not Type.serialise
 
 
-    def getTabularProvider(self, d):
+    def tabularProvider(self, d):
         raise pcot.datumexceptions.CannotProvideTable(self.name)
 
     def canProvideTable(self):
-        """True if this type overrides getTabularProvider(), so it can generate tabular data"""
-        return type(self).getTabularProvider is not Type.getTabularProvider
+        """True if this type overrides tabularProvider(), so it can generate tabular data"""
+        return type(self).tabularProvider is not Type.tabularProvider
 
     def writeCSV(self, f:Path, d):
         """Write the datum as CSV, using its tabular provider (so only for types which canProvideTable)"""
         with f.open(mode='w', newline='', encoding='utf-8') as csvfile:
-            self.getTabularProvider(d).writeCSV(csvfile)
+            self.tabularProvider(d).writeCSV(csvfile)
 
     def view(self, d) -> str:
         """Used by the viewparc command to view to stdout the contents of a datum"""
@@ -144,7 +144,7 @@ class Type:
                 f.write(outputDescription.prefix)
             if self.canProvideTable():
                 # tabular data is written as CSV
-                s = self.getTabularProvider(d).csvString()
+                s = self.tabularProvider(d).csvString()
             else:
                 s = str(d.val)
             f.write(s+"\n")
@@ -334,7 +334,7 @@ class TabularDataType(Type):
     def getByIndices(self, d, args):
         return d.val.getByIndices(args, d.sources)
 
-    def getTabularProvider(self, d):
+    def tabularProvider(self, d):
         return d.val.tabularProvider()
 
 
@@ -362,7 +362,7 @@ class SpectraDataType(Type):
     def copy(self,d):
         return d  # type is immutable
 
-    def getTabularProvider(self,d):
+    def tabularProvider(self,d):
         return d.val.tabularProvider()
 
 
@@ -384,7 +384,7 @@ class CalibrationDataType(Type):
     def copy(self, d):
         return d # type is immutable
 
-    def getTabularProvider(self,d):
+    def tabularProvider(self,d):
         return d.val.tabularProvider()
 
 
@@ -394,17 +394,19 @@ class HistogramDataType(Type):
         from pcot.utils.histogram import Histogram
         super().__init__("histogram",valid=[Histogram],connColour="#20b2aa")
 
-    def serialise(self,d):
-        # SNARK - NO SERIALISATION YET
-        return self.name, []
+    def serialise(self, d):
+        return self.name, (d.val.serialise(), d.getSources().serialise())
 
-    def deserialise(self,d):
-        return pcot.datum.Datum.null
+    def deserialise(self, d):
+        from pcot.utils.histogram import Histogram
+        v, s = d
+        sources = pcot.sources.SourceSet.deserialise(s)
+        return pcot.datum.Datum(self, Histogram.deserialise(v, sources), sources)
 
     def copy(self, d):
         return d # type is immutable
 
-    def getTabularProvider(self,d):
+    def tabularProvider(self,d):
         return d.val.tabularProvider()
 
 

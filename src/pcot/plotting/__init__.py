@@ -106,25 +106,27 @@ def _aggFigure(width, height, dpi):
 
 
 def _histogram(data, bincount):
-    """Accept a Histogram, or make one from an ImageCube or a Datum holding one"""
+    """Accept a Histogram (or a Datum holding one), or make one from an ImageCube or a Datum holding one"""
     from pcot.datum import Datum
     from pcot.imagecube import ImageCube
     from pcot.utils.histogram import Histogram
+    if isinstance(data, Datum) and data.tp == Datum.HISTOGRAM:
+        data = data.get(Datum.HISTOGRAM)
     if isinstance(data, Histogram):
         if bincount is not None:
             raise TypeError("bincount can only be given when plotting an image, not a Histogram")
         return data
     if isinstance(data, (ImageCube, Datum)):
         return Histogram.fromImage(data, 16 if bincount is None else bincount)
-    raise TypeError(f"expected a Histogram, an ImageCube or a Datum holding an image, not {type(data).__name__}")
+    raise TypeError(f"expected a Histogram, an ImageCube or a Datum holding either, not {type(data).__name__}")
 
 
 def histogram(data, ax=None, bincount: Optional[int] = None):
     """Plot histograms of the bands of an image as the histogram node does, and return the matplotlib Axes.
 
-    * data - a Histogram (such as a histogram node's 'hist' field), or an image (an ImageCube or a Datum
-      holding one) to make one from: only pixels in the image's ROIs are counted, if it has any, and BAD
-      pixels are not counted
+    * data - a Histogram (or a Datum holding one, such as a histogram node's output), or an image (an
+      ImageCube or a Datum holding one) to make one from: only pixels in the image's ROIs are counted, if
+      it has any, and BAD pixels are not counted
     * ax - matplotlib Axes to draw on; if None, a new figure is created
     * bincount - the number of bins when plotting an image (default 16)
     """

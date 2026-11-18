@@ -148,23 +148,24 @@ h = Histogram.fromImage(img, 32)
 h                   # shows the plot
 h.counts            # array of shape (bands, 32)
 h.edges             # the 33 bin edges
-h.labels            # a label for each band
+h.labels            # a label for each band - its wavelength, where it has one
 ```
 
-A *histogram* node in a document keeps its histograms in its `hist` field once the document has
-been run, so `doc.getNodeByName("histogram").hist` gives the same as the node shows, with the
-node's number of bins.
+A *histogram* node's output is a `Histogram` (in a `Datum`), so once a document has been run,
+`doc.getNodeByName("histogram").getOutputDatum(0)` displays as the node's plot, and
+`.get(Datum.HISTOGRAM)` gives the `Histogram` itself. It can also be turned into a table, as
+below, with a row for each bin and a column for each band.
 
 ## Tables
 
-Data which PCOT can show as a table - such as spectra and tables - can be turned into a pandas
+Data which PCOT can show as a table - such as spectra, histograms and tables - can be turned into a pandas
 DataFrame (install pandas with `pip install pandas` if you don't have it):
 
 ```python
 import io
 import pandas as pd
 
-pd.read_csv(io.StringIO(spectra.getTabularProvider().csvString()))
+pd.read_csv(io.StringIO(spectra.tabularProvider().csvString()))
 ```
 
 ## Messages

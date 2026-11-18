@@ -154,13 +154,18 @@ use NumPy directly may need changes for NumPy 2 - see the
 value of a cell, it is shown with its ROIs and annotations. Sets of spectra display as a spectrum plot,
 and the new `pcot.plotting.spectrum` function draws spectrum plots with any of the spectrum node's
 settings, in notebooks or scripts. Similarly, `pcot.plotting.histogram` plots histograms of an image's
-bands, and the histogram node keeps its histograms - counts and bins as well as a plot - for notebooks
-to use. See
+bands. See
 [Using PCOT in Jupyter notebooks](userguide/jupyter.md).
 * The histogram node's bins now span only the pixels it counts. Previously BAD pixels, and pixels inside
 the bounding box of a non-rectangular ROI but outside the ROI itself, could stretch the range (or, if they
 held NaN, stop the node working), though they were never counted. Histograms of such images will have
 different bins from before.
+* The histogram node now outputs *histogram* data rather than a table, in the same way that the spectrum
+node outputs spectra. It shows as a table with a row for each bin, giving its lower and upper edges, and
+a column of counts for each band, headed with the band's wavelength (or its sources, for bands without
+a single filter) - the other way round from before, so **CSV files saved from it will be laid out
+differently**. In notebooks and scripts it displays as the node's plot, and gives the counts and
+bin edges as numpy arrays.
 * When PCOT is used as a library, it no longer changes the program's logging setup, and by default
 shows only its warnings and errors rather than its informational messages. Scripts which relied on
 seeing those messages can turn them back on - see "Logging" in the [library guide](devguide/library.md).

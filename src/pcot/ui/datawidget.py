@@ -199,7 +199,7 @@ class DataWidget(QtWidgets.QWidget):
                 self.canvas.display(d.val)
             elif d.tp.canProvideTable() and not d.isNone():
                 try:
-                    self.table.display(d.tp.getTabularProvider(d))
+                    self.table.display(d.tp.tabularProvider(d))
                     self.setDispType(self.DISP_TABLE)
                 except Exception as e:
                     # e.g. data the provider can't lay out as a table; show why rather than a stale table

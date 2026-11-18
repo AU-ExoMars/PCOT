@@ -511,7 +511,7 @@ class Datum(SourcesObtainable):
         reprPNG = getattr(self.val, "_repr_png_", None)
         return reprPNG() if reprPNG is not None else None
 
-    def getTabularProvider(self):
+    def tabularProvider(self):
         """
         Returns a TabularProvider object with a view into this Datum as a table. The actual object
         provided has parameters which vary according to the type. Throws ValueError if
@@ -519,7 +519,7 @@ class Datum(SourcesObtainable):
         """
         if not self.tp.canProvideTable():
             raise ValueError(f"'{self.tp.name}' Datum objects cannot provide a tabular view")
-        return self.tp.getTabularProvider(self)
+        return self.tp.tabularProvider(self)
 
 
 # a handy null datum object

@@ -9,6 +9,7 @@ from pcot.rois import ROIRect
 from pcot.sources import SourceSet, nullSourceSet
 from pcot.utils.spectrumdata import SpectrumSet
 from pcot.calib.fit import CalibrationData
+from pcot.utils.histogram import Histogram
 from pcot.value import Value
 
 from fixtures import *
@@ -95,6 +96,7 @@ def test_datum_str_all_types():
         'cameradata': None,
         'spectra': SpectrumSet({}),
         'calibration': CalibrationData(),
+        'histogram': Histogram(['band'], [[3, 4]], [0, 0.5, 1]),
     }
 
     builtin_types = {v.name: v for v in vars(Datum).values() if isinstance(v, Type)}

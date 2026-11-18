@@ -4,14 +4,17 @@ notebook users can make and plot them too.
 """
 
 from __future__ import annotations
+from collections import Counter
 from typing import List, Optional, Dict
 
 import numpy as np
 
+import pcot.config
+
 from pcot.documentsettings import DocumentSettings
 from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.sources import SourcesObtainable, SourceSet
-from pcot.utils.table import Table
+from pcot.utils.table import printable
 from pcot.utils.tabular_provider import TabularProvider, TabularIterator
 
 
@@ -26,6 +29,38 @@ def _edges(lo, hi, bincount):
     return np.linspace(lo, hi, bincount + 1, dtype=np.float64).astype(np.float32)
 
 
+# column headers in the table for the bin edges; band labels must not be these
+BIN_HEADERS = ["lower", "upper"]
+
+
+def _bandLabels(img) -> List[str]:
+    """Labels for the bands of an image, which must be unique (they are table column headers). A band with
+    a single filter is labelled with its wavelength, as in spectrum tables. Bands without one (e.g. derived
+    from several bands), or sharing a wavelength with another band, are labelled with their sources. If
+    labels still clash, the band index is added."""
+    labels = []
+    for i in range(img.channels):
+        w = img.wavelength(i)
+        labels.append(f"{w:g}" if w >= 0 else None)
+    counts = Counter(x for x in labels if x is not None)
+    for i, lab in enumerate(labels):
+        if lab is None or counts[lab] > 1:
+            labels[i] = img.sources.sourceSets[i].brief(DocumentSettings.CAP_CWL) or f"band {i}"
+    counts = Counter(labels)
+    return [f"{lab} #{i}" if counts[lab] > 1 or lab in BIN_HEADERS else lab for i, lab in enumerate(labels)]
+
+
+def _edgeLabels(edges) -> List[str]:
+    """Bin edges as strings, to the configured number of significant figures - or more, if needed to make
+    them all different (with very narrow bins). 9 figures always distinguishes different float32 values."""
+    sf = pcot.config.data.sigfigs
+    while True:
+        labels = [printable(e, sf) for e in edges]
+        if len(set(labels)) == len(labels) or sf >= 9:
+            return labels
+        sf += 1
+
+
 class Histogram(SourcesObtainable):
     """Histograms of the bands of an image, all over the same range and so sharing the same bins.
 
@@ -34,7 +69,8 @@ class Histogram(SourcesObtainable):
     * edges - the bin edges, bincount+1 of them
 
     Make one from an image with Histogram.fromImage(). In a Jupyter notebook it displays as a plot;
-    plot() draws it onto matplotlib axes, and table() gives the counts as a PCOT Table.
+    plot() draws it onto matplotlib axes, and tabularProvider() gives it as a table with a row for each bin
+    and a column for each band.
     """
     labels: List[str]
     counts: np.ndarray
@@ -47,17 +83,33 @@ class Histogram(SourcesObtainable):
         if self.counts.shape != (len(self.labels), len(self.edges) - 1):
             raise ValueError(f"counts should have shape {(len(self.labels), len(self.edges) - 1)}, "
                              f"not {self.counts.shape}")
+        # labels are table column headers, so must be unique and not clash with the bin edge headers
+        if len(set(self.labels)) != len(self.labels) or set(self.labels) & set(BIN_HEADERS):
+            raise ValueError(f"band labels must be unique and not {' or '.join(BIN_HEADERS)}: {self.labels}")
         self.sources = sources if sources is not None else SourceSet()
 
     def getSources(self):
         return self.sources
 
+    def serialise(self):
+        """Serialise; the sources are not included, and are serialised separately by the Datum type"""
+        return {
+            "labels": self.labels,
+            "counts": self.counts.tolist(),
+            "edges": self.edges.tolist(),
+        }
+
+    @staticmethod
+    def deserialise(data, sources: Optional[SourceSet] = None) -> Histogram:
+        return Histogram(data["labels"], np.array(data["counts"]),
+                         np.array(data["edges"], dtype=np.float32), sources)
 
     @classmethod
-    def fromImage(cls, img, bincount: int = 16, captionType: int = DocumentSettings.CAP_DEFAULT) -> 'Histogram':
+    def fromImage(cls, img, bincount: int = 16) -> 'Histogram':
         """Histogram each band of an image (an ImageCube, or a Datum holding one). Only pixels in the image's
         regions of interest are counted, if it has any, and BAD pixels in each band are not counted. The bins
-        span the range of the counted pixels, across all bands. Uncertainty is ignored. captionType says how bands are labelled (see DocumentSettings)."""
+        span the range of the counted pixels, across all bands. Uncertainty is ignored. Bands are labelled
+        with their wavelengths where they have a single filter, or with their sources otherwise."""
         from pcot.datum import Datum
         if isinstance(img, Datum):
             d = img.get(Datum.IMG)
@@ -72,7 +124,7 @@ class Histogram(SourcesObtainable):
         data = subimg.img
         if data.ndim == 2:
             data, weights = data[:, :, np.newaxis], weights[:, :, np.newaxis]
-        labels = [f"{i}: {s.brief(captionType)}" for i, s in enumerate(img.sources.sourceSets)]
+        labels = _bandLabels(img)
         assert len(labels) == data.shape[2]
         # all bands share a range, so they can be compared. It only covers the pixels which are counted, so
         # BAD pixels and those outside the ROI (but inside its bounding box) can't stretch it. If no pixels
@@ -99,27 +151,15 @@ class Histogram(SourcesObtainable):
     def __repr__(self):
         return f"Histogram({len(self)} bands, {self.bincount} bins, {self.edges[0]:g} to {self.edges[-1]:g})"
 
-    def table(self) -> Table:
-        """The counts as a table: a row for each band, a column for each bin labelled with its lower edge"""
-        t = Table()
-        for lab, counts in zip(self.labels, self.counts):
-            t.newRow(lab)
-            t.add('band', lab)
-            for k, v in zip(self.edges, counts):
-                t.add(k, v)
-        return t
-
     def plot(self, ax=None):
         """Plot the histograms onto matplotlib axes, or a new figure if none are given; returns the axes"""
-        # SNARK import pcot.plotting
-        # return pcot.plotting.histogram(self, ax)
-        return None
+        import pcot.plotting
+        return pcot.plotting.histogram(self, ax)
 
     def _repr_png_(self):
         """Jupyter display: the histograms as a plot"""
-        # SNARK import pcot.plotting
-        # return pcot.plotting.histogramPNG(self)
-        return None
+        import pcot.plotting
+        return pcot.plotting.histogramPNG(self)
 
     # table provider gubbins
 
@@ -131,8 +171,8 @@ class Histogram(SourcesObtainable):
             return None
 
         def getHeaders(self) -> List[str]:
-            """bins are rows"""
-            return ["bin"] + self.h.labels
+            """bins are rows: the bin's lower and upper edges, then the count for each band"""
+            return BIN_HEADERS + self.h.labels
 
         def __iter__(self) -> TabularIterator:
             return Histogram.Provider.RowIterator(self)
@@ -140,37 +180,22 @@ class Histogram(SourcesObtainable):
         class RowIterator(TabularIterator):
             def __init__(self, provider: Histogram.Provider):
                 self.h = provider.h
-                self.headers = provider.getHeaders()
-                print(self.headers)
-                # we're going to iterate over the indices,
-                # so we can index into the edge and count arrays
-                # with the index.
-                self.iter = iter(range(len(self.h.edges)))
+                # edges are formatted here rather than when the histogram is made, so they follow the
+                # current sigfigs setting
+                self.edgeLabels = _edgeLabels(self.h.edges)
+                # there is one fewer bin than edges
+                self.iter = iter(range(self.h.bincount))
 
             def __next__(self) -> Dict[str, str]:
-                idx = next(self.iter) # throws StopIteration to halt
-                edge = self.h.edges[idx]
-                count_array = self.h.counts[idx]
-
-                # the label for this bin
-                binlabel = str(edge)    # TODO fix format
-
-                # count for each label in this bin
-                data = [count_array[x] for x in range(0,len(self.h.labels))]
-                data = [str(x) for x in data] # TODO fix format
-
-                out =  {
-                    "bin": binlabel,
-                }
-                # TODO rewrite this better
-                for idx,label in enumerate(self.h.labels):
-                    out[label] = data[idx]
-
-                print(out)
+                idx = next(self.iter)  # throws StopIteration to halt
+                out = {"lower": self.edgeLabels[idx], "upper": self.edgeLabels[idx + 1]}
+                # counts array is indexed as (band,bin); counts are whole numbers
+                for band, label in enumerate(self.h.labels):
+                    out[label] = str(int(self.h.counts[band, idx]))
                 return out
 
     def tabularProvider(self):
-        """Return a tabular provider object for this spectrum set"""
+        """Return a tabular provider: a row for each bin, a column for each band"""
         return Histogram.Provider(self)
 
     def __str__(self):

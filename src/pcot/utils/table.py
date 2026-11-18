@@ -13,13 +13,13 @@ from pcot.utils.tabular_provider import TabularProvider, TabularIterator
 
 
 
-def printable(v):
+def printable(v, sigfigs: Optional[int] = None):
     """Convert a value to a printable string. Floats are given to the number of significant
-    figures in the config (read at output time so changes take effect), but never with fewer
-    digits than they have before the decimal point - so large values don't lose whole digits
-    or turn into scientific notation."""
+    figures in the config (read at output time so changes take effect) unless sigfigs is given,
+    but never with fewer digits than they have before the decimal point - so large values don't
+    lose whole digits or turn into scientific notation."""
     if isinstance(v, (float, np.floating)):
-        sf = pcot.config.data.sigfigs
+        sf = pcot.config.data.sigfigs if sigfigs is None else sigfigs
         if np.isfinite(v) and abs(v) >= 1:
             # count digits after rounding, so 99999.5 doesn't gain a digit and go to 1e+05.
             # Beyond 17 digits a float has no real precision left, so allow scientific notation.
