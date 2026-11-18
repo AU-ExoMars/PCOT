@@ -1,8 +1,8 @@
 """
 Data widget that shows a text view, a canvas view or a table view of the data.
 """
+import logging
 import os
-import traceback
 from pathlib import Path
 from typing import Optional
 
@@ -16,6 +16,8 @@ from pcot.ui.canvas import Canvas
 from pcot.ui.tabulardatawidget import TabularDataWidget
 from pcot.utils import SignalBlocker
 from pcot.utils.text import generateIndenting
+
+logger = logging.getLogger(__name__)
 
 
 class DataWidget(QtWidgets.QWidget):
@@ -203,7 +205,7 @@ class DataWidget(QtWidgets.QWidget):
                     self.setDispType(self.DISP_TABLE)
                 except Exception as e:
                     # e.g. data the provider can't lay out as a table; show why rather than a stale table
-                    print(traceback.format_exc())
+                    logger.warning(f"Cannot show '{d.tp.name}' data as a table", exc_info=True)
                     self.table.display(None)
                     self.setDispType(self.DISP_TEXT)
                     self.text.setText(f"Cannot show as a table: {e}")
