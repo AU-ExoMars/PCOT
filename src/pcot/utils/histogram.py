@@ -147,12 +147,20 @@ class Histogram(SourcesObtainable):
             def __next__(self) -> Dict[str, str]:
                 idx = next(self.iter) # throws StopIteration to halt
                 edge = self.h.edges[idx]
-                count = self.h.counts[idx]
+                count_array = self.h.counts[idx]
 
-                binlabel = str(edge)
+                # the label for this bin
+                binlabel = str(edge)    # TODO fix format
 
+                # count for each label in this bin
+                data = [count_array[x] for x in range(0,len(self.h.labels))]
+                data = [str(x) for x in data] # TODO fix format
 
+                out =  {
+                    "bin": binlabel,
+                }
+                # TODO rewrite this better
+                for idx,label in enumerate(self.h.labels):
+                    out[label] = data[idx]
 
-
-
-
+                return out
