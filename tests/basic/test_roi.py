@@ -445,3 +445,21 @@ def test_modified_roi_serialisation_roundtrip(tmp_path):
     assert roi2.params.croi.x == 20
     assert roi2.params.croi.y == 20
     assert roi2.params.croi.r == 50
+
+
+def test_multidot_zero_radius_survives_save(tmp_path):
+    """A multidot circle with radius 0 is a valid single-pixel ROI (the dot size spinner goes down to 0)
+    and must survive a save/load. Loading used to silently drop them, so a user's dots vanished on reopen."""
+    import pcot
+    from pcot.document import Document
+    pcot.setup()
+
+    fn = str(tmp_path / "multidot0.pcot")
+    doc = Document()
+    node = doc.graph.create("multidot")
+    node.rois = [ROICircle(10, 12, 0, label="a"), ROICircle(20, 22, 3, label="b")]
+    doc.save(fn)
+
+    doc = Document(fn)
+    node, = [n for n in doc.graph.nodes if n.type.name == "multidot"]
+    assert [(r.label, r.x, r.y, r.r) for r in node.rois] == [("a", 10, 12, 0), ("b", 20, 22, 3)]
