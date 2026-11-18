@@ -84,12 +84,72 @@ def spectrumFromNode(node, ax=None):
 def spectrumPNG(spectra, width=8, height=4.5, dpi=100, **settings) -> bytes:
     """Plot a set of spectra with default (or given) settings and return the plot as PNG data. Uses
     matplotlib's Agg renderer directly, so it doesn't create a pyplot figure."""
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    from matplotlib.figure import Figure
     spectra = _spectrumSet(spectra)
-    fig = Figure(figsize=(width, height), dpi=dpi, layout="constrained")
-    FigureCanvasAgg(fig)
+    fig = _aggFigure(width, height, dpi)
     plotSpectrum(fig.add_subplot(), spectra, spectrumSettings(**settings))
+    return _png(fig)
+
+
+def _png(fig) -> bytes:
     buf = io.BytesIO()
     fig.savefig(buf, format="png")
     return buf.getvalue()
+
+
+def _aggFigure(width, height, dpi):
+    """A figure drawn with matplotlib's Agg renderer directly, not a pyplot figure"""
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+    fig = Figure(figsize=(width, height), dpi=dpi, layout="constrained")
+    FigureCanvasAgg(fig)
+    return fig
+
+
+def _histogram(data, bincount):
+    """Accept a Histogram, or make one from an ImageCube or a Datum holding one"""
+    from pcot.datum import Datum
+    from pcot.imagecube import ImageCube
+    from pcot.utils.histogram import Histogram
+    if isinstance(data, Histogram):
+        if bincount is not None:
+            raise TypeError("bincount can only be given when plotting an image, not a Histogram")
+        return data
+    if isinstance(data, (ImageCube, Datum)):
+        return Histogram.fromImage(data, 16 if bincount is None else bincount)
+    raise TypeError(f"expected a Histogram, an ImageCube or a Datum holding an image, not {type(data).__name__}")
+
+
+def histogram(data, ax=None, bincount: Optional[int] = None):
+    """Plot histograms of the bands of an image as the histogram node does, and return the matplotlib Axes.
+
+    * data - a Histogram (such as a histogram node's 'hist' field), or an image (an ImageCube or a Datum
+      holding one) to make one from: only pixels in the image's ROIs are counted, if it has any, and BAD
+      pixels are not counted
+    * ax - matplotlib Axes to draw on; if None, a new figure is created
+    * bincount - the number of bins when plotting an image (default 16)
+    """
+    from pcot.plotting.histogramplot import plotHistogram
+    hist = _histogram(data, bincount)
+    ax = _newAxes(ax)
+    plotHistogram(ax, hist)
+    return ax
+
+
+def histogramFromNode(node, ax=None):
+    """Plot a histogram node's histograms as the node's own plot shows them, and return the matplotlib
+    Axes. The document must have been run."""
+    if node.type.name != "histogram":
+        raise TypeError(f"'{node.displayName}' is a {node.type.name} node, not a histogram node")
+    if node.hist is None:
+        raise ValueError(f"histogram node '{node.displayName}' has no data - has the document been run?")
+    return histogram(node.hist, ax)
+
+
+def histogramPNG(data, width=8, height=4.5, dpi=100, bincount: Optional[int] = None) -> bytes:
+    """Plot histograms (a Histogram, or of an image) and return the plot as PNG data. Uses matplotlib's Agg
+    renderer directly, so it doesn't create a pyplot figure."""
+    from pcot.plotting.histogramplot import plotHistogram
+    hist = _histogram(data, bincount)
+    fig = _aggFigure(width, height, dpi)
+    plotHistogram(fig.add_subplot(), hist)
+    return _png(fig)

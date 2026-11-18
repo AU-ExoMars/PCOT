@@ -125,6 +125,36 @@ The notebook also prints the returned axes; end the line with `;` to hide that. 
 plots that can be zoomed and panned, install the `ipympl` package and run `%matplotlib widget`
 in the notebook.
 
+## Histograms
+
+`pcot.plotting.histogram` plots a histogram of each band of an image, as the *histogram* node
+does. As in the node, only pixels in the image's regions of interest are counted (if it has any),
+BAD pixels in each band aren't counted, and all the bands share the same bins:
+
+```python
+pcot.plotting.histogram(img, bincount=32)
+```
+
+Like the spectrum functions, it draws onto a new figure or onto axes passed as the second argument,
+and returns the axes.
+
+For the numbers themselves, make a `Histogram`. It displays as a plot, and holds the counts as a
+numpy array with a row for each band, along with the bin edges and band labels:
+
+```python
+from pcot.utils.histogram import Histogram
+
+h = Histogram.fromImage(img, 32)
+h                   # shows the plot
+h.counts            # array of shape (bands, 32)
+h.edges             # the 33 bin edges
+h.labels            # a label for each band
+```
+
+A *histogram* node in a document keeps its histograms in its `hist` field once the document has
+been run, so `doc.getNodeByName("histogram").hist` gives the same as the node shows, with the
+node's number of bins.
+
 ## Tables
 
 Data which PCOT can show as a table - such as spectra and tables - can be turned into a pandas

@@ -1,25 +1,12 @@
-import numpy as np
-
 from pcot import ui
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
+from pcot.plotting.histogramplot import plotHistogram
 from pcot.sources import SourceSet
 from pcot.ui.tabs import Tab
 from pcot.ui import theme
-from pcot.utils import image
-from pcot.utils.table import Table
+from pcot.utils.histogram import Histogram
 from pcot.xform import xformtype, XFormType
-
-import matplotlib
-
-
-def gethistogram(chan, weights, bincount, range):
-    counts, _ = np.histogram(chan, bincount, range=range, weights=weights)
-    # We work out the bin edges ourselves, in float64 narrowed to float32, rather than using the ones
-    # np.histogram returns. numpy 2 calculates its edges directly in float32, which makes them differ
-    # in the last digit from numpy 1; these are the same on both (and are what numpy 1 returned).
-    edges = np.linspace(float(range[0]), float(range[1]), bincount + 1, dtype=np.float64).astype(np.float32)
-    return counts, edges
 
 
 @xformtype
@@ -49,45 +36,16 @@ class XFormHistogram(XFormType):
         return TabHistogram(n, w)
 
     def init(self, node):
-        # the histogram data
-        node.hists = None
+        # the histogram data, a pcot.utils.histogram.Histogram
+        node.hist = None
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
-            subimg = img.subimage()
-            # we get a mask - this has a layer for each channel. Each True value will be considered a weight of 1,
-            # each False is a weight of 0. That means that areas outside the ROI and BAD pixels in channels will
-            # not be counted.
-            weights = subimg.fullmask(True).astype(float)  # ignore BAD pixels and convert to 0 or 1
-            # generate a list of labels, one for each channel
-            labels = [f"{i}: {s.brief(node.graph.doc.settings.captionType)}" \
-                      for i,s in enumerate(img.sources.sourceSets)]
-            # generate a (data,bins) tuple for each channel taking account of the weight for that channel.
-            range = (subimg.img.min(), subimg.img.max())
-            if subimg.img.ndim == 2:
-                # single band image
-                hists = [gethistogram(subimg.img, weights[:, :], node.params.bincount, range=range)]
-            else:
-                hists = [gethistogram(chan, weights[:, :, i], node.params.bincount, range=range) for i, chan in
-                         enumerate(image.imgsplit(subimg.img))]
-            # they must be the same size
-            assert (len(labels) == len(hists))
-            # unzips the (data,bins) tuple list into two lists of data and bins
-            unzipped = list(zip(*hists))
-            # zips the labels, data and bins together into a list of (label,data,bins) for each channel!
-            node.hists = list(zip(labels, *unzipped))
-
-            # generate a table for output
-            t = Table()
-            for lab, dat, bins in node.hists:
-                t.newRow(lab)
-                t.add('band', lab)
-                for k, v in zip(bins, dat):
-                    t.add(k, v)
-
-            node.setOutput(0, Datum(Datum.TABLE, t, sources=SourceSet(img.sources.getSources())))
+            node.hist = Histogram.fromImage(img, node.params.bincount, node.graph.doc.settings.captionType)
+            node.setOutput(0, Datum(Datum.TABLE, node.hist.table(), sources=SourceSet(img.sources.getSources())))
         else:
+            node.hist = None
             node.setOutput(0, None)
 
 
@@ -101,19 +59,8 @@ class TabHistogram(Tab):
     def replot(self):
         # set up the plot
         self.w.bins.setValue(self.node.params.bincount)
-        if self.node.hists is not None:
-            # self.w.mpl.fig.suptitle("TODO")  # TODO? Do we need a title?
-            self.w.mpl.ax.cla()  # clear any previous plot
-            cols = matplotlib.colormaps['Dark2'].colors
-            colct = 0
-            for xx in self.node.hists:
-                lab, h, bins = xx
-                #                bw = (bins.max()-bins.min())/self.node.bincount
-                #                self.w.mpl.ax.bar(bins,h,width=bw,alpha=0.34,color=cols[colct])
-                _, _, handle = self.w.mpl.ax.hist(bins[:-1], bins, weights=h, alpha=0.34, label=lab,
-                                                  color=cols[colct % len(cols)])
-                colct += 1
-            self.w.mpl.ax.legend()
+        if self.node.hist is not None:
+            plotHistogram(self.w.mpl.ax, self.node.hist)
             self.w.mpl.draw()
         theme.setStaleStyle(self.w.replot, False)
 
