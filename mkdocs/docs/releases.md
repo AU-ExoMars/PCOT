@@ -45,6 +45,11 @@ yet re-saved will now load correctly.
 occurs during the save: the new file is written separately and only replaces the old one once it
 is complete. Appending to a PARC file is still done in place, so an error part way through an
 append can leave partial data in the file.
+* If saving a document fails, a dialog now says so. Previously the error only appeared in the
+log, so it was easy to miss and think the document had been saved.
+* Fixed a bug where *multidot* regions with a dot size of 0 (single-pixel regions) were silently
+deleted when a document was loaded, so they seemed not to have been saved. They were saved
+correctly, so documents affected by this will now load with all their regions.
 * Trackpad zooming works properly in the graph, image canvas and timeline views. Previously, scrolling
 on a trackpad (particularly on a Mac) zoomed far too fast and could zoom the graph out of sight.
 Scroll zooming is now smooth, the graph can't be zoomed out of sight, and you can pinch to zoom.
