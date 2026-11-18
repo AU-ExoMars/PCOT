@@ -42,11 +42,11 @@ class XFormMultiDot(XFormType):
     To add and edit circular ROIs:
 
     - select "Circles" on the left-hand side
-    - set the dot size to the desired radius
+    - set the dot radius as desired (0 gives a single-pixel dot)
     - shift-click to add and select a new ROI
     - click to select an existing ROI (or deselect)
     - drag to move the centre of the circle
-    - edit parameters like dot size, name, colour, etc. to change the current ROI or next created ROI
+    - edit parameters like dot radius, name, colour, etc. to change the current ROI or next created ROI
 
     To delete an ROI:
 
@@ -56,7 +56,7 @@ class XFormMultiDot(XFormType):
     To add and edit painted ROIs:
 
     - select "Painted" on the left-hand side
-    - set the dot size to the desired radius
+    - set the dot radius as desired (0 gives a single-pixel dot)
     - set add/create mode to Brush
     - shift-click to add and select a new painted ROI
     - click inside an ROI to select it
@@ -79,7 +79,7 @@ class XFormMultiDot(XFormType):
 
     - **Circles or Painted** selects the type of new ROIs
     - **click inside an ROI** (or very near a circle) to show and edit its properties
-    - **Dot size** is the size of the circle used for both creating circle ROIs and for circular painting in Painted mode.
+    - **Dot radius** is the radius in pixels of the circle used for both creating circle ROIs and for circular painting in Painted mode. A radius of 0 gives a single pixel, 1 gives a 5-pixel cross, 2 gives 13 pixels and so on.
     - **Scale** is the font size for all annotations created by this node
     - **Thickness** is the border size for (currently) all circles only
     - **Colour** is the colour of the current ROI's annotation
@@ -256,7 +256,7 @@ class XFormMultiDot(XFormType):
             rs.append(roi)
 
         # filter out any invalid circles. A zero-radius circle is a valid single-pixel ROI (the
-        # dot size spinner goes down to 0), so it must survive a save/load.
+        # dot radius spinner goes down to 0), so it must survive a save/load.
         node.rois = [r for r in rs if isinstance(r, ROIPainted) or r.r >= 0]
         # filter out unset ROIs
         node.rois = [r for r in node.rois if r.bb() is not None]

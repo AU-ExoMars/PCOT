@@ -47,7 +47,7 @@ is complete. Appending to a PARC file is still done in place, so an error part w
 append can leave partial data in the file.
 * If saving a document fails, a dialog now says so. Previously the error only appeared in the
 log, so it was easy to miss and think the document had been saved.
-* Fixed a bug where *multidot* regions with a dot size of 0 (single-pixel regions) were silently
+* Fixed a bug where *multidot* regions with a dot radius of 0 (single-pixel regions) were silently
 deleted when a document was loaded, so they seemed not to have been saved. They were saved
 correctly, so documents affected by this will now load with all their regions.
 * Trackpad zooming works properly in the graph, image canvas and timeline views. Previously, scrolling

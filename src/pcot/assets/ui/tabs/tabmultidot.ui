@@ -52,13 +52,19 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="toolTip">
+         <string>Radius of new dots and of the paint brush. 0 is a single pixel, 1 is a 5-pixel cross, 2 is 13 pixels.</string>
+        </property>
         <property name="text">
-         <string>Dot Size (pixels)</string>
+         <string>Dot radius (pixels)</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="MouseReleaseSpinBox" name="dotSize">
+        <property name="toolTip">
+         <string>Radius of new dots and of the paint brush. 0 is a single pixel, 1 is a 5-pixel cross, 2 is 13 pixels.</string>
+        </property>
         <property name="maximum">
          <number>800</number>
         </property>
