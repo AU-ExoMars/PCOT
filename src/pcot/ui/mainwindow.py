@@ -405,7 +405,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.rebuildPalettes()
 
     ## saving to a file  
-    def save(self, fname, saveInputs=True):
+    def save(self, fname, saveInputs=True) -> bool:
+        """Save the document, returning True on success. On failure the user gets a modal
+        dialog - a log line alone is too easy to miss, and they'd lose their work."""
         # we serialise to a string and then save the string rather than
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
@@ -416,9 +418,16 @@ class MainUI(ui.tabs.DockableTabWindow):
             ui.log(f"File saved to {fname}")
             self.rebuildRecents()
             MainUI.setTitlesForDocument(self.doc)
+            return True
         except Exception as e:
             traceback.print_exc()
             ui.error("cannot save file {}: {}".format(fname, e))
+            QMessageBox.critical(self, "Save failed",
+                                 f"The document could not be saved to\n{fname}\n\n"
+                                 f"{type(e).__name__}: {e}\n\n"
+                                 "Nothing was written; any existing file is unchanged. "
+                                 "Your changes are still open - try saving somewhere else.")
+            return False
 
     ## loading from a file
     def load(self, fname):
@@ -458,9 +467,9 @@ class MainUI(ui.tabs.DockableTabWindow):
             path = root + ext
 
             logger.info(f"saving: {res[0]}")
-            self.save(path, saveInputs=saveInputs)
-            ui.log("Document written to " + path)
-            pcot.config.setDefaultDir('pcotfiles', os.path.dirname(os.path.realpath(res[0])))
+            if self.save(path, saveInputs=saveInputs):
+                ui.log("Document written to " + path)
+                pcot.config.setDefaultDir('pcotfiles', os.path.dirname(os.path.realpath(res[0])))
         else:
             logger.info("Save cancelled")
 
