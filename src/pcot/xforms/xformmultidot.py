@@ -255,8 +255,9 @@ class XFormMultiDot(XFormType):
             roi = ROI.new_from_tagged_dict(d)
             rs.append(roi)
 
-        # filter out any zero-radius circles
-        node.rois = [r for r in rs if isinstance(r, ROIPainted) or r.r > 0]
+        # filter out any invalid circles. A zero-radius circle is a valid single-pixel ROI (the
+        # dot size spinner goes down to 0), so it must survive a save/load.
+        node.rois = [r for r in rs if isinstance(r, ROIPainted) or r.r >= 0]
         # filter out unset ROIs
         node.rois = [r for r in node.rois if r.bb() is not None]
 
