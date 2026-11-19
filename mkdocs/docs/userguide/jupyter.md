@@ -55,8 +55,21 @@ from pcot.datum import Datum
 doc = Document("example.pcot")
 doc.run()
 
-img = doc.getNodeByName("multidot").getOutputDatum(0).get(Datum.IMG)
-spectra = doc.getNodeByName("spectrum").getOutputDatum(0)
+# this gets the Datum object from the node's first output - this contains an ImageCube.
+# Datum objects can contain many different types of PCOT data.
+img_datum = doc.getNodeByName("multidot").getOutputDatum(0) 
+
+# This is similar, but gets the underlying ImageCube object
+img = doc.getNodeByName("multidot").getOutput(0,Datum.IMG)
+
+# This works for any kind of output, not just images - for example,
+# this gets the Datum object for a spectrum's output 
+spect_d = doc.getNodeByName("spectrum").getOutputDatum(0)
+# while this gets the SpectrumSet object that is stored in that Datum
+spectra = doc.getNodeByName("spectrum").getOutput(0,Datum.SPECTRA)
+# or you could do this
+spectra = spect_d.get(Datum.SPECTRA)
+
 ```
 
 `getNodeByName` raises an error if there is no node with that name, or more than one. A *sink*
@@ -76,11 +89,17 @@ for an example.
 Images display themselves: if an image (or a `Datum` holding one) is the value of a cell, the
 notebook shows it as an annotated export would look - using the image's RGB channel mapping, with
 its regions of interest and annotations. Small images are scaled up so their annotations can be
-read.
+read. For example,
 
 ```python
-img
+doc.getNodeByName("multidot").getOutputDatum(0)
 ```
+or
+```python
+doc.getNodeByName("multidot").getOutput(0,Datum.IMG)
+```
+would both display an image (assuming the multidot node is set up correctly): the
+first expression is a Datum containing an image and the second is the image itself.
 
 The pixel data is available as numpy arrays: `img.img` holds the values (height × width ×
 bands), `img.uncertainty` their uncertainties, and `img.dq` the data quality bits. `img.rgb()`
@@ -94,8 +113,9 @@ Sets of spectra display themselves too, as a spectrum plot with the *spectrum* n
 settings:
 
 ```python
-spectra
+doc.getNodeByName("spectrum").getOutputDatum(0)
 ```
+would display the spectrum.
 
 For other settings, or to draw into your own figure, use `pcot.plotting.spectrum`. It takes any
 of the spectrum node's plot settings as keyword arguments:
@@ -125,9 +145,19 @@ The notebook also prints the returned axes; end the line with `;` to hide that. 
 plots that can be zoomed and panned, install the `ipympl` package and run `%matplotlib widget`
 in the notebook.
 
+Spectral data can also be turned into CSV data for import into (say) Pandas. See
+Tables, below.
+
 ## Histograms
 
-`pcot.plotting.histogram` plots a histogram of each band of an image, as the *histogram* node
+Similarly to the *spectrum* node, the *histogram* node produces Histogram data as its output
+so you can display a histogram thus:
+```python
+doc.getNodeByName("histogram").getOutputDatum(0)
+```
+
+For more control, you can use more direct methods. The
+`pcot.plotting.histogram` method plots a histogram of each band of an image, as the *histogram* node
 does. As in the node, only pixels in the image's regions of interest are counted (if it has any),
 BAD pixels in each band aren't counted, and all the bands share the same bins:
 
@@ -138,8 +168,8 @@ pcot.plotting.histogram(img, bincount=32)
 Like the spectrum functions, it draws onto a new figure or onto axes passed as the second argument,
 and returns the axes.
 
-For the numbers themselves, make a `Histogram`. It displays as a plot, and holds the counts as a
-numpy array with a row for each band, along with the bin edges and band labels:
+For the numbers themselves, make a `Histogram` by using a *histogram* node or by calling
+`Histogram.fromImage`:
 
 ```python
 from pcot.utils.histogram import Histogram
@@ -151,10 +181,7 @@ h.edges             # the 33 bin edges
 h.labels            # a label for each band - its wavelength, where it has one
 ```
 
-A *histogram* node's output is a `Histogram` (in a `Datum`), so once a document has been run,
-`doc.getNodeByName("histogram").getOutputDatum(0)` displays as the node's plot, and
-`.get(Datum.HISTOGRAM)` gives the `Histogram` itself. It can also be turned into a table, as
-below, with a row for each bin and a column for each band.
+Histogram objects can be turned into tables if you need CSV data - see below.
 
 ## Tables
 
@@ -167,6 +194,9 @@ import pandas as pd
 
 pd.read_csv(io.StringIO(spectra.tabularProvider().csvString()))
 ```
+This code takes a Datum or SpectrumSet object, creates a "tabular provider" for it,
+and then converts the result into CSV. The settings for the tabular provider are
+part of PCOT's settings system.
 
 ## Messages
 

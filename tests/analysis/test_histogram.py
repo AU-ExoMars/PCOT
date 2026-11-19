@@ -187,22 +187,22 @@ def test_node_stores_histogram():
     node.connect(0, gen, 0)
     node.params.bincount = 12
     doc.run()
-    assert isinstance(node.hist, Histogram)
-    assert node.hist.bincount == 12
-    assert node.hist.labels == ["440", "540"]
+    assert isinstance(node.data, Histogram)
+    assert node.data.bincount == 12
+    assert node.data.labels == ["440", "540"]
     out = node.getOutputDatum(0)
-    assert out.tp == Datum.HISTOGRAM and out.get(Datum.HISTOGRAM) is node.hist
+    assert out.tp == Datum.HISTOGRAM and out.get(Datum.HISTOGRAM) is node.data
     assert out.getSources().serialise() == gen.getOutputDatum(0).getSources().serialise()
     assert len(pcot.plotting.histogram(out, new_axes()).patches) == 24
 
     ax = pcot.plotting.histogramFromNode(node, new_axes())
-    assert [t.get_text() for t in ax.get_legend().get_texts()] == node.hist.labels
+    assert [t.get_text() for t in ax.get_legend().get_texts()] == node.data.labels
     with pytest.raises(TypeError, match="not a histogram node"):
         pcot.plotting.histogramFromNode(gen, new_axes())
 
     node.disconnect(0)
     doc.run()
-    assert node.hist is None
+    assert node.data is None
     assert node.getOutputDatum(0) is None or node.getOutputDatum(0).isNone()
     with pytest.raises(ValueError, match="has the document been run"):
         pcot.plotting.histogramFromNode(node, new_axes())

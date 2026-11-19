@@ -142,9 +142,9 @@ def histogramFromNode(node, ax=None):
     Axes. The document must have been run."""
     if node.type.name != "histogram":
         raise TypeError(f"'{node.displayName}' is a {node.type.name} node, not a histogram node")
-    if node.hist is None:
+    if node.data is None:
         raise ValueError(f"histogram node '{node.displayName}' has no data - has the document been run?")
-    return histogram(node.hist, ax)
+    return histogram(node.data, ax)
 
 
 def histogramPNG(data, width=8, height=4.5, dpi=100, bincount: Optional[int] = None) -> bytes:

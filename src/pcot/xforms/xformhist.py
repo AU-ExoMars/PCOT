@@ -38,15 +38,15 @@ class XFormHistogram(XFormType):
 
     def init(self, node):
         # the histogram data, a pcot.utils.histogram.Histogram
-        node.hist = None
+        node.data = None
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
-            node.hist = Histogram.fromImage(img, node.params.bincount)
-            node.setOutput(0, Datum(Datum.HISTOGRAM, node.hist, node.hist.getSources()))
+            node.data = Histogram.fromImage(img, node.params.bincount)
+            node.setOutput(0, Datum(Datum.HISTOGRAM, node.data, node.data.getSources()))
         else:
-            node.hist = None
+            node.data = None
             node.setOutput(0, None)
 
 
@@ -60,8 +60,8 @@ class TabHistogram(Tab):
     def replot(self):
         # set up the plot
         self.w.bins.setValue(self.node.params.bincount)
-        if self.node.hist is not None:
-            plotHistogram(self.w.mpl.ax, self.node.hist)
+        if self.node.data is not None:
+            plotHistogram(self.w.mpl.ax, self.node.data)
             self.w.mpl.draw()
         theme.setStaleStyle(self.w.replot, False)
 
