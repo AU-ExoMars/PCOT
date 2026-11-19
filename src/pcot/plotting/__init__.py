@@ -1,6 +1,7 @@
 """
 Plots of PCOT data for use outside the PCOT application - in scripts and Jupyter notebooks. These draw
-the same plots as the corresponding nodes, onto ordinary matplotlib axes.
+the same plots as the corresponding nodes, onto ordinary matplotlib axes (or figures, for plots made of
+several axes).
 
 Call pcot.setup() before using these.
 """
@@ -154,4 +155,100 @@ def histogramPNG(data, width=8, height=4.5, dpi=100, bincount: Optional[int] = N
     hist = _histogram(data, bincount)
     fig = _aggFigure(width, height, dpi)
     plotHistogram(fig.add_subplot(), hist)
+    return _png(fig)
+
+
+def _calibrationData(data):
+    """Accept a CalibrationData, or a Datum holding one (such as a reflectance node's calib output)"""
+    from pcot.calib.fit import CalibrationData
+    from pcot.datum import Datum
+    if isinstance(data, Datum):
+        d = data.get(Datum.CALIBRATION)
+        if d is None:
+            raise TypeError("the Datum doesn't hold calibration data")
+        data = d
+    if not isinstance(data, CalibrationData):
+        raise TypeError(f"expected CalibrationData or a Datum holding it, not {type(data).__name__}")
+    return data
+
+
+def _reflectanceFilters(data, filters):
+    """Check a filter name or list of names against the calibration data, returning a list (or None for
+    all filters)"""
+    if filters is None:
+        return None
+    if isinstance(filters, str):
+        filters = [filters]
+    filters = list(filters)
+    unknown = [f for f in filters if f not in (data.filters or [])]
+    if unknown:
+        raise ValueError(f"filters not in the calibration data: {', '.join(unknown)}; "
+                         f"it has {', '.join(data.filters or []) or 'none'}")
+    return filters
+
+
+def reflectance(data, ax=None, filters=None, show_patches=True):
+    """Plot reflectance calibration data as the reflectance node does - measured against known reflectance,
+    with the fitted line, for each filter - and return the matplotlib Axes.
+
+    * data - CalibrationData, or a Datum holding it (such as a reflectance node's 'calib' output)
+    * ax - matplotlib Axes to draw on; if None, a new figure is created
+    * filters - a filter name or list of names to plot; all filters if None. A single filter's plot has a
+      title giving its fit.
+    * show_patches - when plotting a single filter, label its points with their patches and measured values
+    """
+    from pcot.plotting.reflectanceplot import plotReflectance
+    data = _calibrationData(data)
+    filters = _reflectanceFilters(data, filters)
+    ax = _newAxes(ax)
+    plotReflectance(ax, data, filters, show_patches)
+    return ax
+
+
+def reflectancePerFilter(data, fig=None, columns=3):
+    """Plot reflectance calibration data as the reflectance node does with "separate plots" set - a small plot
+    for each filter, in a grid with the given number of columns - and return the matplotlib Figure.
+
+    * data - CalibrationData, or a Datum holding it (such as a reflectance node's 'calib' output)
+    * fig - matplotlib Figure to draw on, which is cleared first; if None, a new figure is created
+    """
+    from pcot.plotting.reflectanceplot import plotReflectancePerFilter
+    data = _calibrationData(data)
+    if fig is None:
+        import matplotlib.pyplot as plt
+        n = len(data.filters or [])
+        rows, cols = (max(n, 1) - 1) // columns + 1, max(1, min(columns, n))
+        fig = plt.figure(figsize=(3.5 * cols, 3 * rows), layout="constrained")
+    plotReflectancePerFilter(fig, data, columns=columns)
+    return fig
+
+
+def reflectanceFromNode(node, fig=None):
+    """Plot a reflectance node's calibration data as the node's own plot shows it - with its filter, patch
+    and separate plot settings - and return the matplotlib Figure (as separate plots need a whole figure).
+    The figure given is cleared first; if None, a new one is created. The document must have been run."""
+    if node.type.name != "reflectance":
+        raise TypeError(f"'{node.displayName}' is a {node.type.name} node, not a reflectance node")
+    if not node.data.filters:
+        raise ValueError(f"reflectance node '{node.displayName}' has no data - has the document been run?")
+    if node.params.sep_plots:
+        return reflectancePerFilter(node.data, fig)
+    if fig is None:
+        import matplotlib.pyplot as plt
+        fig = plt.figure(layout="constrained")
+    else:
+        fig.clf()
+    f = node.filter_to_plot
+    reflectance(node.data, fig.add_subplot(), None if f is None or f == "ALL" else f, node.params.show_patches)
+    return fig
+
+
+def reflectancePNG(data, width=8, height=6, dpi=100, filters=None, show_patches=True) -> bytes:
+    """Plot reflectance calibration data (as reflectance() does) and return the plot as PNG data. Uses
+    matplotlib's Agg renderer directly, so it doesn't create a pyplot figure."""
+    from pcot.plotting.reflectanceplot import plotReflectance
+    data = _calibrationData(data)
+    filters = _reflectanceFilters(data, filters)
+    fig = _aggFigure(width, height, dpi)
+    plotReflectance(fig.add_subplot(), data, filters, show_patches)
     return _png(fig)

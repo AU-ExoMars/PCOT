@@ -15,6 +15,7 @@ from pcot.calib import SimpleValue
 from pcot.calib.fit import CalibrationData, ReflectancePoint, Fit
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
+from pcot.plotting.reflectanceplot import plotReflectance, plotReflectancePerFilter
 from pcot.sources import SourceSet
 from pcot.ui import theme
 from pcot.ui.help import showHelpDialog
@@ -553,147 +554,19 @@ class TabReflectance(pcot.ui.tabs.Tab):
         """make the replot button red"""
         theme.setStaleStyle(self.w.replot, True)
 
-    @staticmethod
-    def set_axis_data(ax, sep_plots=False):
-        ax.cla()
-        if not sep_plots:
-            ax.set_xlabel("Known reflectance")
-            ax.set_ylabel("Measured reflectance")
-        else:
-            ax.tick_params(labelsize=6)
-
-            # we don't generally do this.
-            # ax.set_ylim(bottom=0)
-            # ax.set_xlim(left=0)
-
-        # move the axes to pass through the origin
-        ax.spines['left'].set_position('zero')
-        ax.spines['right'].set_color('none')
-        ax.yaxis.tick_left()
-        ax.spines['bottom'].set_position('zero')
-        ax.spines['top'].set_color('none')
-        ax.xaxis.tick_bottom()
-
-    def replot_sep_plots(self):
-        data:CalibrationData = self.node.data   # for easy access
-
-        # clear all figures
-        self.w.mpl.fig.clf()
-        # work out the grid dimensions (i.e. how many rows and columns we have)
-        COLUMNS = 3
-        filters = data.filters or []    # may be None if perform() failed early
-        cwls = data.cwls or {}
-        plotcount = len(filters)
-        rows = ((plotcount-1) // COLUMNS) + 1
-        cols = min(COLUMNS, plotcount)
-
-        for plotidx,filter in enumerate(filters):
-            # add_subplot args: rows in entire plot, cols in plot, index of the plot we're making (1-based).
-            ax = self.w.mpl.fig.add_subplot(rows, cols, plotidx+1)
-            self.set_axis_data(ax,sep_plots=True)
-
-            # these may be None if perform() failed before they were set
-            points = (data.points_per_filter or {}).get(filter, None)
-            fit = (data.fits or {}).get(filter, None)
-
-            if points is None:
-                ui.log(f"No points of data for filter {filter}")
-                continue
-            if fit is None:
-                ui.log(f"No fit data for filter {filter}")
-                continue
-
-            # separate out the data
-            points = [dataclasses.astuple(p) for p in points]
-            known, measured, sample_counts, patches = zip(*points)
-
-            known_mean = [x.mean for x in known]
-            measured_mean = [x.mean for x in measured]
-            known_std = [x.std for x in known]
-            measured_std = [x.std for x in measured]
-
-            # plot
-            if fit:
-                ax.axline((0, fit.c), slope=fit.m)
-            # ax.plot(known, measured, '+', color=colname, label=band)
-            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=filter, fmt='x')
-
-            # point labelling: don't do this if we're plotting all bands or it's turned off
-            cwl = cwls.get(filter,0)
-            ax.set_title(f"Fit for {filter} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}",fontsize=6)
-            for i, patch in enumerate(patches):
-                # plot the patch name and the measured value at the point
-                ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f}",
-                            (known_mean[i], measured_mean[i]), fontsize=5)
-        self.w.mpl.draw()
-
     def replot(self):
         theme.setStaleStyle(self.w.replot, False)
         # the MPL widget creates a default subplot, let's clear it...
         self.w.mpl.fig.clf()
-        if self.node.params.sep_plots:
-            self.replot_sep_plots()
-            return
-
-        # and here, reset the plot and recreate the subplot
-        self.w.mpl.clear()
-
-        ax = self.w.mpl.ax
-        self.set_axis_data(ax)
-
         data: CalibrationData = self.node.data
-        cwls = data.cwls or {}      # may be None if perform() failed early
-        if self.node.filter_to_plot is None or self.node.filter_to_plot == "ALL":
-            bands = data.filters or []
+        if self.node.params.sep_plots:
+            plotReflectancePerFilter(self.w.mpl.fig, data, onMessage=ui.log)
         else:
-            bands = [self.node.filter_to_plot]
-
-        col = 0  # colour index
-        for band in bands:
-            # this will be (known_mean, known_std, measured_mean, measured_std)
-            # these may be None if perform() failed before they were set
-            points = (data.points_per_filter or {}).get(band, None)
-            fit = (data.fits or {}).get(band, None)
-
-            if points is None:
-                ui.log(f"No points of data for filter {band}")
-                continue
-            if fit is None:
-                ui.log(f"No fit data for filter {band}")
-                continue
-            # separate out the data
-            points = [dataclasses.astuple(p) for p in points]
-            known, measured, sample_counts, patches = zip(*points)
-
-            known_mean = [x.mean for x in known]
-            measured_mean = [x.mean for x in measured]
-            known_std = [x.std for x in known]
-            measured_std = [x.std for x in measured]
-
-            # plot
-            colname = f"C{col}"
-            col += 1
-            if fit:
-                ax.axline((0, fit.c), slope=fit.m, color=colname)
-            # ax.plot(known, measured, '+', color=colname, label=band)
-            cwl = cwls.get(band,0)
-            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std,
-                        label=f"{band} {int(cwl)}nm", fmt='x',
-                        color=colname)
-
-
-
-            # point labelling and title : don't do this if we're plotting all bands or it's turned off
-            if len(bands) == 1:
-                ax.set_title(f"Fit for {band} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}")
-                if  self.node.params.show_patches:
-                    for i, patch in enumerate(patches):
-                        # plot the patch name and the measured value at the point
-                        ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f} (n={sample_counts[i]})",
-                                    (known_mean[i], measured_mean[i]), fontsize=8)
-
-        if len(bands) > 1:
-            ax.legend(loc="lower right")
-
+            # reset the plot and recreate the subplot
+            self.w.mpl.clear()
+            if self.node.filter_to_plot is None or self.node.filter_to_plot == "ALL":
+                filters = None
+            else:
+                filters = [self.node.filter_to_plot]
+            plotReflectance(self.w.mpl.ax, data, filters, self.node.params.show_patches, onMessage=ui.log)
         self.w.mpl.draw()
-        theme.setStaleStyle(self.w.replot, False)

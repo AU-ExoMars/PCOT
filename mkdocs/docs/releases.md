@@ -159,7 +159,8 @@ use NumPy directly may need changes for NumPy 2 - see the
 value of a cell, it is shown with its ROIs and annotations. Sets of spectra display as a spectrum plot,
 and the new `pcot.plotting.spectrum` function draws spectrum plots with any of the spectrum node's
 settings, in notebooks or scripts. Similarly, `pcot.plotting.histogram` plots histograms of an image's
-bands. See
+bands, and calibration data from the reflectance node displays as the node's plot, which
+`pcot.plotting.reflectance` draws with other settings. See
 [Using PCOT in Jupyter notebooks](userguide/jupyter.md).
 * The histogram node's bins now span only the pixels it counts. Previously BAD pixels, and pixels inside
 the bounding box of a non-rectangular ROI but outside the ROI itself, could stretch the range (or, if they

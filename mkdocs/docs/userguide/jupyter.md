@@ -183,9 +183,42 @@ h.labels            # a label for each band - its wavelength, where it has one
 
 Histogram objects can be turned into tables if you need CSV data - see below.
 
+## Reflectance calibration
+
+A *reflectance* node's *calib* output is calibration data: for each filter, the points measured
+from the calibration target's patches and the line fitted to them. It displays as the node's plot
+of all the filters:
+
+```python
+# Note - the reflectance object comes from the third output, index 2 (we start at zero,
+# of course)
+doc.getNodeByName("reflectance").getOutputDatum(2)
+```
+
+`pcot.plotting.reflectance` draws the same plot with more control. It takes the calibration data
+(or the Datum holding it), and optionally axes to draw on, the filters to plot, and whether to
+label the points with their patches - which is only done when plotting a single filter, whose
+plot is also titled with its fit:
+
+```python
+calib = doc.getNodeByName("reflectance").getOutput(2, Datum.CALIBRATION)
+
+pcot.plotting.reflectance(calib)                    # all filters
+pcot.plotting.reflectance(calib, filters="G04")     # one filter, with its fit and patches
+pcot.plotting.reflectance(calib, filters=["G01", "G06"], show_patches=False)
+```
+
+`pcot.plotting.reflectancePerFilter(calib)` draws a small plot for each filter, as the node does
+with "separate plots" set, and returns the figure. To draw the node's plot exactly as the node
+shows it, use `pcot.plotting.reflectanceFromNode(node)`.
+
+The fits themselves are in `calib.fits`, a dictionary of filter name to fit, each having a
+gradient `m` and intercept `c` (and their standard deviations `sdm` and `sdc`). Calibration data
+can also be turned into a table - see below.
+
 ## Tables
 
-Data which PCOT can show as a table - such as spectra, histograms and tables - can be turned into a pandas
+Data which PCOT can show as a table - such as spectra, histograms, calibration data and tables - can be turned into a pandas
 DataFrame (install pandas with `pip install pandas` if you don't have it):
 
 ```python

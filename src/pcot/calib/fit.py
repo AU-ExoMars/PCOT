@@ -234,6 +234,14 @@ class CalibrationData:
     def tabularProvider(self):
         return CalibrationData.Provider(self)
 
+    def _repr_png_(self):
+        """Jupyter display: the points and fits for all the filters, as the reflectance node plots them. Returns
+        None (so the text form is shown) if there are no filters yet."""
+        if not self.filters:
+            return None
+        import pcot.plotting
+        return pcot.plotting.reflectancePNG(self)
+
     def getGradientsAndIntercepts(self):
         """return tuple of two vector Values (m,c) in filter order, or (None, None) if the data
         isn't complete (including when any filter has no fit)"""
